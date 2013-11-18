@@ -1,13 +1,17 @@
+{-# OPTIONS --copatterns --sized-types #-}
+
 module Term where
 
 open import Level renaming (zero to lzero; suc to lsuc)
-open import Coinduction
+open import Size
 
 open import Category.Applicative
 open import Category.Monad
-open import Category.Monad.Partiality renaming (monad to delayMonad)
 
-open RawMonad (delayMonad {f = lzero}) renaming (_⊛_ to _<*>_)
+open import Delay
+
+module _ {i : Size} where
+  open module DelayMonad = RawMonad (delayMonad {i = i}) public renaming (_⊛_ to _<*>_)
 
 infixr 4 _⇒_
 infixl 1 _,_
@@ -66,14 +70,20 @@ lookup zero    (ρ , v) = v
 lookup (suc x) (ρ , v) = lookup x ρ
 
 mutual
-  ⟦_⟧  : {Γ : Cxt} {a : Ty} → Tm Γ a → Env Γ → Val a ⊥
+  ⟦_⟧  : ∀ {i} {Γ : Cxt} {a : Ty} → Tm Γ a → Env Γ → Delay (Val a) i
   ⟦ var x   ⟧ ρ = now (lookup x ρ)
   ⟦ abs t   ⟧ ρ = now (lam t ρ)
   ⟦ app t u ⟧ ρ = ⟦ t ⟧ ρ >>= λ f →
-                 ⟦ u ⟧ ρ >>= λ v → later (♯ apply f v)
+                 ⟦ u ⟧ ρ >>= λ v → later (∞apply f v)
 
-  apply : ∀ {a b} → Val (a ⇒ b) → Val a → Val b ⊥
-  apply (lam t ρ) v = later (♯ ⟦ t ⟧ (ρ , v))
+  -- ∞⟦_⟧  : ∀ {i} {Γ : Cxt} {a : Ty} → Tm Γ a → Env Γ → ∞Delay (Val a) i
+  -- ∞⟦ t ⟧ ρ =
+
+  ∞apply : ∀ {i a b} → Val (a ⇒ b) → Val a → ∞Delay (Val b) i
+  force (∞apply (lam t ρ) v) = ⟦ t ⟧ (ρ , v)
+
+--  apply : ∀ {i a b} → Val (a ⇒ b) → Val a → Delay (Val b) i
+--  apply (lam t ρ) v = later (delay (⟦ t ⟧ (ρ , v)))
 
 {-
 ⟦_⟧ : {vt : VarTm}{Γ : Cxt}{a : Ty} →  El vt Γ a → Env Γ → Val a

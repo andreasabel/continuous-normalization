@@ -19,7 +19,7 @@ mutual
     field
       force : {j : Size< i} → Delay A j
 
-open ∞Delay
+open ∞Delay public
 
 -- Smart constructor.
 
