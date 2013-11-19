@@ -52,8 +52,8 @@ mutual
   x ⇓ a = Terminates a x
 
   data Terminates {A : Set} (a : A) : Delay A ∞ → Set where
-    now   : now a ⇓ a
-    later : ∀ {x : ∞Delay A ∞} → force x ⇓ a → later x ⇓ a
+    now⇓   : now a ⇓ a
+    later⇓ : ∀ {x : ∞Delay A ∞} → force x ⇓ a → later x ⇓ a
 
 _⇓ : {A : Set} (x : Delay A ∞) → Set
 x ⇓ = ∃ λ a → x ⇓ a
