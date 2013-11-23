@@ -15,6 +15,12 @@ data Cxt : Set where
   ε   : Cxt
   _,_ : Cxt → Ty → Cxt
 
+-- Generic reversed Spines (last application available first).
+
+data RSpine (V : Ty → Set) (a : Ty) : (c : Ty) → Set where
+  ε   : RSpine V a a
+  _,_ : ∀ {b c} → RSpine V a (b ⇒ c) → V b → RSpine V a c
+
 -- Variables and terms.
 
 mutual
@@ -30,3 +36,14 @@ data Tm (Γ : Cxt) : (a : Ty) → Set where
   abs : ∀ {a b} (t : Tm (Γ , a) b)              → Tm Γ (a ⇒ b)
   app : ∀ {a b} (t : Tm Γ (a ⇒ b)) (u : Tm Γ a) → Tm Γ b
 
+-- β-normal forms.
+
+data βNf (Γ : Cxt) : Ty → Set where
+  lam : ∀ {σ τ}  (n : βNf (Γ , σ) τ)                      → βNf Γ (σ ⇒ τ)
+  ne  : ∀ {σ τ}  (x : Var Γ σ) (ns : RSpine (βNf Γ) σ τ)  → βNf Γ τ
+
+-- Long normal forms.
+
+data Nf (Γ : Cxt) : Ty → Set where
+  lam : ∀ {σ τ}  (n : Nf (Γ , σ) τ)                      → Nf Γ (σ ⇒ τ)
+  ne  : ∀ {σ}    (x : Var Γ σ) (ns : RSpine (Nf Γ) σ ★)  → Nf Γ ★
