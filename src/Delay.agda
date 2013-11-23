@@ -45,6 +45,12 @@ delayMonad = record
       _∞>>=_ :  ∀ {A B i} → ∞Delay A i → (A → Delay B i) → ∞Delay B i
       force (x ∞>>= f) = force x >>= f
 
+module _ {i : Size} where
+  open module DelayMonad = RawMonad (delayMonad {i = i}) public renaming (_⊛_ to _<*>_)
+
+_=<<2_,_ : ∀ {i A B C} → (A → B → Delay C i) → Delay A i → Delay B i → Delay C i
+f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
+
 -- Termination.  Makes only sense for Delay A ∞.
 
 mutual

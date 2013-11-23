@@ -15,9 +15,6 @@ open import Data.Product using (∃; _×_; _,_) renaming (proj₁ to fst; proj�
 open import Term
 open import Delay
 
-module _ {i : Size} where
-  open module DelayMonad = RawMonad (delayMonad {i = i}) public renaming (_⊛_ to _<*>_)
-
 -- Values and environments
 
 mutual
