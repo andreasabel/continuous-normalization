@@ -2,7 +2,7 @@
 
 module Term where
 
-infixr 4 _⇒_
+infixr 6 _⇒_
 infixl 1 _,_
 
 -- Types and contexts.
@@ -13,7 +13,7 @@ data Ty : Set where
 
 data Cxt : Set where
   ε   : Cxt
-  _,_ : Cxt → Ty → Cxt
+  _,_ : (Γ : Cxt) (a : Ty) → Cxt
 
 -- Generic reversed Spines (last application available first).
 
@@ -39,11 +39,11 @@ data Tm (Γ : Cxt) : (a : Ty) → Set where
 -- β-normal forms.
 
 data βNf (Γ : Cxt) : Ty → Set where
-  lam : ∀ {σ τ}  (n : βNf (Γ , σ) τ)                      → βNf Γ (σ ⇒ τ)
-  ne  : ∀ {σ τ}  (x : Var Γ σ) (ns : RSpine (βNf Γ) σ τ)  → βNf Γ τ
+  lam : ∀ {a b}  (n : βNf (Γ , a) b)                      → βNf Γ (a ⇒ b)
+  ne  : ∀ {a b}  (x : Var Γ a) (ns : RSpine (βNf Γ) a b)  → βNf Γ b
 
 -- Long normal forms.
 
 data Nf (Γ : Cxt) : Ty → Set where
-  lam : ∀ {σ τ}  (n : Nf (Γ , σ) τ)                      → Nf Γ (σ ⇒ τ)
-  ne  : ∀ {σ}    (x : Var Γ σ) (ns : RSpine (Nf Γ) σ ★)  → Nf Γ ★
+  lam : ∀ {a b}  (n : Nf (Γ , a) b)                      → Nf Γ (a ⇒ b)
+  ne  : ∀ {a}    (x : Var Γ a) (ns : RSpine (Nf Γ) a ★)  → Nf Γ ★
