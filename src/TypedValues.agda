@@ -13,10 +13,6 @@ open import Term
 open import Delay
 open import Spine
 
--- De Bruijn Level
-
-data Lvl (Δ : Cxt) (a : Ty) : Set where
-
 -- Values and environments
 
 mutual
@@ -85,10 +81,11 @@ mutual
   force (∞readback (ne x rs)) = ne x <$> mapRSpM readback rs
 
 {-
+
 -- Type interpretation
 
 mutual
-  V⟦_⟧_ : (a : Ty) → Val a → Set
+  V⟦_⟧_  : (a : Ty) → Val Δ a → Set
   V⟦ ★     ⟧ v = ⊤
   V⟦ a ⇒ b ⟧ f = {u : Val a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply f u)
 
@@ -148,22 +145,5 @@ norm : ∀ {Γ a} (t : Tm Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a �
 norm (var x)   ρ θ = 〖var〗 x ρ θ
 norm (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → norm t (ρ , u) (θ , u⇓))
 norm (app t u) ρ θ = 〖app〗 (norm t ρ θ) (norm u ρ θ)
--}
 
-{-
-mutual
-  data Nf (Γ : Cxt) : Ty → Set where
-    lam : ∀{σ τ} → Nf (Γ , σ) τ → Nf Γ (σ ⇒ τ)
-    ne  : Ne Γ ★  → Nf Γ ★
-
-  data Ne (Γ : Cxt) : Ty → Set where
-    var : ∀{σ} → Var Γ σ → Ne Γ σ
-    app : ∀{σ τ} → Ne Γ (σ ⇒ τ) → Nf Γ σ → Ne Γ τ
-
-mutual
-  reify : ∀{Γ} σ → Val Γ σ → Nf Γ σ
-  reify = ?
-
-  reflect : ∀ {Γ} σ → Ne Γ σ → Val Γ σ
-  reflect = ?
 -}

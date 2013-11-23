@@ -3,18 +3,6 @@ module Spine where
 open import Term
 open import Delay
 
-module _ (V : Ty → Set) where
-
-  mutual
-    SpineF : (a c : Ty) → Set
-    SpineF a c = SpineF' c a
-
-    data SpineF' (c : Ty) : (a : Ty) → Set where
-      []  : SpineF c c
-      _∷_ : ∀ {a b} → V a → SpineF b c → SpineF (a ⇒ b) c
-
-
-
 -- Functoriality for RSpine
 
 mapRSp : ∀ {V W : Ty → Set} →
@@ -40,3 +28,17 @@ foldRSp {V = V} {W = W} ap {a = a} h = loop
     loop : ∀ {c} → RSpine V a c → W c
     loop ε        = h
     loop (rs , r) = ap (loop rs) r
+
+-- Currently not used: left-to-right spines.
+
+module _ (V : Ty → Set) where
+
+  mutual
+    SpineF : (a c : Ty) → Set
+    SpineF a c = SpineF' c a
+
+    data SpineF' (c : Ty) : (a : Ty) → Set where
+      []  : SpineF c c
+      _∷_ : ∀ {a b} → V a → SpineF b c → SpineF (a ⇒ b) c
+
+
