@@ -12,6 +12,7 @@ open import Data.Nat using (ℕ; zero; suc)
 open import Data.Unit using (⊤)
 open import Data.Product using (∃; _×_; _,_) renaming (proj₁ to fst; proj₂ to snd)
 
+open import Relation.Nullary using (Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
 
 open import Term
@@ -44,11 +45,11 @@ lookup (suc x) (ρ , v) = lookup x ρ
 
 -- Lifting.
 
-var0 : Val
-var0 = ne 0 ε
+var0 : (Γ : Cxt) → Val
+var0 Γ = ne (len Γ) ε
 
 liftEnv : ∀ {Γ a} → Env Γ → Env (Γ , a)
-liftEnv ρ = ρ , var0
+liftEnv {Γ = Γ} ρ = ρ , var0 Γ
 
 -- Call-by-value evaluation.
 
@@ -86,11 +87,11 @@ mutual
   -- Type-directed readback.
 
   readback : ∀ {i} Γ a → Val → Delay (Nf Γ a) i
-  readback Γ (a ⇒ b) v   = lam <$> (readback (Γ , a) b =<< apply v (var0 (length Γ)))
+  readback Γ (a ⇒ b) v   = lam <$> (readback (Γ , a) b =<< apply v (var0 Γ))
   readback Γ ★ (lam t ρ) = fail
   readback Γ ★ (ne x vs) = case lookupLev x Γ of λ
-    { nothing        -> fail
-    ; (just (a , i)) -> ne i <$> (ensure★ =<< readbackSp Γ a vs)
+    { (no _)                                    -> fail
+    ; (yes (validLev {type = a} {index = i} d)) -> ne i <$> (ensure★ =<< readbackSp Γ a vs)
     }
 
   -- Structural readback of spines.
@@ -111,7 +112,7 @@ mutual
 
     canReadFun : ∀ {a b f v} →
 
-      apply f var0 ⇓ v →
+      apply f (var0 Γ) ⇓ v →  -- TODO: this needs to be relation, closed under ≤
       CanRead (Γ , a) b v →
       ---------------------
       CanRead Γ (a ⇒ b) f
@@ -141,7 +142,7 @@ mutual
 
 mutual
   canRead≤ : ∀ {Γ Δ a v} → (η : Γ ≤ Δ) (d : CanRead Δ a v) → CanRead Γ a v
-  canRead≤ η (canReadFun x d) = canReadFun x (canRead≤ (lift η) d)
+  canRead≤ η (canReadFun x d) = canReadFun {!lev≤ !} (canRead≤ (lift η) d)
   canRead≤ η (canReadBase x d) = canReadBase {!!} (canReadSpine≤ η d)
 
   canReadSpine≤ : ∀ {Γ Δ a vs c} → (η : Γ ≤ Δ) (d : CanReadSpine Δ a vs c) → CanReadSpine Γ a vs c

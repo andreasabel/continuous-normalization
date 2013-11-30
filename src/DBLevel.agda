@@ -14,40 +14,53 @@ open import Term
 
 Lev = ℕ
 
-{-
-lev≤ : ∀ {Γ Δ} (η : Γ ≤ Δ) (x : Lev) → Lev
-lev≤ ε        x = x -- dont care
-lev≤ (weak η) x = lev≤ η x
-lev≤ (lift {Γ = Γ} {Δ = Δ} η) x with x ≟ len Δ
-... | yes _ = len Γ
-... | no  _ = x
+-- Connection between de Bruijn indices and levels.
+
+data LookupLev {a : Ty} : (x : Lev) (Γ : Cxt) (i : Var Γ a) → Set where
+  lookupZero : ∀ {Γ} →
+    LookupLev (len Γ) (Γ , a) zero
+
+  lookupSuc : ∀ {Γ b x i} →
+    LookupLev x Γ i →
+    LookupLev x (Γ , b) (suc i)
+
+-- Monotonicity.
+
+lev≤ : ∀ {Γ Δ a} {i : Var Δ a} (η : Γ ≤ Δ) (x : Lev) (d : LookupLev x Δ i) → Lev
+lev≤ ε                        x         d            = x -- dont care
+lev≤ (weak η)                 x         d            = lev≤ η x d -- lev≤ η ? x
+lev≤ (lift {Γ = Γ} {Δ = Δ} η) .(len Δ)  lookupZero   = len Γ
+lev≤ (lift η)                 x        (lookupSuc d) = lev≤ η x d
   -- the last variable is affected by lift
   -- if x = |Δ|, then the result should be |Γ|
--}
+
+lookupLev≤ : ∀ {Γ Δ x a} {i : Var Δ a} (η : Γ ≤ Δ) (d : LookupLev x Δ i) → LookupLev (lev≤ η x d) Γ (var≤ η i)
+lookupLev≤ ε        ()
+lookupLev≤ (weak η)  d            = lookupSuc (lookupLev≤ η d)
+lookupLev≤ (lift η)  lookupZero   = lookupZero
+lookupLev≤ (lift η) (lookupSuc d) = lookupSuc (lookupLev≤ η d)
 
 -- Valid de Bruijn levels.
-
-data LookupLev : (x : Lev) (Γ : Cxt) (a : Ty) (i : Var Γ a) → Set where
-  lookupZero : ∀ {Γ a} →
-    LookupLev (len Γ) (Γ , a) a zero
-
-  lookupSuc : ∀ {Γ a b x i} →
-    LookupLev x Γ a i →
-    LookupLev x (Γ , b) a (suc i)
 
 record ValidLev (x : Lev) (Γ : Cxt) : Set where
   constructor validLev
   field
     {type } : Ty
     {index} : Var Γ type
-    valid   : LookupLev x Γ type index
-
-weakLev : ∀ {x Γ a} → ValidLev x Γ → ValidLev x (Γ , a)
-weakLev (validLev d) = validLev (lookupSuc d)
+    valid   : LookupLev x Γ index
+open ValidLev public
 
 strengthLev : ∀ {x Γ a} → ValidLev x (Γ , a) → (x ≡ len Γ) ⊎ ValidLev x Γ
 strengthLev (validLev lookupZero)        = inl refl
 strengthLev (validLev (lookupSuc valid)) = inr (validLev valid)
+
+-- Monotonicity.
+
+weakLev : ∀ {x Γ a} → ValidLev x Γ → ValidLev x (Γ , a)
+weakLev (validLev d) = validLev (lookupSuc d)
+
+validLev≤ : ∀ {Γ Δ x} (η : Γ ≤ Δ) (d : ValidLev x Δ) → ValidLev (lev≤ η x (valid d)) Γ
+validLev≤ η (validLev d) = validLev (lookupLev≤ η d)
 
 -- Looking up a de Bruijn level.
 
@@ -59,27 +72,20 @@ lookupLev x  (Γ , a) | no _  with lookupLev x Γ
 lookupLev x  (Γ , a) | no ¬p | yes d             = yes (weakLev d)
 lookupLev x  (Γ , a) | no ¬p | no ¬d             = no (λ d → [ ¬p , ¬d ]′ (strengthLev d))
 
--- lookupInv : lookupLev x Γ a zero
-lev≤ : ∀ {Γ Δ a i} (η : Γ ≤ Δ) (x : Lev) (d : LookupLev x Δ a i) → Lev
-lev≤ ε                        x         d            = x -- dont care
-lev≤ (weak η)                 x         d            = lev≤ η x d -- lev≤ η ? x
-lev≤ (lift {Γ = Γ} {Δ = Δ} η) .(len Δ)  lookupZero   = len Γ
-lev≤ (lift η)                 x        (lookupSuc d) = lev≤ η x d
-{-
-lev≤ (lift {Γ = Γ} η) .0  lookupFound          = len Γ
-lev≤ (lift η)         .0 (lookupZero d)        = lev≤ η 0 d
-lev≤ (lift η)   .(suc x) (lookupSuc {x = x} d) = lev≤ η x d
--}
-  -- the last variable is affected by lift
-  -- if x = |Δ|, then the result should be |Γ|
+-- Typed de Bruijn Levels.
 
--- Monotonicity.
+record Lvl (Γ : Cxt) (a : Ty) : Set where
+  constructor lvl
+  field
+    lev  : ℕ
+    ind  : Var Γ a
+    corr : LookupLev lev Γ ind
+open Lvl public
 
-lookupLev≤ : ∀ {Γ Δ x a i} (η : Γ ≤ Δ) (d : LookupLev x Δ a i) → LookupLev (lev≤ η x d) Γ a (var≤ η i)
-lookupLev≤ ε ()
-lookupLev≤ (lift η) lookupZero    = lookupZero
-lookupLev≤ (lift η) (lookupSuc d) = lookupSuc (lookupLev≤ η d)
-lookupLev≤ (weak η) d = lookupSuc (lookupLev≤ η d)
+-- Monotonicity
+
+lvl≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Lvl Δ a) → Lvl Γ a
+lvl≤ η (lvl x i d) = lvl (lev≤ η x d) (var≤ η i) (lookupLev≤ η d)
 
 {-
 -- Implementation of level lookup.
