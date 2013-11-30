@@ -32,7 +32,7 @@ open import Data.Unit  public
   using (⊤)
 
 open import Function public
-  using (id; _∘_; case_of_)
+  using (_∘_; case_of_)
 
 open import Relation.Nullary public
   using (Dec; yes; no)

@@ -53,18 +53,20 @@ data Nf (Γ : Cxt) : Ty → Set where
 -- Additional stuff for contexts.
 
 data _≤_ : (Γ Δ : Cxt) → Set where
-  ε    : ε ≤ ε
+  id   : ∀ {Γ} → Γ ≤ Γ
   weak : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ Δ
   lift : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ (Δ , a)
 
+{-
 ηid : ∀ {Γ} → Γ ≤ Γ
 ηid {Γ = ε}     = ε
 ηid {Γ = Γ , a} = lift ηid
+-}
 
 -- Monotonicity.
 
 var≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Var Δ a) → Var Γ a
-var≤ ε        ()
+var≤ id        x      = x
 var≤ (weak η)  x      = suc (var≤ η x)
 var≤ (lift η)  zero   = zero
 var≤ (lift η) (suc x) = suc (var≤ η x)

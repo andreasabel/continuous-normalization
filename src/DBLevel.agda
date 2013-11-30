@@ -20,7 +20,7 @@ data LookupLev {a : Ty} : (x : Lev) (Γ : Cxt) (i : Var Γ a) → Set where
 -- Monotonicity.
 
 lev≤ : ∀ {Γ Δ a} {i : Var Δ a} (η : Γ ≤ Δ) (x : Lev) (d : LookupLev x Δ i) → Lev
-lev≤ ε                        x         d            = x -- dont care
+lev≤ id                       x         d            = x -- dont care
 lev≤ (weak η)                 x         d            = lev≤ η x d -- lev≤ η ? x
 lev≤ (lift {Γ = Γ} {Δ = Δ} η) .(len Δ)  lookupZero   = len Γ
 lev≤ (lift η)                 x        (lookupSuc d) = lev≤ η x d
@@ -28,7 +28,7 @@ lev≤ (lift η)                 x        (lookupSuc d) = lev≤ η x d
   -- if x = |Δ|, then the result should be |Γ|
 
 lookupLev≤ : ∀ {Γ Δ x a} {i : Var Δ a} (η : Γ ≤ Δ) (d : LookupLev x Δ i) → LookupLev (lev≤ η x d) Γ (var≤ η i)
-lookupLev≤ ε        ()
+lookupLev≤ id        d            = d
 lookupLev≤ (weak η)  d            = lookupSuc (lookupLev≤ η d)
 lookupLev≤ (lift η)  lookupZero   = lookupZero
 lookupLev≤ (lift η) (lookupSuc d) = lookupSuc (lookupLev≤ η d)
