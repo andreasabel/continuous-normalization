@@ -75,10 +75,26 @@ record Lvl (Γ : Cxt) (a : Ty) : Set where
     corr : LookupLev lev Γ ind
 open Lvl public
 
+-- Newest binding
+
+newLvl : ∀ Γ {a} → Lvl (Γ , a) a
+newLvl Γ = lvl (len Γ) zero lookupZero
+
 -- Monotonicity
+
+weakLvl : ∀ {Γ a b} (x : Lvl Γ a) → Lvl (Γ , b) a
+weakLvl (lvl x i d) = lvl x (suc i) (lookupSuc d)
 
 lvl≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Lvl Δ a) → Lvl Γ a
 lvl≤ η (lvl x i d) = lvl (lev≤ η x d) (var≤ η i) (lookupLev≤ η d)
+
+
+
+
+
+
+
+
 
 {-
 -- Implementation of level lookup.
