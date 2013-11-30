@@ -33,12 +33,8 @@ foldRSp {V = V} {W = W} ap {a = a} h = loop
 
 module _ (V : Ty → Set) where
 
-  mutual
-    SpineF : (a c : Ty) → Set
-    SpineF a c = SpineF' c a
-
-    data SpineF' (c : Ty) : (a : Ty) → Set where
-      []  : SpineF c c
-      _∷_ : ∀ {a b} → V a → SpineF b c → SpineF (a ⇒ b) c
+  data SpineF : (a c : Ty) → Set where
+    []  : ∀ {c}                        → SpineF c c
+    _∷_ : ∀ {a b c} → V a → SpineF b c → SpineF (a ⇒ b) c
 
 
