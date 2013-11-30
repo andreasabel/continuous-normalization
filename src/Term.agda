@@ -2,6 +2,8 @@
 
 module Term where
 
+open import Library
+
 infixr 6 _⇒_
 infixl 1 _,_
 
@@ -50,12 +52,16 @@ data Nf (Γ : Cxt) : Ty → Set where
 
 -- Additional stuff for contexts.
 
--- Monotonicity.
-
 data _≤_ : (Γ Δ : Cxt) → Set where
   ε    : ε ≤ ε
   weak : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ Δ
   lift : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ (Δ , a)
+
+ηid : ∀ {Γ} → Γ ≤ Γ
+ηid {Γ = ε}     = ε
+ηid {Γ = Γ , a} = lift ηid
+
+-- Monotonicity.
 
 var≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Var Δ a) → Var Γ a
 var≤ ε        ()
@@ -63,7 +69,7 @@ var≤ (weak η)  x      = suc (var≤ η x)
 var≤ (lift η)  zero   = zero
 var≤ (lift η) (suc x) = suc (var≤ η x)
 
-open import Data.Nat
+-- Length.
 
 len : Cxt → ℕ
 len ε       = 0

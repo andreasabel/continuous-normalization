@@ -63,10 +63,6 @@ mutual
   force (∞apply (lam t ρ) v) = 〖 t 〗 (ρ , v)
   force (∞apply (ne x sp) v) = now (ne x (sp , v))
 
-β-expand : ∀ {Γ Δ a b} {t : Tm (Γ , a) b} {ρ : Env Δ Γ} {u : Val Δ a} {v : Val Δ b} →
-  (h : 〖 t 〗 (ρ , u) ⇓ v) → apply (lam t ρ) u ⇓ v
-β-expand h = later⇓ h
-
 mutual
   readback : ∀ {i Γ a} → Val Γ a → Delay (βNf Γ a) i
   readback v = later (∞readback v)
@@ -75,65 +71,74 @@ mutual
   force (∞readback (lam t ρ)) = lam  <$> (readback =<< 〖 t 〗 (liftEnv ρ))
   force (∞readback (ne x rs)) = ne (ind x) <$> mapRSpM readback rs
 
-{-
+-- Monotonicity
+
+mutual
+  env≤ : ∀ {i Γ Δ Δ′} (η : Δ′ ≤ Δ) (ρ : Env {i = i} Δ Γ) → Env {i = i} Δ′ Γ
+  env≤ η ε        = ε
+  env≤ η (ρ , v)  = env≤ η ρ , val≤ η v
+
+  val≤ : ∀ {i Δ Δ′ c} (η : Δ′ ≤ Δ) (v : Val {i = i} Δ c) → Val {i = i} Δ′ c
+  val≤ η (ne {j = j} x vs)  = ne (lvl≤ η x) (mapRSp (val≤ {i = j} η) vs)
+  val≤ η (lam t ρ)          = lam t (env≤ η ρ)
+
 -- Type interpretation
 
 mutual
-  V⟦_⟧_ : (a : Ty) → Val a → Set
-  V⟦ ★     ⟧ v = ⊤
-  V⟦ a ⇒ b ⟧ f = {u : Val a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply f u)
+  V⟦_⟧ : (a : Ty) {Δ : Cxt} (v : Val Δ a) → Set
+  V⟦ ★     ⟧ {Δ = Δ} v = ⊤
+  V⟦ a ⇒ b ⟧ {Δ = Δ} f = {Γ : Cxt} (η : Γ ≤ Δ) →
+    {u : Val Γ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ η f) u)
 
-  C⟦_⟧_ : (a : Ty) → Delay (Val a) ∞ → Set
-  C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
+  C⟦_⟧ : (a : Ty) {Δ : Cxt} (v? : Delay (Val Δ a) ∞) → Set
+  C⟦ a ⟧ v? = ∃ λ v → v? ⇓ v × V⟦ a ⟧ v
 
-{-
-  C⟦ ★     ⟧ v = v ⇓
-  C⟦ a ⇒ b ⟧ f = (u : Delay (Val a) ∞) → ⟦ a ⟧ u → ⟦ b ⟧ (apply* f u)
--}
-
-⟪_⟫_ : (Γ : Cxt) → Env Γ → Set
+⟪_⟫ : (Γ : Cxt) {Δ : Cxt} (ρ : Env Δ Γ) → Set
 ⟪ ε ⟫     ε       = ⊤
 ⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ v
 
+
 -- Type soundness
 
-〖var〗 : ∀ {Γ a} (x : Var Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (now (lookup x ρ))
+〖var〗 : ∀ {Γ Δ a} (x : Var Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (now (lookup x ρ))
 〖var〗 zero    (_ , v) (_ , v⇓) = v , now⇓ , v⇓
 〖var〗 (suc x) (ρ , _) (θ , _ ) = 〖var〗 x ρ θ
 
-sound-β : ∀ {Γ a b} {t : Tm (Γ , a) b} {ρ : Env Γ} {u : Val a} →
+sound-β : ∀ {Γ Δ a b} {t : Tm (Γ , a) b} {ρ : Env Δ Γ} {u : Val Δ a} →
 
   C⟦ b ⟧ (〖 t 〗 (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
 
-sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
+sound-β (v , v⇓ , ⟦v⟧) = v , later⇓ v⇓ , ⟦v⟧
 
+〖abs〗 : ∀ {Γ Δ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) →
 
-〖abs〗 : ∀ {Γ a b} (t : Tm (Γ , a) b) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) →
-
-  ({u : Val a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (〖 t 〗 (ρ , u))) →
+  ({Δ′ : Cxt} (η : Δ′ ≤ Δ) {u : Val Δ′ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (〖 t 〗 (env≤ η ρ , u))) →
   C⟦ a ⇒ b ⟧ (now (lam t ρ))
 
-〖abs〗 t ρ θ ih = lam t ρ , now⇓ , λ u⇓ → sound-β (ih u⇓)
+〖abs〗 t ρ θ ih = lam t ρ , now⇓ , λ η u⇓ → sound-β (ih η u⇓)
 
-sound-app' : ∀ {a b} (f : Val (a ⇒ b)) →
-  {u* : Delay (Val a) _} {u : Val a} (u⇓ : u* ⇓ u) →
-  {v : Val b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
+sound-app' : ∀ {Δ a b} (f : Val Δ (a ⇒ b)) →
+  {u* : Delay (Val Δ a) _} {u : Val Δ a} (u⇓ : u* ⇓ u) →
+  {v : Val Δ b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
 sound-app' f (later⇓ u⇓) h = later⇓ (sound-app' f u⇓ h)
 sound-app' f  now⇓       h = h
 
-sound-app : ∀ {a b} →
-  {f* : Delay (Val (a ⇒ b)) _} {f : Val (a ⇒ b)} (f⇓ : f* ⇓ f) →
-  {u* : Delay (Val a)       _} {u : Val a}       (u⇓ : u* ⇓ u) →
-  {v : Val b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
+sound-app : ∀ {Δ a b} →
+  {f* : Delay (Val Δ (a ⇒ b)) _} {f : Val Δ (a ⇒ b)} (f⇓ : f* ⇓ f) →
+  {u* : Delay (Val Δ a)       _} {u : Val Δ a}       (u⇓ : u* ⇓ u) →
+  {v : Val Δ b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
 sound-app  (later⇓ f⇓) u⇓ h = later⇓ (sound-app f⇓ u⇓ h)
 sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
-〖app〗 : ∀ {a b} {f : Delay (Val (a ⇒ b)) _} {u : Delay (Val a) _} →
+
+〖app〗 : ∀ {Δ a b} {f : Delay (Val Δ (a ⇒ b)) _} {u : Delay (Val Δ a) _} →
 
   C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
 
-〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ⟦u⟧
+〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ηid ⟦u⟧
                                        in  v , sound-app f⇓ u⇓ v⇓ , ⟦v⟧
+
+{-
 
 norm : ∀ {Γ a} (t : Tm Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
 norm (var x)   ρ θ = 〖var〗 x ρ θ

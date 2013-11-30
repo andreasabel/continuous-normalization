@@ -20,7 +20,7 @@ open import Data.Maybe public
   using (Maybe; just; nothing) renaming (map to fmap)
 
 open import Data.Nat public
-  using (ℕ; zero; suc; _≟_)
+  using (ℕ; zero; suc; _+_; _≟_)
 
 open import Data.Product public
   using (∃; _×_; _,_) renaming (proj₁ to fst; proj₂ to snd)
