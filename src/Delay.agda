@@ -2,11 +2,7 @@
 -- {-# OPTIONS -v tc.conv:10 -v tc.conv.size:15 #-}
 module Delay where
 
-open import Level renaming (zero to lzero; suc to lsuc)
-open import Size
-
-open import Category.Monad
-open import Data.Product using (∃)
+open import Library
 
 -- Coinductive delay monad.
 

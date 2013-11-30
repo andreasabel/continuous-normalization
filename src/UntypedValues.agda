@@ -2,19 +2,7 @@
 
 module UntypedValues where
 
-open import Function
-open import Level using () renaming (zero to lzero; suc to lsuc)
-open import Size
-
-open import Data.List using (List; []; _∷_; map)
-open import Data.Maybe using (Maybe; just; nothing) renaming (map to fmap)
-open import Data.Nat using (ℕ; zero; suc)
-open import Data.Unit using (⊤)
-open import Data.Product using (∃; _×_; _,_) renaming (proj₁ to fst; proj₂ to snd)
-
-open import Relation.Nullary using (Dec; yes; no)
-open import Relation.Binary.PropositionalEquality
-
+open import Library
 open import Term
 open import DelayError
 open import Spine
@@ -117,9 +105,9 @@ mutual
       ---------------------
       CanRead Γ (a ⇒ b) f
 
-    canReadBase : ∀ {a x vs i} →
+    canReadBase : ∀ {a x vs}{i : Var Γ a} →
 
-      LookupLev x Γ a i →
+      LookupLev x Γ i →
       CanReadSpine Γ a vs ★ →
       -----------------------
       CanRead Γ ★ (ne x vs)

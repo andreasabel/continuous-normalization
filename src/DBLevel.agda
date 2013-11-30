@@ -1,13 +1,6 @@
 module DBLevel where
 
-open import Data.Maybe using (Maybe; just; nothing) renaming (map to fmap)
-open import Data.Nat using (ℕ; zero; suc; _≟_)
-open import Data.Product using (∃; _×_; _,_) renaming (proj₁ to fst; proj₂ to snd)
-open import Data.Sum using (_⊎_; [_,_]′) renaming (inj₁ to inl; inj₂ to inr)
-
-open import Relation.Nullary using (Dec; yes; no)
-open import Relation.Binary.PropositionalEquality
-
+open import Library
 open import Term
 
 -- De Bruijn Level

@@ -3,15 +3,7 @@
 
 module ClosedTerms where
 
-open import Level renaming (zero to lzero; suc to lsuc)
-open import Size
-
-open import Category.Applicative
-open import Category.Monad
-
-open import Data.Unit using (⊤)
-open import Data.Product using (∃; _×_; _,_) renaming (proj₁ to fst; proj₂ to snd)
-
+open import Library
 open import Term
 open import Delay
 
