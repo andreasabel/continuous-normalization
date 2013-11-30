@@ -82,6 +82,26 @@ mutual
   val≤ η (ne {j = j} x vs)  = ne (lvl≤ η x) (mapRSp (val≤ {i = j} η) vs)
   val≤ η (lam t ρ)          = lam t (env≤ η ρ)
 
+mutual
+  env≤-id : ∀ {Γ Δ} (ρ : Env Δ Γ) → env≤ id ρ ≡ ρ
+  env≤-id ε = refl
+  env≤-id (ρ , v) rewrite env≤-id ρ | val≤-id v = refl
+
+  val≤-id : ∀ {Δ a} (v : Val Δ a) → val≤ id v ≡ v
+  val≤-id (ne x vs) = {!!}
+  val≤-id (lam t ρ) rewrite env≤-id ρ = refl
+
+mutual
+  env≤-• : ∀ {Γ Δ₁ Δ₂ Δ₃} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (ρ : Env Δ₃ Γ) →
+    env≤ η (env≤ η' ρ) ≡ env≤ (η • η') ρ
+  env≤-• η η' ε                                             = refl
+  env≤-• η η' (ρ , v) rewrite env≤-• η η' ρ | val≤-• η η' v = refl
+
+  val≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (v : Val Δ₃ a) →
+    val≤ η (val≤ η' v) ≡ val≤ (η • η') v
+  val≤-• η η' (ne x vs) = {!!}
+  val≤-• η η' (lam t ρ) rewrite env≤-• η η' ρ = refl
+
 -- Type interpretation
 
 mutual
@@ -97,6 +117,22 @@ mutual
 ⟪ ε ⟫     ε       = ⊤
 ⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ v
 
+-- Monotonicity
+
+mutual
+  V≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) {v : Val Δ a} (〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
+  V≤ {a = ★}     η 〖v〗         = _
+  V≤ {a = a ⇒ b} η {f}〖f〗 η′ {u} 〖u〗 =
+    let v , v⇓ , 〖v〗 = 〖f〗 (η′ • η) 〖u〗
+        v⇓'           = subst (λ f' → apply f' u ⇓ v) (sym (val≤-• η′ η f)) v⇓
+    in  v , v⇓' , 〖v〗
+
+  C≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) {v? : Delay (Val Δ a) ∞} (v⇓ : C⟦ a ⟧ v?) → C⟦ a ⟧ (val≤ η <$> v?)
+  C≤ η (v , v⇓ , 〖v〗) = (val≤ η v) , ({!!} , (V≤ η 〖v〗))
+
+CXT≤ : ∀ {Γ Δ Δ′} (η : Δ′ ≤ Δ) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → ⟪ Γ ⟫ (env≤ η ρ)
+CXT≤ η ε       θ        = _
+CXT≤ η (ρ , v) (θ , v⇓) = CXT≤ η ρ θ , V≤ η v⇓
 
 -- Type soundness
 
@@ -135,16 +171,16 @@ sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
   C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
 
-〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ηid ⟦u⟧
-                                       in  v , sound-app f⇓ u⇓ v⇓ , ⟦v⟧
+〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) =
+  let v , v⇓ , ⟦v⟧ = ⟦f⟧ id ⟦u⟧
+      v⇓'          = subst (λ f' → later (∞apply f' u) ⇓ _) (val≤-id f) v⇓
+  in  v , sound-app f⇓ u⇓ v⇓' , ⟦v⟧
 
-{-
+sound : ∀ {Γ Δ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
+sound (var x)   ρ θ = 〖var〗 x ρ θ
+sound (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {Δ′} η {u} u⇓ → sound t (env≤ η ρ , u) (CXT≤ η ρ θ , u⇓))
+sound (app t u) ρ θ = 〖app〗 (sound t ρ θ) (sound u ρ θ)
 
-norm : ∀ {Γ a} (t : Tm Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
-norm (var x)   ρ θ = 〖var〗 x ρ θ
-norm (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → norm t (ρ , u) (θ , u⇓))
-norm (app t u) ρ θ = 〖app〗 (norm t ρ θ) (norm u ρ θ)
--}
 
 {-
 mutual

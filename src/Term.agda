@@ -57,11 +57,14 @@ data _≤_ : (Γ Δ : Cxt) → Set where
   weak : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ Δ
   lift : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ (Δ , a)
 
-{-
-ηid : ∀ {Γ} → Γ ≤ Γ
-ηid {Γ = ε}     = ε
-ηid {Γ = Γ , a} = lift ηid
--}
+-- Composition
+
+_•_ : ∀ {Γ Δ Δ'} (η : Γ ≤ Δ) (η' : Δ ≤ Δ') → Γ ≤ Δ'
+id     • η'      = η'
+weak η • η'      = weak (η • η')
+lift η • id      = lift η
+lift η • weak η' = weak (η • η')
+lift η • lift η' = lift (η • η')
 
 -- Monotonicity.
 
