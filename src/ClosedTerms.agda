@@ -60,11 +60,6 @@ mutual
   C⟦_⟧_ : (a : Ty) → Delay (Val a) ∞ → Set
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
 
-{-
-  C⟦ ★     ⟧ v = v ⇓
-  C⟦ a ⇒ b ⟧ f = (u : Delay (Val a) ∞) → ⟦ a ⟧ u → ⟦ b ⟧ (apply* f u)
--}
-
 ⟪_⟫_ : (Γ : Cxt) → Env Γ → Set
 ⟪ ε ⟫     ε       = ⊤
 ⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ v

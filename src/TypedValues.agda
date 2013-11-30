@@ -47,8 +47,8 @@ mutual
 var0 : ∀ {Δ a} → Val (Δ , a) a
 var0 = ne zero ε
 
-lift : ∀ {Γ Δ a} → Env Δ Γ → Env (Δ , a) (Γ , a)
-lift ρ = weakEnv ρ , var0
+liftEnv : ∀ {Γ Δ a} → Env Δ Γ → Env (Δ , a) (Γ , a)
+liftEnv ρ = weakEnv ρ , var0
 
 -- Call-by-value evaluation.
 
@@ -77,7 +77,7 @@ mutual
   readback v = later (∞readback v)
 
   ∞readback : ∀ {i Γ a} → Val Γ a → ∞Delay (βNf Γ a) i
-  force (∞readback (lam t ρ)) = lam  <$> (readback =<< 〖 t 〗 (lift ρ))
+  force (∞readback (lam t ρ)) = lam  <$> (readback =<< 〖 t 〗 (liftEnv ρ))
   force (∞readback (ne x rs)) = ne x <$> mapRSpM readback rs
 
 {-

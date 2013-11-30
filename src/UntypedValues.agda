@@ -47,8 +47,8 @@ lookup (suc x) (ρ , v) = lookup x ρ
 var0 : Val
 var0 = ne 0 ε
 
-lift : ∀ {Γ a} → Env Γ → Env (Γ , a)
-lift ρ = ρ , var0
+liftEnv : ∀ {Γ a} → Env Γ → Env (Γ , a)
+liftEnv ρ = ρ , var0
 
 -- Call-by-value evaluation.
 
@@ -86,11 +86,11 @@ mutual
   -- Type-directed readback.
 
   readback : ∀ {i} Γ a → Val → Delay (Nf Γ a) i
-  readback Γ (a ⇒ b) v   = lam <$> (readback (Γ , a) b =<< apply v var0)
+  readback Γ (a ⇒ b) v   = lam <$> (readback (Γ , a) b =<< apply v (var0 (length Γ)))
   readback Γ ★ (lam t ρ) = fail
   readback Γ ★ (ne x vs) = case lookupLev x Γ of λ
     { nothing        -> fail
-    ; (just (a , x)) -> ne x <$> (ensure★ =<< readbackSp Γ a vs)
+    ; (just (a , i)) -> ne i <$> (ensure★ =<< readbackSp Γ a vs)
     }
 
   -- Structural readback of spines.
@@ -137,25 +137,37 @@ mutual
       -----------------------------
       CanReadSpine Γ a (vs , v) c
 
+-- Monotonicity
+
+mutual
+  canRead≤ : ∀ {Γ Δ a v} → (η : Γ ≤ Δ) (d : CanRead Δ a v) → CanRead Γ a v
+  canRead≤ η (canReadFun x d) = canReadFun x (canRead≤ (lift η) d)
+  canRead≤ η (canReadBase x d) = canReadBase {!!} (canReadSpine≤ η d)
+
+  canReadSpine≤ : ∀ {Γ Δ a vs c} → (η : Γ ≤ Δ) (d : CanReadSpine Δ a vs c) → CanReadSpine Γ a vs c
+  canReadSpine≤ η canReadε = canReadε
+  canReadSpine≤ η (canReadApp d e) = canReadApp (canReadSpine≤ η d) (canRead≤ η e)
+
 -- Type interpretation
 
 mutual
-  V⟦_⟧_  : (a : Ty) → Val → Set
-  V⟦ ★     ⟧ v = ⊤
-  V⟦ a ⇒ b ⟧ f = {u : Val} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply f u)
+  V⟦_⟧  : (a : Ty) → (Γ : Cxt) (v : Val) → Set
+  V⟦ ★     ⟧ Γ v = CanRead Γ ★ v
+  V⟦ a ⇒ b ⟧ Γ f = {u : Val} (u⇓ : V⟦ a ⟧ Γ u) → C⟦ b ⟧ Γ (apply f u)
 
-  C⟦_⟧_ : (a : Ty) → Delay Val ∞ → Set
-  C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
+  C⟦_⟧  : (a : Ty) → (Γ : Cxt) (v? : Delay Val ∞) → Set
+  C⟦ a ⟧ Γ v? = ∃ λ v → v? ⇓ v × V⟦ a ⟧ Γ v
 
-{-
 
 ⟪_⟫_ : (Γ : Cxt) → Env Γ → Set
 ⟪ ε ⟫     ε       = ⊤
-⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ v
+⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ Γ v
+
+{-
 
 -- Type soundness
 
-〖var〗 : ∀ {Γ a} (x : Var Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (now (lookup x ρ))
+〖var〗 : ∀ {Γ a} (x : Var Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ Γ (now (lookup x ρ))
 〖var〗 zero    (_ , v) (_ , v⇓) = v , now⇓ , v⇓
 〖var〗 (suc x) (ρ , _) (θ , _ ) = 〖var〗 x ρ θ
 
