@@ -25,13 +25,9 @@ data RSpine (V : Ty → Set) (a : Ty) : (c : Ty) → Set where
 
 -- Variables and terms.
 
-mutual
-  Var : Cxt → Ty → Set
-  Var Γ a = Var' a Γ
-
-  data Var' (a : Ty) : (Γ : Cxt) → Set where
-    zero : ∀ {Γ}                 → Var (Γ , a) a
-    suc  : ∀ {Γ b} (x : Var Γ a) → Var (Γ , b) a
+data Var : (Γ : Cxt) (a : Ty) → Set where
+  zero : ∀ {Γ a}                 → Var (Γ , a) a
+  suc  : ∀ {Γ a b} (x : Var Γ a) → Var (Γ , b) a
 
 data Tm (Γ : Cxt) : (a : Ty) → Set where
   var : ∀ {a}   (x : Var Γ a)                   → Tm Γ a
