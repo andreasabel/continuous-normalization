@@ -49,13 +49,9 @@ f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
 
 -- Termination.  Makes only sense for Delay A ∞.
 
-mutual
-  _⇓_ : {A : Set} (x : Delay A ∞) (a : A) → Set
-  x ⇓ a = Terminates a x
-
-  data Terminates {A : Set} (a : A) : Delay A ∞ → Set where
-    now⇓   : now a ⇓ a
-    later⇓ : ∀ {x : ∞Delay A ∞} → force x ⇓ a → later x ⇓ a
+data _⇓_ {A : Set} : (a? : Delay A ∞) (a : A) → Set where
+  now⇓   : ∀ {a} → now a ⇓ a
+  later⇓ : ∀ {a} {a∞ : ∞Delay A ∞} → force a∞ ⇓ a → later a∞ ⇓ a
 
 _⇓ : {A : Set} (x : Delay A ∞) → Set
 x ⇓ = ∃ λ a → x ⇓ a
