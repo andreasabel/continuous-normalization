@@ -1,5 +1,6 @@
 module Spine where
 
+open import Library
 open import Term
 open import Delay
 
@@ -10,6 +11,25 @@ mapRSp : ∀ {V W : Ty → Set} →
   ∀ {a c} → RSpine V a c → RSpine W a c
 mapRSp f ε        = ε
 mapRSp f (rs , r) = mapRSp f rs , f r
+
+-- Functor law 1.
+
+mapRSp-id : ∀ {V : Ty → Set}{f : ∀ {a} → V a → V a} →
+  (∀ {a}   (r  : V a         ) → f r         ≡ r) →
+   ∀ {a c} (rs : RSpine V a c) → mapRSp f rs ≡ rs
+mapRSp-id f-id ε = refl
+mapRSp-id f-id (rs , r) = cong₂ _,_ (mapRSp-id f-id rs) (f-id r)
+
+-- Functor law 2.
+
+mapRSp-∘ :  ∀ {V W X : Ty → Set}
+  {f : ∀ {a} → W a → X a}
+  {g : ∀ {a} → V a → W a}
+  {h : ∀ {a} → V a → X a} →
+  (∀ {a}   (r  : V a         ) → f (g r)                ≡ h r) →
+   ∀ {a c} (rs : RSpine V a c) → mapRSp f (mapRSp g rs) ≡ mapRSp h rs
+mapRSp-∘ fg ε        = refl
+mapRSp-∘ fg (rs , r) = cong₂ _,_ (mapRSp-∘ fg rs) (fg r)
 
 -- Traversability of RSpine
 

@@ -88,7 +88,13 @@ weakLvl (lvl x i d) = lvl x (suc i) (lookupSuc d)
 lvl≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Lvl Δ a) → Lvl Γ a
 lvl≤ η (lvl x i d) = lvl (lev≤ η x d) (var≤ η i) (lookupLev≤ η d)
 
+lvl≤-id : ∀ {Δ a} (x : Lvl Δ a) → lvl≤ id x ≡ x
+lvl≤-id x = refl
 
+postulate
+  lvl≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (x : Lvl Δ₃ a) →
+    lvl≤ η (lvl≤ η' x) ≡ lvl≤ (η • η') x
+-- lvl≤-• η η' (lvl x i d) = {!!}
 
 
 

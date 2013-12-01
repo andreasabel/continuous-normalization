@@ -82,25 +82,32 @@ mutual
   val≤ η (ne {j = j} x vs)  = ne (lvl≤ η x) (mapRSp (val≤ {i = j} η) vs)
   val≤ η (lam t ρ)          = lam t (env≤ η ρ)
 
-mutual
-  env≤-id : ∀ {Γ Δ} (ρ : Env Δ Γ) → env≤ id ρ ≡ ρ
-  env≤-id ε = refl
-  env≤-id (ρ , v) rewrite env≤-id ρ | val≤-id v = refl
-
-  val≤-id : ∀ {Δ a} (v : Val Δ a) → val≤ id v ≡ v
-  val≤-id (ne x vs) = {!!}
-  val≤-id (lam t ρ) rewrite env≤-id ρ = refl
+-- First functor law.
 
 mutual
-  env≤-• : ∀ {Γ Δ₁ Δ₂ Δ₃} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (ρ : Env Δ₃ Γ) →
+  env≤-id : ∀ {i Γ Δ} (ρ : Env {i} Δ Γ) → env≤ id ρ ≡ ρ
+  env≤-id ε         = refl
+  env≤-id (ρ , v)   = cong₂ _,_ (env≤-id ρ) (val≤-id v)
+
+  val≤-id : ∀ {i Δ a} (v : Val {i} Δ a) → val≤ id v ≡ v
+  val≤-id (ne x vs) = cong₂ ne refl (mapRSp-id val≤-id vs)
+  val≤-id (lam t ρ) = cong (lam t) (env≤-id ρ)
+
+{- SUBSUMED
+  rsp≤-id : ∀ {i Δ a c} (vs : ValSpine {i} Δ a c) → mapRSp (val≤ id) vs ≡ vs
+  rsp≤-id ε         = refl
+  rsp≤-id (vs , v)  = cong₂ _,_ (rsp≤-id vs) (val≤-id v)
+-}
+mutual
+  env≤-• : ∀ {i Γ Δ₁ Δ₂ Δ₃} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (ρ : Env {i} Δ₃ Γ) →
     env≤ η (env≤ η' ρ) ≡ env≤ (η • η') ρ
-  env≤-• η η' ε                                             = refl
-  env≤-• η η' (ρ , v) rewrite env≤-• η η' ρ | val≤-• η η' v = refl
+  env≤-• η η' ε       = refl
+  env≤-• η η' (ρ , v) = cong₂ _,_ (env≤-• η η' ρ) (val≤-• η η' v)
 
-  val≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (v : Val Δ₃ a) →
+  val≤-• : ∀ {i Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (v : Val {i} Δ₃ a) →
     val≤ η (val≤ η' v) ≡ val≤ (η • η') v
-  val≤-• η η' (ne x vs) = {!!}
-  val≤-• η η' (lam t ρ) rewrite env≤-• η η' ρ = refl
+  val≤-• η η' (ne x vs) = cong₂ ne (lvl≤-• η η' x) (mapRSp-∘ (val≤-• η η') vs )
+  val≤-• η η' (lam t ρ) = cong (lam t) (env≤-• η η' ρ)
 
 -- Type interpretation
 
@@ -128,7 +135,7 @@ mutual
     in  v , v⇓' , 〖v〗
 
   C≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) {v? : Delay (Val Δ a) ∞} (v⇓ : C⟦ a ⟧ v?) → C⟦ a ⟧ (val≤ η <$> v?)
-  C≤ η (v , v⇓ , 〖v〗) = (val≤ η v) , ({!!} , (V≤ η 〖v〗))
+  C≤ η (v , v⇓ , 〖v〗) = val≤ η v , map⇓ (val≤ η) v⇓ , V≤ η 〖v〗
 
 CXT≤ : ∀ {Γ Δ Δ′} (η : Δ′ ≤ Δ) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → ⟪ Γ ⟫ (env≤ η ρ)
 CXT≤ η ε       θ        = _

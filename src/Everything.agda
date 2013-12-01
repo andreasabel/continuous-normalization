@@ -9,5 +9,5 @@ import Spine
 import ClosedTerms
 import OpenTerms
 import TypedValues
-import UntypedValues
 import LocallyNamelessValues
+import UntypedValues

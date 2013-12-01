@@ -56,7 +56,12 @@ data _⇓_ {A : Set} : (a? : Delay A ∞) (a : A) → Set where
 _⇓ : {A : Set} (x : Delay A ∞) → Set
 x ⇓ = ∃ λ a → x ⇓ a
 
+-- Monotonicity.
 
+map⇓ : ∀ {A B} {a : A} {a? : Delay A ∞}
+  (f : A → B) (a⇓ : a? ⇓ a) → (f <$> a?) ⇓ f a
+map⇓ f now⇓        = now⇓
+map⇓ f (later⇓ a⇓) = later⇓ (map⇓ f a⇓)
 
 
 

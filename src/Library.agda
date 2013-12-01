@@ -38,7 +38,7 @@ open import Relation.Nullary public
   using (Dec; yes; no)
 
 open import Relation.Binary.PropositionalEquality public
-  using (_≡_; refl; sym; trans; cong; subst; module ≡-Reasoning)
+  using (_≡_; refl; sym; trans; cong; cong₂; subst; module ≡-Reasoning)
 
 open ≡-Reasoning public
 
