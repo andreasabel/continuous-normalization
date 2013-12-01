@@ -53,6 +53,21 @@ lev≤-• (lift η) (weak η') x   d            = lev≤-• η η' x d
 lev≤-• (lift η) (lift η') ._  lookupZero   = refl
 lev≤-• (lift η) (lift η') x  (lookupSuc d) = lev≤-• η η' x d
 
+lookupLev≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃)
+  {i : Var Δ₃ a} {x : Lev} (d : LookupLev x Δ₃ i) →
+
+      lookupLev≤ η (lookupLev≤ η' d) ≅
+
+      lookupLev≤ (η • η') d
+
+lookupLev≤-• id       η'        d = refl
+lookupLev≤-• (weak η) η'        d = {! hcong lookupSuc {!(lookupLev≤-• η η' d)!}!}
+lookupLev≤-• (lift η) id        d = refl
+lookupLev≤-• (lift η) (weak η') d = {!hcong lookupSuc (lookupLev≤-• η η' d)!}
+lookupLev≤-• (lift η) (lift η') lookupZero = refl
+lookupLev≤-• (lift η) (lift η') (lookupSuc d) = {!hcong lookupSuc (lookupLev≤-• η η' d)!}
+
+{-
 -- Need heterogeneous equality for that:
 
 lookupLev≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃)
@@ -71,6 +86,7 @@ lookupLev≤-• (weak η) η' d = {! cong lookupSuc (lookupLev≤-• η η' d)
 lookupLev≤-• (lift η) id d = refl
 lookupLev≤-• (lift η) (weak η') d = {!!}
 lookupLev≤-• (lift η) (lift η') d = {!!}
+-}
 
 -- Valid de Bruijn levels.
 

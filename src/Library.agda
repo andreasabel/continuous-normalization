@@ -40,5 +40,8 @@ open import Relation.Nullary public
 open import Relation.Binary.PropositionalEquality public
   using (_≡_; refl; sym; trans; cong; cong₂; subst; module ≡-Reasoning)
 
-open ≡-Reasoning public
+open import Relation.Binary.HeterogeneousEquality public
+  using (_≅_; refl; module ≅-Reasoning)
+  renaming (sym to hsym; trans to htrans; cong to hcong; cong₂ to hcong₂; subst to hsubst)
+
 
