@@ -33,6 +33,45 @@ lookupLev≤ (weak η)  d            = lookupSuc (lookupLev≤ η d)
 lookupLev≤ (lift η)  lookupZero   = lookupZero
 lookupLev≤ (lift η) (lookupSuc d) = lookupSuc (lookupLev≤ η d)
 
+-- First functor law.
+
+lev≤-id : ∀ {Δ a} {i : Var Δ a} (x : Lev) (d : LookupLev x Δ i) → lev≤ id x d ≡ x
+lev≤-id x d = refl
+
+lookupLev≤-id : ∀ {Γ x a} {i : Var Γ a} (d : LookupLev x Γ i) → lookupLev≤ id d ≡ d
+lookupLev≤-id d = refl
+
+-- Second functor law.
+
+lev≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃)
+  {i : Var Δ₃ a} (x : Lev) (d : LookupLev x Δ₃ i) →
+  lev≤ η (lev≤ η' x d) (lookupLev≤ η' d) ≡ lev≤ (η • η') x d
+lev≤-• id       η'        x   d            = refl
+lev≤-• (weak η) η'        x   d            = lev≤-• η η' x d
+lev≤-• (lift η) id        x   d            = refl
+lev≤-• (lift η) (weak η') x   d            = lev≤-• η η' x d
+lev≤-• (lift η) (lift η') ._  lookupZero   = refl
+lev≤-• (lift η) (lift η') x  (lookupSuc d) = lev≤-• η η' x d
+
+-- Need heterogeneous equality for that:
+
+lookupLev≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃)
+  {i : Var Δ₃ a} {x : Lev} (d : LookupLev x Δ₃ i) →
+
+  _≡_ {A = LookupLev (lev≤ (η • η') x d) Δ₁ (var≤ (η • η') i) }
+    (subst (λ z → LookupLev z Δ₁ (var≤ (η • η') i)) (lev≤-• η η' x d)
+     (subst (λ z → LookupLev (lev≤ η (lev≤ η' x d) (lookupLev≤ η' d)) Δ₁ z) (var≤-• η η' i)
+
+      (lookupLev≤ η (lookupLev≤ η' d))))
+
+      (lookupLev≤ (η • η') d)
+
+lookupLev≤-• id η' d = refl
+lookupLev≤-• (weak η) η' d = {! cong lookupSuc (lookupLev≤-• η η' d)!}
+lookupLev≤-• (lift η) id d = refl
+lookupLev≤-• (lift η) (weak η') d = {!!}
+lookupLev≤-• (lift η) (lift η') d = {!!}
+
 -- Valid de Bruijn levels.
 
 record ValidLev (x : Lev) (Γ : Cxt) : Set where
@@ -88,13 +127,16 @@ weakLvl (lvl x i d) = lvl x (suc i) (lookupSuc d)
 lvl≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Lvl Δ a) → Lvl Γ a
 lvl≤ η (lvl x i d) = lvl (lev≤ η x d) (var≤ η i) (lookupLev≤ η d)
 
+-- First functor law.
+
 lvl≤-id : ∀ {Δ a} (x : Lvl Δ a) → lvl≤ id x ≡ x
 lvl≤-id x = refl
 
-postulate
-  lvl≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (x : Lvl Δ₃ a) →
-    lvl≤ η (lvl≤ η' x) ≡ lvl≤ (η • η') x
--- lvl≤-• η η' (lvl x i d) = {!!}
+-- Second functor law.
+
+lvl≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (x : Lvl Δ₃ a) →
+  lvl≤ η (lvl≤ η' x) ≡ lvl≤ (η • η') x
+lvl≤-• η η' (lvl x i d) = {!cong₃ (lev≤-• η η' x d) (var≤-• η η' i) (lookupLev≤-• η η' d) !}
 
 
 

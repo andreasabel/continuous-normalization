@@ -70,6 +70,22 @@ var≤ (weak η)  x      = suc (var≤ η x)
 var≤ (lift η)  zero   = zero
 var≤ (lift η) (suc x) = suc (var≤ η x)
 
+-- First functor law.
+
+var≤-id : ∀ {Γ a} (x : Var Γ a) → var≤ id x ≡ x
+var≤-id x = refl
+
+-- Second functor law.
+
+var≤-• : ∀ {Γ₁ Γ₂ Γ₃ a} (η : Γ₁ ≤ Γ₂) (η' : Γ₂ ≤ Γ₃) (x : Var Γ₃ a) →
+  var≤ η (var≤ η' x) ≡ var≤ (η • η') x
+var≤-• id       η'        x       = refl
+var≤-• (weak η) η'        x       = cong suc (var≤-• η η' x)
+var≤-• (lift η) id        x       = refl
+var≤-• (lift η) (weak η') x       = cong suc (var≤-• η η' x)
+var≤-• (lift η) (lift η') zero    = refl
+var≤-• (lift η) (lift η') (suc x) = cong suc (var≤-• η η' x)
+
 -- Length.
 
 len : Cxt → ℕ
