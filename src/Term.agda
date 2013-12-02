@@ -40,13 +40,14 @@ data βNf (Γ : Cxt) : Ty → Set where
   lam : ∀ {a b}  (n : βNf (Γ , a) b)                      → βNf Γ (a ⇒ b)
   ne  : ∀ {a b}  (x : Var Γ a) (ns : RSpine (βNf Γ) a b)  → βNf Γ b
 
--- Long normal forms.
+-- η-long β-normal forms.
 
 data Nf (Γ : Cxt) : Ty → Set where
   lam : ∀ {a b}  (n : Nf (Γ , a) b)                      → Nf Γ (a ⇒ b)
   ne  : ∀ {a}    (x : Var Γ a) (ns : RSpine (Nf Γ) a ★)  → Nf Γ ★
 
 -- Additional stuff for contexts.
+-- order preserving embeddings
 
 data _≤_ : (Γ Δ : Cxt) → Set where
   id   : ∀ {Γ} → Γ ≤ Γ
@@ -62,7 +63,7 @@ lift η • id      = lift η
 lift η • weak η' = weak (η • η')
 lift η • lift η' = lift (η • η')
 
--- Monotonicity.
+-- Monotonicity / map for variables
 
 var≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Var Δ a) → Var Γ a
 var≤ id        x      = x

@@ -42,62 +42,61 @@ mutual
   (h : 〖 t 〗 (ρ , u) ⇓ v) → apply (lam t ρ) u ⇓ v
 β-expand h = later⇓ h
 
--- Type interpretation
+-- Type interpretation / strong computability
 
 mutual
+  -- strongly computable value
   V⟦_⟧_ : (a : Ty) → Val a → Set
   V⟦ ★     ⟧ v = ⊤
   V⟦ a ⇒ b ⟧ f = {u : Val a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply f u)
 
+  -- strongly computable delayed value:
+  -- x is strongly computable if there is exists a v such that x
+  -- converges to v and v is strongly computable
   C⟦_⟧_ : (a : Ty) → Delay (Val a) ∞ → Set
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
 
+-- strongly computable environment
 ⟪_⟫_ : (Γ : Cxt) → Env Γ → Set
 ⟪ ε ⟫     ε       = ⊤
 ⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ v
 
--- Type soundness
+-- Type soundness / termination
 
 〖var〗 : ∀ {Γ a} (x : Var Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (now (lookup x ρ))
 〖var〗 zero    (_ , v) (_ , v⇓) = v , now⇓ , v⇓
 〖var〗 (suc x) (ρ , _) (θ , _ ) = 〖var〗 x ρ θ
 
 sound-β : ∀ {Γ a b} {t : Tm (Γ , a) b} {ρ : Env Γ} {u : Val a} →
-
-  C⟦ b ⟧ (〖 t 〗 (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
-
+          C⟦ b ⟧ (〖 t 〗 (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
 sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
 
 
 〖abs〗 : ∀ {Γ a b} (t : Tm (Γ , a) b) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) →
-
-  ({u : Val a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (〖 t 〗 (ρ , u))) →
-  C⟦ a ⇒ b ⟧ (now (lam t ρ))
-
+          ({u : Val a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (〖 t 〗 (ρ , u))) →
+          C⟦ a ⇒ b ⟧ (now (lam t ρ))
 〖abs〗 t ρ θ ih = lam t ρ , now⇓ , λ u⇓ → sound-β (ih u⇓)
 
 sound-app' : ∀ {a b} (f : Val (a ⇒ b)) →
-  {u* : Delay (Val a) _} {u : Val a} (u⇓ : u* ⇓ u) →
-  {v : Val b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
+             {u* : Delay (Val a) _} {u : Val a} (u⇓ : u* ⇓ u) →
+             {v : Val b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
 sound-app' f (later⇓ u⇓) h = later⇓ (sound-app' f u⇓ h)
 sound-app' f  now⇓       h = h
 
 sound-app : ∀ {a b} →
-  {f* : Delay (Val (a ⇒ b)) _} {f : Val (a ⇒ b)} (f⇓ : f* ⇓ f) →
-  {u* : Delay (Val a)       _} {u : Val a}       (u⇓ : u* ⇓ u) →
-  {v : Val b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
+            {f* : Delay (Val (a ⇒ b)) _} {f : Val (a ⇒ b)} (f⇓ : f* ⇓ f) →
+            {u* : Delay (Val a)       _} {u : Val a}       (u⇓ : u* ⇓ u) →
+            {v : Val b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
 sound-app  (later⇓ f⇓) u⇓ h = later⇓ (sound-app f⇓ u⇓ h)
 sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
 〖app〗 : ∀ {a b} {f : Delay (Val (a ⇒ b)) _} {u : Delay (Val a) _} →
-
-  C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
-
+          C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
 〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ⟦u⟧
                                        in  v , sound-app f⇓ u⇓ v⇓ , ⟦v⟧
-
-norm : ∀ {Γ a} (t : Tm Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
-norm (var x)   ρ θ = 〖var〗 x ρ θ
-norm (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → norm t (ρ , u) (θ , u⇓))
-norm (app t u) ρ θ = 〖app〗 (norm t ρ θ) (norm u ρ θ)
+-- termination
+term : ∀ {Γ a} (t : Tm Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
+term (var x)   ρ θ = 〖var〗 x ρ θ
+term (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → term t (ρ , u) (θ , u⇓))
+term (app t u) ρ θ = 〖app〗 (term t ρ θ) (term u ρ θ)
 
