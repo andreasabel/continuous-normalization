@@ -2,12 +2,7 @@
 
 module TypedValues where
 
-open import Level using () renaming (zero to lzero; suc to lsuc)
-open import Size
-
-open import Data.Nat using (ℕ; zero; suc)
-open import Data.Unit using (⊤)
-open import Data.Product using (∃; _×_; _,_) renaming (proj₁ to fst; proj₂ to snd)
+open import Library
 
 open import Term
 open import Delay
@@ -80,70 +75,63 @@ mutual
   force (∞readback (lam t ρ)) = lam  <$> (readback =<< 〖 t 〗 (liftEnv ρ))
   force (∞readback (ne x rs)) = ne x <$> mapRSpM readback rs
 
-{-
-
 -- Type interpretation
 
 mutual
-  V⟦_⟧_  : (a : Ty) → Val Δ a → Set
+  V⟦_⟧_ : ∀{Γ}(a : Ty) → Val Γ a → Set
   V⟦ ★     ⟧ v = ⊤
-  V⟦ a ⇒ b ⟧ f = {u : Val a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply f u)
+  V⟦ a ⇒ b ⟧ f = {u : Val _ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply f u)
 
-  C⟦_⟧_ : (a : Ty) → Delay (Val a) ∞ → Set
+  C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay (Val Γ a) ∞ → Set
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
+
 
 {-
   C⟦ ★     ⟧ v = v ⇓
   C⟦ a ⇒ b ⟧ f = (u : Delay (Val a) ∞) → ⟦ a ⟧ u → ⟦ b ⟧ (apply* f u)
 -}
 
-⟪_⟫_ : (Γ : Cxt) → Env Γ → Set
+⟪_⟫_ : ∀{Δ}(Γ : Cxt) → Env Δ Γ → Set
 ⟪ ε ⟫     ε       = ⊤
 ⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ v
 
+
 -- Type soundness
 
-〖var〗 : ∀ {Γ a} (x : Var Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (now (lookup x ρ))
+〖var〗 : ∀ {Δ Γ a} (x : Var Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (now (lookup x ρ))
 〖var〗 zero    (_ , v) (_ , v⇓) = v , now⇓ , v⇓
 〖var〗 (suc x) (ρ , _) (θ , _ ) = 〖var〗 x ρ θ
 
-sound-β : ∀ {Γ a b} {t : Tm (Γ , a) b} {ρ : Env Γ} {u : Val a} →
-
-  C⟦ b ⟧ (〖 t 〗 (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
-
+sound-β : ∀ {Δ Γ a b} {t : Tm (Γ , a) b} {ρ : Env Δ Γ} {u : Val Δ a} →
+          C⟦ b ⟧ (〖 t 〗 (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
 sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
 
-
-〖abs〗 : ∀ {Γ a b} (t : Tm (Γ , a) b) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) →
-
-  ({u : Val a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (〖 t 〗 (ρ , u))) →
+〖abs〗 : ∀ {Δ Γ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) →
+  ({u : Val Δ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (〖 t 〗 (ρ , u))) →
   C⟦ a ⇒ b ⟧ (now (lam t ρ))
-
 〖abs〗 t ρ θ ih = lam t ρ , now⇓ , λ u⇓ → sound-β (ih u⇓)
 
-sound-app' : ∀ {a b} (f : Val (a ⇒ b)) →
-  {u* : Delay (Val a) _} {u : Val a} (u⇓ : u* ⇓ u) →
-  {v : Val b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
+sound-app' : ∀ {Δ a b} (f : Val Δ (a ⇒ b)) →
+  {u* : Delay (Val Δ a) _} {u : Val Δ a} (u⇓ : u* ⇓ u) →
+  {v : Val Δ b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
 sound-app' f (later⇓ u⇓) h = later⇓ (sound-app' f u⇓ h)
 sound-app' f  now⇓       h = h
 
-sound-app : ∀ {a b} →
-  {f* : Delay (Val (a ⇒ b)) _} {f : Val (a ⇒ b)} (f⇓ : f* ⇓ f) →
-  {u* : Delay (Val a)       _} {u : Val a}       (u⇓ : u* ⇓ u) →
-  {v : Val b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
+sound-app : ∀ {Δ a b} →
+  {f* : Delay (Val Δ (a ⇒ b)) _} {f : Val Δ (a ⇒ b)} (f⇓ : f* ⇓ f) →
+  {u* : Delay (Val Δ a)       _} {u : Val Δ a}       (u⇓ : u* ⇓ u) →
+  {v : Val Δ b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
 sound-app  (later⇓ f⇓) u⇓ h = later⇓ (sound-app f⇓ u⇓ h)
 sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
-〖app〗 : ∀ {a b} {f : Delay (Val (a ⇒ b)) _} {u : Delay (Val a) _} →
-
-  C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
-
+〖app〗 : ∀ {Δ a b} {f : Delay (Val Δ (a ⇒ b)) _} {u : Delay (Val Δ a) _} →
+          C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
 〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ⟦u⟧
                                        in  v , sound-app f⇓ u⇓ v⇓ , ⟦v⟧
 
-norm : ∀ {Γ a} (t : Tm Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
-norm (var x)   ρ θ = 〖var〗 x ρ θ
-norm (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → norm t (ρ , u) (θ , u⇓))
-norm (app t u) ρ θ = 〖app〗 (norm t ρ θ) (norm u ρ θ)
+-- termination of eval
+term : ∀ {Δ Γ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
+term (var x)   ρ θ = 〖var〗 x ρ θ
+term (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → term t (ρ , u) (θ , u⇓))
+term (app t u) ρ θ = 〖app〗 (term t ρ θ) (term u ρ θ)
 
--}
