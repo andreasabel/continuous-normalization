@@ -47,7 +47,7 @@ module _ {i : Size} where
 _=<<2_,_ : ∀ {i A B C} → (A → B → Delay C i) → Delay A i → Delay B i → Delay C i
 f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
 
--- Termination.  Makes only sense for Delay A ∞.
+-- Termination/Convergence.  Makes only sense for Delay A ∞.
 
 data _⇓_ {A : Set} : (a? : Delay A ∞) (a : A) → Set where
   now⇓   : ∀ {a} → now a ⇓ a
