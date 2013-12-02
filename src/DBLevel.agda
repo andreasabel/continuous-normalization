@@ -53,19 +53,29 @@ lev≤-• (lift η) (weak η') x   d            = lev≤-• η η' x d
 lev≤-• (lift η) (lift η') ._  lookupZero   = refl
 lev≤-• (lift η) (lift η') x  (lookupSuc d) = lev≤-• η η' x d
 
+-- too many implicit args needed to use this below
+{-
+hcong₃ : {A : Set}{B : A → Set}{C : ∀ a → B a → Set}{D : ∀ a b → C a b → Set}
+         (f : ∀ a b c → D a b c)
+         {a a' : A} → a ≅ a' → 
+         {b : B a}{b' : B a'} → b ≅ b' → 
+         {c : C a b}{c' : C a' b'} → c ≅ c' → 
+         f a b c ≅ f a' b' c'
+hcong₃ f refl refl refl = refl
+-}
+
+lookupSucLem : ∀ {Γ a b x x'}{i : Var Γ a}{i' : Var Γ a} → x ≡ x' → i ≡ i' → {l : LookupLev x Γ i}{l' : LookupLev x' Γ i'} → l ≅ l' → lookupSuc {b = b} l ≅ lookupSuc {b = b} l'
+lookupSucLem refl refl refl = refl
+
 lookupLev≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃)
   {i : Var Δ₃ a} {x : Lev} (d : LookupLev x Δ₃ i) →
-
-      lookupLev≤ η (lookupLev≤ η' d) ≅
-
-      lookupLev≤ (η • η') d
-
-lookupLev≤-• id       η'        d = refl
-lookupLev≤-• (weak η) η'        d = {! hcong lookupSuc {!(lookupLev≤-• η η' d)!}!}
-lookupLev≤-• (lift η) id        d = refl
-lookupLev≤-• (lift η) (weak η') d = {!hcong lookupSuc (lookupLev≤-• η η' d)!}
-lookupLev≤-• (lift η) (lift η') lookupZero = refl
-lookupLev≤-• (lift η) (lift η') (lookupSuc d) = {!hcong lookupSuc (lookupLev≤-• η η' d)!}
+  lookupLev≤ η (lookupLev≤ η' d) ≅ lookupLev≤ (η • η') d
+lookupLev≤-• id       η'        d             = refl
+lookupLev≤-• (weak η) η'        d             = lookupSucLem (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
+lookupLev≤-• (lift η) id        d             = refl
+lookupLev≤-• (lift η) (weak η') d             = lookupSucLem (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
+lookupLev≤-• (lift η) (lift η') lookupZero    = refl
+lookupLev≤-• (lift η) (lift η') (lookupSuc d) = lookupSucLem (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
 
 {-
 -- Need heterogeneous equality for that:
@@ -152,7 +162,7 @@ lvl≤-id x = refl
 
 lvl≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (x : Lvl Δ₃ a) →
   lvl≤ η (lvl≤ η' x) ≡ lvl≤ (η • η') x
-lvl≤-• η η' (lvl x i d) = {!cong₃ (lev≤-• η η' x d) (var≤-• η η' i) (lookupLev≤-• η η' d) !}
+lvl≤-• η η' (lvl x i d) = {!!}
 
 
 
