@@ -44,4 +44,10 @@ open import Relation.Binary.HeterogeneousEquality public
   using (_≅_; refl; ≡-to-≅; module ≅-Reasoning)
   renaming (sym to hsym; trans to htrans; cong to hcong; cong₂ to hcong₂; subst to hsubst)
 
-
+hcong₃ : {A : Set}{B : A → Set}{C : ∀ a → B a → Set}{D : ∀ a b → C a b → Set}
+         (f : ∀ a b c → D a b c)
+         {a a' : A} → a ≅ a' → 
+         {b : B a}{b' : B a'} → b ≅ b' → 
+         {c : C a b}{c' : C a' b'} → c ≅ c' → 
+         f a b c ≅ f a' b' c'
+hcong₃ f refl refl refl = refl

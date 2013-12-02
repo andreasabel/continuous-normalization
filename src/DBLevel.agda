@@ -53,17 +53,6 @@ lev≤-• (lift η) (weak η') x   d            = lev≤-• η η' x d
 lev≤-• (lift η) (lift η') ._  lookupZero   = refl
 lev≤-• (lift η) (lift η') x  (lookupSuc d) = lev≤-• η η' x d
 
--- too many implicit args needed to use this below
-{-
-hcong₃ : {A : Set}{B : A → Set}{C : ∀ a → B a → Set}{D : ∀ a b → C a b → Set}
-         (f : ∀ a b c → D a b c)
-         {a a' : A} → a ≅ a' → 
-         {b : B a}{b' : B a'} → b ≅ b' → 
-         {c : C a b}{c' : C a' b'} → c ≅ c' → 
-         f a b c ≅ f a' b' c'
-hcong₃ f refl refl refl = refl
--}
-
 lookupSucLem : ∀ {Γ a b x x'}{i : Var Γ a}{i' : Var Γ a} → x ≡ x' → i ≡ i' → {l : LookupLev x Γ i}{l' : LookupLev x' Γ i'} → l ≅ l' → lookupSuc {b = b} l ≅ lookupSuc {b = b} l'
 lookupSucLem refl refl refl = refl
 
@@ -161,13 +150,8 @@ lvl≤-id x = refl
 -- Second functor law.
 
 lvl≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (x : Lvl Δ₃ a) →
-  lvl≤ η (lvl≤ η' x) ≡ lvl≤ (η • η') x
-lvl≤-• η η' (lvl x i d) = {!!}
-
-
-
-
-
+  lvl≤ η (lvl≤ η' x) ≅ lvl≤ (η • η') x
+lvl≤-• η η' (lvl x i d) = hcong₃ lvl (≡-to-≅ (lev≤-• η η' x d)) (≡-to-≅(var≤-• η η' i)) (lookupLev≤-• η η' d)
 
 
 {-
