@@ -134,6 +134,13 @@ record Lvl (Γ : Cxt) (a : Ty) : Set where
     corr : LookupLev lev Γ ind
 open Lvl public
 
+-- Heterogeneous congruence for lvl.
+lvlCong : ∀ {x x' : ℕ} → x ≡ x' →
+  ∀ {Γ a } {i i' : Var Γ a} → i ≡ i' →
+  ∀ {d : LookupLev x Γ i} {d' : LookupLev x' Γ i'} → d ≅ d' →
+  lvl x i d ≅ lvl x' i' d'
+lvlCong refl refl refl = refl
+
 -- Newest binding
 
 newLvl : ∀ Γ {a} → Lvl (Γ , a) a
@@ -155,8 +162,9 @@ lvl≤-id x = refl
 -- Second functor law.
 
 lvl≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (x : Lvl Δ₃ a) →
-  lvl≤ η (lvl≤ η' x) ≅ lvl≤ (η • η') x
-lvl≤-• η η' (lvl x i d) = hcong₃ lvl (≡-to-≅ (lev≤-• η η' x d)) (≡-to-≅(var≤-• η η' i)) (lookupLev≤-• η η' d)
+  lvl≤ η (lvl≤ η' x) ≡ lvl≤ (η • η') x
+lvl≤-• η η' (lvl x i d) = ≅-to-≡ (lvlCong (lev≤-• η η' x d) (var≤-• η η' i) (lookupLev≤-• η η' d))
+-- lvl≤-• η η' (lvl x i d) = ≅-to-≡ (hcong₃ lvl (≡-to-≅ (lev≤-• η η' x d)) (≡-to-≅ (var≤-• η η' i)) (lookupLev≤-• η η' d))
 
 
 {-
