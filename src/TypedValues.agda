@@ -99,7 +99,7 @@ mutual
 
 mutual
   V⟦_⟧_ : ∀{Γ}(a : Ty) → Val Γ a → Set
-  V⟦ ★     ⟧ v = β-readback v ⇓
+  V⟦ ★     ⟧ v = readback v ⇓
   V⟦ a ⇒ b ⟧ f = {u : Val _ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply f u)
 
   C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay (Val Γ a) ∞ → Set
@@ -157,9 +157,25 @@ term (var x)   ρ θ = 〖var〗 x ρ θ
 term (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → term t (ρ , u) (θ , u⇓))
 term (app t u) ρ θ = 〖app〗 (term t ρ θ) (term u ρ θ)
 
-{-
+
 --termination of readback
+{-
 β-rterm : ∀{Γ a}(v : Val Γ a) →   V⟦ a ⟧ v → β-readback v ⇓
 β-rterm {a = ★}     v q = q
 β-rterm {Γ}{a = a ⇒ b} v q = {!β-readback v !}
 -}
+
+
+-- I'm expecting these two lemmas which are like reify and reflect here
+mutual
+  rterm : ∀{Γ a}(v : Val Γ a) →   V⟦ a ⟧ v → readback v ⇓
+  rterm {a = ★}     v q = q
+  rterm {Γ}{a = a ⇒ b} v q = {!lam (fst y)!} , {! {- uses snd y -}!}
+    where
+    x = q {{!Val.ne (zero {Γ}{a}) ε!}} {! {- call to rterm'!} 
+        -- need Kripke V⟦⟧ here
+    y = rterm (fst x) (snd (snd x))
+    
+  rterm' : ∀{Γ a}(x : Var Γ a) (vs : RSpine (Val Γ) a ★) → 
+           readback (ne x vs) ⇓ → V⟦ ★ ⟧ (ne x vs)
+  rterm' x vs = {!!}
