@@ -16,8 +16,9 @@ mutual
     _,_ : ∀ {Γ a} (ρ : Env {i = i} Δ Γ) (v : Val {i = i} Δ a) → Env Δ (Γ , a)
 
   data Val {i : Size} (Δ : Cxt) : (a : Ty) → Set where
-    ne  : ∀ {j : Size< i}{a c} (x : Var Δ a) (vs : ValSpine {i = j} Δ a c) → Val Δ c
-    lam : ∀ {Γ a b}            (t : Tm (Γ , a) b) (ρ : Env {i = i} Δ Γ)    → Val Δ (a ⇒ b)
+    ne  : ∀{j : Size< i}{a c}(x : Var Δ a)(vs : ValSpine {i = j} Δ a c) → 
+          Val Δ c
+    lam : ∀{Γ a b}(t : Tm (Γ , a) b)(ρ : Env {i = i} Δ Γ) → Val Δ (a ⇒ b)
 
   ValSpine : {i : Size} (Δ : Cxt) (a c : Ty) → Set
   ValSpine {i = i} Δ = RSpine (Val {i = i} Δ)
@@ -27,7 +28,6 @@ lookup zero    (ρ , v) = v
 lookup (suc x) (ρ , v) = lookup x ρ
 
 -- Weakening.
-
 mutual
   weakEnv : ∀ {i Γ Δ a} → Env {i = i} Δ Γ → Env {i = i} (Δ , a) Γ
   weakEnv ε        = ε
@@ -45,41 +45,61 @@ var0 = ne zero ε
 liftEnv : ∀ {Γ Δ a} → Env Δ Γ → Env (Δ , a) (Γ , a)
 liftEnv ρ = weakEnv ρ , var0
 
+-- identity Env
+ide : ∀ Γ → Env Γ Γ
+ide ε = ε
+ide (Γ , a) = liftEnv (ide Γ)
+
 -- Call-by-value evaluation.
 
 mutual
-  〖_〗  : ∀ {i} {Γ : Cxt} {a : Ty} → Tm Γ a → {Δ : Cxt} → Env Δ Γ → Delay (Val Δ a) i
+  〖_〗  : ∀{i}{Γ : Cxt} {a : Ty} → Tm Γ a → {Δ : Cxt} → 
+           Env Δ Γ → Delay (Val Δ a) i
   〖 var x   〗 ρ = now (lookup x ρ)
   〖 abs t   〗 ρ = now (lam t ρ)
   〖 app t u 〗 ρ = apply* (〖 t 〗 ρ) (〖 u 〗 ρ)
 
-  apply* : ∀ {i Δ a b} → Delay (Val Δ (a ⇒ b)) i → Delay (Val Δ a) i → Delay (Val Δ b) i
+  apply* : ∀{i Δ a b} → Delay (Val Δ (a ⇒ b)) i → Delay (Val Δ a) i → 
+           Delay (Val Δ b) i
   apply* f⊥ v⊥ = apply =<<2 f⊥ , v⊥
 
-  apply : ∀ {i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → Delay (Val Δ b) i
+  apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → Delay (Val Δ b) i
   apply f v = later (∞apply f v)
 
-  ∞apply : ∀ {i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → ∞Delay (Val Δ b) i
+  ∞apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → ∞Delay (Val Δ b) i
   force (∞apply (lam t ρ) v) = 〖 t 〗 (ρ , v)
   force (∞apply (ne x sp) v) = now (ne x (sp , v))
 
-β-expand : ∀ {Γ Δ a b} {t : Tm (Γ , a) b} {ρ : Env Δ Γ} {u : Val Δ a} {v : Val Δ b} →
-  (h : 〖 t 〗 (ρ , u) ⇓ v) → apply (lam t ρ) u ⇓ v
+β-expand : ∀{Γ Δ a b}{t : Tm (Γ , a) b}{ρ : Env Δ Γ}{u : Val Δ a}{v : Val Δ b}
+           (h : 〖 t 〗 (ρ , u) ⇓ v) → apply (lam t ρ) u ⇓ v
 β-expand h = later⇓ h
 
+
+-- beta quote
 mutual
-  readback : ∀ {i Γ a} → Val Γ a → Delay (βNf Γ a) i
+  β-readback : ∀{i Γ a} → Val Γ a → Delay (βNf Γ a) i
+  β-readback v = later (∞β-readback v)
+
+  ∞β-readback : ∀{i Γ a} → Val Γ a → ∞Delay (βNf Γ a) i
+  force (∞β-readback (lam t ρ)) = lam  <$> (β-readback =<< 〖 t 〗 (liftEnv ρ))
+  force (∞β-readback (ne x rs)) = ne x <$> mapRSpM β-readback rs
+
+
+-- beta-eta quote
+mutual
+  readback : ∀{i Γ a} → Val Γ a → Delay (Nf Γ a) i
   readback v = later (∞readback v)
 
-  ∞readback : ∀ {i Γ a} → Val Γ a → ∞Delay (βNf Γ a) i
-  force (∞readback (lam t ρ)) = lam  <$> (readback =<< 〖 t 〗 (liftEnv ρ))
-  force (∞readback (ne x rs)) = ne x <$> mapRSpM readback rs
+  ∞readback : ∀{i Γ a} → Val Γ a → ∞Delay (Nf Γ a) i
+  force (∞readback {a = ★}    (ne x vs)) = ne x <$> mapRSpM readback vs
+  force (∞readback {a = a ⇒ b} v) = 
+    lam <$> (readback {a = b} =<< apply (weakVal v) (ne zero ε))
 
 -- Type interpretation
 
 mutual
   V⟦_⟧_ : ∀{Γ}(a : Ty) → Val Γ a → Set
-  V⟦ ★     ⟧ v = ⊤
+  V⟦ ★     ⟧ v = β-readback v ⇓
   V⟦ a ⇒ b ⟧ f = {u : Val _ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply f u)
 
   C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay (Val Γ a) ∞ → Set
@@ -98,7 +118,8 @@ mutual
 
 -- Type soundness
 
-〖var〗 : ∀ {Δ Γ a} (x : Var Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (now (lookup x ρ))
+〖var〗 : ∀{Δ Γ a}(x : Var Γ a)(ρ : Env Δ Γ)(θ : ⟪ Γ ⟫ ρ) → 
+            C⟦ a ⟧ (now (lookup x ρ))
 〖var〗 zero    (_ , v) (_ , v⇓) = v , now⇓ , v⇓
 〖var〗 (suc x) (ρ , _) (θ , _ ) = 〖var〗 x ρ θ
 
@@ -126,8 +147,9 @@ sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
 〖app〗 : ∀ {Δ a b} {f : Delay (Val Δ (a ⇒ b)) _} {u : Delay (Val Δ a) _} →
           C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
-〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ⟦u⟧
-                                       in  v , sound-app f⇓ u⇓ v⇓ , ⟦v⟧
+〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = 
+  let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ⟦u⟧
+  in  v , sound-app f⇓ u⇓ v⇓ , ⟦v⟧
 
 -- termination of eval
 term : ∀ {Δ Γ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
@@ -135,3 +157,9 @@ term (var x)   ρ θ = 〖var〗 x ρ θ
 term (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → term t (ρ , u) (θ , u⇓))
 term (app t u) ρ θ = 〖app〗 (term t ρ θ) (term u ρ θ)
 
+{-
+--termination of readback
+β-rterm : ∀{Γ a}(v : Val Γ a) →   V⟦ a ⟧ v → β-readback v ⇓
+β-rterm {a = ★}     v q = q
+β-rterm {Γ}{a = a ⇒ b} v q = {!β-readback v !}
+-}

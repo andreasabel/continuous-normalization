@@ -100,3 +100,5 @@ term (var x)   ρ θ = 〖var〗 x ρ θ
 term (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → term t (ρ , u) (θ , u⇓))
 term (app t u) ρ θ = 〖app〗 (term t ρ θ) (term u ρ θ)
 
+norm : ∀{Γ a} (t : Tm Γ a) (ρ : Env Γ) (θ : ⟪ Γ ⟫ ρ) → Val a
+norm t ρ Θ = fst (term t ρ Θ)
