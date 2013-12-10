@@ -17,6 +17,14 @@ data LookupLev {a : Ty} : (x : Lev) (Γ : Cxt) (i : Var Γ a) → Set where
     LookupLev x Γ i →
     LookupLev x (Γ , b) (suc i)
 
+-- Heterogeneous congruence rule for lookupSuc.
+
+lookupSucCong : ∀ {Γ a b x x'} → x ≡ x' →
+  ∀ {i i' : Var Γ a} → i ≡ i' →
+  ∀ {l : LookupLev x Γ i} {l' : LookupLev x' Γ i'} → l ≅ l' →
+  lookupSuc {b = b} l ≅ lookupSuc {b = b} l'
+lookupSucCong refl refl refl = refl
+
 -- Monotonicity.
 
 lev≤ : ∀ {Γ Δ a} {i : Var Δ a} (η : Γ ≤ Δ) (x : Lev) (d : LookupLev x Δ i) → Lev
@@ -53,18 +61,15 @@ lev≤-• (lift η) (weak η') x   d            = lev≤-• η η' x d
 lev≤-• (lift η) (lift η') ._  lookupZero   = refl
 lev≤-• (lift η) (lift η') x  (lookupSuc d) = lev≤-• η η' x d
 
-lookupSucLem : ∀ {Γ a b x x'}{i : Var Γ a}{i' : Var Γ a} → x ≡ x' → i ≡ i' → {l : LookupLev x Γ i}{l' : LookupLev x' Γ i'} → l ≅ l' → lookupSuc {b = b} l ≅ lookupSuc {b = b} l'
-lookupSucLem refl refl refl = refl
-
 lookupLev≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃)
   {i : Var Δ₃ a} {x : Lev} (d : LookupLev x Δ₃ i) →
   lookupLev≤ η (lookupLev≤ η' d) ≅ lookupLev≤ (η • η') d
 lookupLev≤-• id       η'        d             = refl
-lookupLev≤-• (weak η) η'        d             = lookupSucLem (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
+lookupLev≤-• (weak η) η'        d             = lookupSucCong (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
 lookupLev≤-• (lift η) id        d             = refl
-lookupLev≤-• (lift η) (weak η') d             = lookupSucLem (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
+lookupLev≤-• (lift η) (weak η') d             = lookupSucCong (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
 lookupLev≤-• (lift η) (lift η') lookupZero    = refl
-lookupLev≤-• (lift η) (lift η') (lookupSuc d) = lookupSucLem (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
+lookupLev≤-• (lift η) (lift η') (lookupSuc d) = lookupSucCong (lev≤-• η η' _ d) (var≤-• η η' _) (lookupLev≤-• η η' d)
 
 {-
 -- Need heterogeneous equality for that:
@@ -129,6 +134,13 @@ record Lvl (Γ : Cxt) (a : Ty) : Set where
     corr : LookupLev lev Γ ind
 open Lvl public
 
+-- Heterogeneous congruence for lvl.
+lvlCong : ∀ {x x' : ℕ} → x ≡ x' →
+  ∀ {Γ a } {i i' : Var Γ a} → i ≡ i' →
+  ∀ {d : LookupLev x Γ i} {d' : LookupLev x' Γ i'} → d ≅ d' →
+  lvl x i d ≅ lvl x' i' d'
+lvlCong refl refl refl = refl
+
 -- Newest binding
 
 newLvl : ∀ Γ {a} → Lvl (Γ , a) a
@@ -150,8 +162,9 @@ lvl≤-id x = refl
 -- Second functor law.
 
 lvl≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (x : Lvl Δ₃ a) →
-  lvl≤ η (lvl≤ η' x) ≅ lvl≤ (η • η') x
-lvl≤-• η η' (lvl x i d) = hcong₃ lvl (≡-to-≅ (lev≤-• η η' x d)) (≡-to-≅(var≤-• η η' i)) (lookupLev≤-• η η' d)
+  lvl≤ η (lvl≤ η' x) ≡ lvl≤ (η • η') x
+lvl≤-• η η' (lvl x i d) = ≅-to-≡ (lvlCong (lev≤-• η η' x d) (var≤-• η η' i) (lookupLev≤-• η η' d))
+-- lvl≤-• η η' (lvl x i d) = ≅-to-≡ (hcong₃ lvl (≡-to-≅ (lev≤-• η η' x d)) (≡-to-≅ (var≤-• η η' i)) (lookupLev≤-• η η' d))
 
 
 {-

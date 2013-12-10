@@ -130,7 +130,7 @@ mutual
 
 mutual
   canRead≤ : ∀ {Γ Δ a v} → (η : Γ ≤ Δ) (d : CanRead Δ a v) → CanRead Γ a v
-  canRead≤ η (canReadFun x d) = canReadFun {!lev≤ !} (canRead≤ (lift η) d)
+  canRead≤ η (canReadFun x d) = canReadFun {!lev≤ η x!} (canRead≤ (lift η) d)
   canRead≤ η (canReadBase x d) = canReadBase {!!} (canReadSpine≤ η d)
 
   canReadSpine≤ : ∀ {Γ Δ a vs c} → (η : Γ ≤ Δ) (d : CanReadSpine Δ a vs c) → CanReadSpine Γ a vs c

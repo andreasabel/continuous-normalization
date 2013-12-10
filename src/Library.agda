@@ -46,8 +46,11 @@ open import Relation.Binary.HeterogeneousEquality public
 
 hcong₃ : {A : Set}{B : A → Set}{C : ∀ a → B a → Set}{D : ∀ a b → C a b → Set}
          (f : ∀ a b c → D a b c)
-         {a a' : A} → a ≅ a' → 
-         {b : B a}{b' : B a'} → b ≅ b' → 
-         {c : C a b}{c' : C a' b'} → c ≅ c' → 
+         {a a' : A} → a ≅ a' →
+         {b : B a}{b' : B a'} → b ≅ b' →
+         {c : C a b}{c' : C a' b'} → c ≅ c' →
          f a b c ≅ f a' b' c'
 hcong₃ f refl refl refl = refl
+
+≅-to-≡ : ∀ {a} {A : Set a} {x y : A} → x ≅ y → x ≡ y
+≅-to-≡ refl = refl
