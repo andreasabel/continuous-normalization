@@ -42,9 +42,13 @@ data βNf (Γ : Cxt) : Ty → Set where
 
 -- η-long β-normal forms.
 
-data Nf (Γ : Cxt) : Ty → Set where
-  lam : ∀ {a b}  (n : Nf (Γ , a) b)                      → Nf Γ (a ⇒ b)
-  ne  : ∀ {a}    (x : Var Γ a) (ns : RSpine (Nf Γ) a ★)  → Nf Γ ★
+mutual
+  data Nf (Γ : Cxt) : Ty → Set where
+    lam : ∀ {a b}  (n : Nf (Γ , a) b)                  → Nf Γ (a ⇒ b)
+    ne  : ∀ {a}    (x : Var Γ a) (ns : NfSpine Γ a ★)  → Nf Γ ★
+
+  NfSpine : (Γ : Cxt) (a c : Ty) → Set
+  NfSpine Γ a c = RSpine (Nf Γ) a c
 
 -- Additional stuff for contexts.
 -- order preserving embeddings

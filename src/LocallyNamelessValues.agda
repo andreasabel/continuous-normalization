@@ -63,13 +63,25 @@ mutual
   force (∞apply (lam t ρ) v) = 〖 t 〗 (ρ , v)
   force (∞apply (ne x sp) v) = now (ne x (sp , v))
 
+-- beta quote
 mutual
-  readback : ∀ {i Γ a} → Val Γ a → Delay (βNf Γ a) i
+  β-readback : ∀{i Γ a} → Val Γ a → Delay (βNf Γ a) i
+  β-readback v = later (∞β-readback v)
+
+  ∞β-readback : ∀{i Γ a} → Val Γ a → ∞Delay (βNf Γ a) i
+  force (∞β-readback (lam t ρ)) = lam  <$> (β-readback =<< 〖 t 〗 (liftEnv ρ))
+  force (∞β-readback (ne x rs)) = ne (ind x) <$> mapRSpM β-readback rs
+
+
+-- beta-eta quote
+mutual
+  readback : ∀{i Γ a} → Val Γ a → Delay (Nf Γ a) i
   readback v = later (∞readback v)
 
-  ∞readback : ∀ {i Γ a} → Val Γ a → ∞Delay (βNf Γ a) i
-  force (∞readback (lam t ρ)) = lam  <$> (readback =<< 〖 t 〗 (liftEnv ρ))
-  force (∞readback (ne x rs)) = ne (ind x) <$> mapRSpM readback rs
+  ∞readback : ∀{i Γ a} → Val Γ a → ∞Delay (Nf Γ a) i
+  force (∞readback {a = ★}    (ne x vs)) = ne (ind x) <$> mapRSpM readback vs
+  force (∞readback {a = a ⇒ b} v       ) =
+    lam <$> (readback {a = b} =<< apply (weakVal v) (ne (newLvl _) ε))
 
 -- Monotonicity
 
@@ -79,8 +91,11 @@ mutual
   env≤ η (ρ , v)  = env≤ η ρ , val≤ η v
 
   val≤ : ∀ {i Δ Δ′ c} (η : Δ′ ≤ Δ) (v : Val {i = i} Δ c) → Val {i = i} Δ′ c
-  val≤ η (ne {j = j} x vs)  = ne (lvl≤ η x) (mapRSp (val≤ {i = j} η) vs)
+  val≤ η (ne {j = j} x vs)  = ne (lvl≤ η x) (valSpine≤ η vs)
   val≤ η (lam t ρ)          = lam t (env≤ η ρ)
+
+  valSpine≤ : ∀ {i Δ Δ′ a c} (η : Δ′ ≤ Δ) (v : ValSpine {i = i} Δ a c) → ValSpine {i = i} Δ′ a c
+  valSpine≤ η vs = mapRSp (val≤ η) vs
 
 -- First functor law.
 
@@ -98,6 +113,9 @@ mutual
   rsp≤-id ε         = refl
   rsp≤-id (vs , v)  = cong₂ _,_ (rsp≤-id vs) (val≤-id v)
 -}
+
+-- Second functor law.
+
 mutual
   env≤-• : ∀ {i Γ Δ₁ Δ₂ Δ₃} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (ρ : Env {i} Δ₃ Γ) →
     env≤ η (env≤ η' ρ) ≡ env≤ (η • η') ρ
@@ -109,13 +127,53 @@ mutual
   val≤-• η η' (ne x vs) = cong₂ ne (lvl≤-• η η' x) (mapRSp-∘ (val≤-• η η') vs )
   val≤-• η η' (lam t ρ) = cong (lam t) (env≤-• η η' ρ)
 
+-- Things we can read back.
+
+Read : ∀ {Γ Δ a} (v : Val Δ a) (η : Γ ≤ Δ) (n : Nf Γ a) → Set
+Read v η n = readback (val≤ η v) ⇓ n
+
+CanRead : ∀ {Δ a} (v : Val Δ a) → Set
+CanRead {Δ} v = {Γ : Cxt} (η : Γ ≤ Δ) → readback (val≤ η v) ⇓
+
+canRead≤ : ∀ {Γ Δ a} (η : Γ ≤ Δ) (v : Val Δ a) → CanRead v → CanRead (val≤ η v)
+canRead≤ η v c η' rewrite val≤-• η' η v = c (η' • η)
+
+data ReadSpine {Γ Δ a} (η : Γ ≤ Δ) :
+    ∀ {c} (vs : ValSpine Δ a c) {Γ}) (ns : NfSpine Γ a c)  → Set
+  where
+    ε   : ReadSpine ε η ε
+    _,_ : ∀ {b c} {vs : ValSpine Δ a (b ⇒ c)} {v : Val Δ b} →
+            ReadSpine vs η ns → Read v η n → ReadSpine (vs , v) (ns , n)
+
+data CanReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) → Set where
+  ε   : CanReadSpine ε
+  _,_ : ∀ {b c} {vs : ValSpine Δ a (b ⇒ c)} {v : Val Δ b} →
+        CanReadSpine vs → CanRead v → CanReadSpine (vs , v)
+
+canRead★ : ∀ {Δ a} (x : Lvl Δ a) {vs : ValSpine Δ a ★} →
+  CanReadSpine vs → CanRead (ne x vs)
+canRead★ (lvl x i x~i) cvs η = (ne i' {!!}) , later⇓ (map⇓ (ne i') {!cvs !})
+  where
+    i' = var≤ η i
+
+canReadApp : ∀ {Δ a b c} {x : Lvl Δ a} {vs : ValSpine Δ a (b ⇒ c)} {v : Val Δ b} →
+  CanRead (ne x vs) → CanRead v → CanRead (ne x (vs , v))
+canReadApp {x = x} cr crv η with cr η | crv η
+canReadApp {Δ} {a} {b} {c} {lvl x i corr} cr crv η | lam t , ⇓t | u , ⇓u = {!!}
+
+{-let
+    n , r⇓ = cr η
+
+  in {!n!} , {!!}
+-}
+
 -- Type interpretation
 
 mutual
   V⟦_⟧ : (a : Ty) {Δ : Cxt} (v : Val Δ a) → Set
-  V⟦ ★     ⟧ {Δ = Δ} v = ⊤
+  V⟦ ★     ⟧ {Δ = Δ} v = CanRead v
   V⟦ a ⇒ b ⟧ {Δ = Δ} f = {Γ : Cxt} (η : Γ ≤ Δ) →
-    {u : Val Γ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ η f) u)
+    {u : Val Γ a} (〖u〗 : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ η f) u)
 
   C⟦_⟧ : (a : Ty) {Δ : Cxt} (v? : Delay (Val Δ a) ∞) → Set
   C⟦ a ⟧ v? = ∃ λ v → v? ⇓ v × V⟦ a ⟧ v
@@ -127,19 +185,19 @@ mutual
 -- Monotonicity
 
 mutual
-  V≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) {v : Val Δ a} (〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
-  V≤ {a = ★}     η 〖v〗         = _
-  V≤ {a = a ⇒ b} η {f}〖f〗 η′ {u} 〖u〗 =
+  V≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) (v : Val Δ a) (〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
+  V≤ {a = ★}     η v 〖v〗             = canRead≤ η v 〖v〗
+  V≤ {a = a ⇒ b} η f 〖f〗 η′ {u} 〖u〗 =
     let v , v⇓ , 〖v〗 = 〖f〗 (η′ • η) 〖u〗
         v⇓'           = subst (λ f' → apply f' u ⇓ v) (sym (val≤-• η′ η f)) v⇓
     in  v , v⇓' , 〖v〗
 
   C≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) {v? : Delay (Val Δ a) ∞} (v⇓ : C⟦ a ⟧ v?) → C⟦ a ⟧ (val≤ η <$> v?)
-  C≤ η (v , v⇓ , 〖v〗) = val≤ η v , map⇓ (val≤ η) v⇓ , V≤ η 〖v〗
+  C≤ η (v , v⇓ , 〖v〗) = val≤ η v , map⇓ (val≤ η) v⇓ , V≤ η v 〖v〗
 
 CXT≤ : ∀ {Γ Δ Δ′} (η : Δ′ ≤ Δ) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → ⟪ Γ ⟫ (env≤ η ρ)
 CXT≤ η ε       θ        = _
-CXT≤ η (ρ , v) (θ , v⇓) = CXT≤ η ρ θ , V≤ η v⇓
+CXT≤ η (ρ , v) (θ , 〖v〗) = CXT≤ η ρ θ , V≤ η v 〖v〗
 
 -- Type soundness
 
@@ -188,7 +246,22 @@ sound (var x)   ρ θ = 〖var〗 x ρ θ
 sound (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {Δ′} η {u} u⇓ → sound t (env≤ η ρ , u) (CXT≤ η ρ θ , u⇓))
 sound (app t u) ρ θ = 〖app〗 (sound t ρ θ) (sound u ρ θ)
 
+-- Reflection and reification
 
+mutual
+  reflect : ∀{Γ a} c (x : Lvl Γ a) (vs : ValSpine Γ a c) →
+           CanReadSpine vs → V⟦ c ⟧ (ne x vs)
+  reflect ★ x vs cr = {!!}
+  reflect (a ⇒ b) x vs cr η {u} 〖u〗 = ne x' vs' , later⇓ now⇓ , reflect b x' vs' ({!!} , {!!})
+    where
+      x'  = lvl≤ η x
+      vs' = valSpine≤ η vs , u
+      ru : readback u ⇓
+      ru = reify a u 〖u〗
+      -- rvs' :
+
+  reify   : ∀{Γ} a (v : Val Γ a) (〖v〗 : V⟦ a ⟧ v) → readback v ⇓
+  reify = {!!}
 {-
 mutual
   data Nf (Γ : Cxt) : Ty → Set where
