@@ -96,3 +96,8 @@ var≤-• (lift η) (lift η') (suc x) = cong suc (var≤-• η η' x)
 len : Cxt → ℕ
 len ε       = 0
 len (Γ , _) = 1 + len Γ
+
+-- Monotonicity for normal forms.
+
+postulate
+  nf≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Nf Δ a) → Nf Γ a
