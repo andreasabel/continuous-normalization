@@ -79,9 +79,12 @@ mutual
   readback v = later (∞readback v)
 
   ∞readback : ∀{i Γ a} → Val Γ a → ∞Delay (Nf Γ a) i
-  force (∞readback {a = ★}    (ne x vs)) = ne (ind x) <$> mapRSpM readback vs
+  force (∞readback {a = ★}    (ne x vs)) = ne (ind x) <$> readbackSpine vs
   force (∞readback {a = a ⇒ b} v       ) =
     lam <$> (readback {a = b} =<< apply (weakVal v) (ne (newLvl _) ε))
+
+  readbackSpine : ∀{i Γ a c} → ValSpine Γ a c → Delay (NfSpine Γ a c) i
+  readbackSpine = mapRSpM readback
 
 -- Monotonicity
 
@@ -134,7 +137,7 @@ Read {Δ} v n = {Γ : Cxt} (η : Γ ≤ Δ) → readback (val≤ η v) ⇓ (nf�
 
 read≤ : ∀ {Γ Δ a} (η : Γ ≤ Δ) {v : Val Δ a} {n : Nf Δ a} →
   Read v n → Read (val≤ η v) (nf≤ η n)
-read≤ η r η' rewrite val≤-• η' η | nf≤-• η' η = {!r (η' • η)!}
+read≤ η {v} {n} r η' rewrite val≤-• η' η v | nf≤-• η' η n = r (η' • η)
 
 data ReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) (ns : NfSpine Δ a c) → Set where
     ε   : ReadSpine ε ε
@@ -144,11 +147,26 @@ data ReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) (ns : NfSpine Δ a c) →
                   {n  : Nf       Δ b} →
           ReadSpine vs ns → Read v n → ReadSpine (vs , v) (ns , n)
 
+readSpine : ∀ {Δ a c} {vs : ValSpine Δ a c} {ns : NfSpine  Δ a c} →
+  ReadSpine vs ns → readbackSpine vs ⇓ ns
+readSpine ε = now⇓
+readSpine (rs , r) = {!!}
+
 readSpine≤ : ∀ {Δ a c} {vs : ValSpine Δ a c} {ns : NfSpine  Δ a c}
   {Γ : Cxt} (η : Γ ≤ Δ) →
   ReadSpine vs ns → ReadSpine (valSpine≤ η vs) (nfSpine≤ η ns)
 readSpine≤ η ε        = ε
-readSpine≤ η (rs , r) = readSpine≤ η rs , {!val≤ η v!}
+readSpine≤ η (rs , r) = readSpine≤ η rs , read≤ η r
+
+read★ : ∀ {Δ a} (x : Lvl Δ a) {vs : ValSpine Δ a ★} {ns : NfSpine Δ a ★} →
+  ReadSpine vs ns → Read (ne x vs) (ne (ind x) ns)
+read★ x {vs} {ns} rs η = later⇓ (map⇓ (ne i') (readSpine rs'))
+  where
+    i'  = var≤       η (ind x)
+    vs' = valSpine≤  η vs
+    ns' = nfSpine≤   η ns
+    rs' = readSpine≤ η rs
+
 
 CanRead : ∀ {Δ a} (v : Val Δ a) → Set
 CanRead {Δ} v = {Γ : Cxt} (η : Γ ≤ Δ) → readback (val≤ η v) ⇓
@@ -161,6 +179,8 @@ data CanReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) → Set where
   _,_ : ∀ {b c} {vs : ValSpine Δ a (b ⇒ c)} {v : Val Δ b} →
         CanReadSpine vs → CanRead v → CanReadSpine (vs , v)
 
+{-
+
 canRead★ : ∀ {Δ a} (x : Lvl Δ a) {vs : ValSpine Δ a ★} →
   CanReadSpine vs → CanRead (ne x vs)
 canRead★ (lvl x i x~i) cvs η = (ne i' {!!}) , later⇓ (map⇓ (ne i') {!cvs !})
@@ -171,6 +191,7 @@ canReadApp : ∀ {Δ a b c} {x : Lvl Δ a} {vs : ValSpine Δ a (b ⇒ c)} {v : V
   CanRead (ne x vs) → CanRead v → CanRead (ne x (vs , v))
 canReadApp {x = x} cr crv η with cr η | crv η
 canReadApp {Δ} {a} {b} {c} {lvl x i corr} cr crv η | lam t , ⇓t | u , ⇓u = {!!}
+-}
 
 {-let
     n , r⇓ = cr η

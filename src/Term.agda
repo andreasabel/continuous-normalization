@@ -57,6 +57,21 @@ lift η • id      = lift η
 lift η • weak η' = weak (η • η')
 lift η • lift η' = lift (η • η')
 
+η•id :  ∀ {Γ Δ} (η : Γ ≤ Δ) → η • id ≡ η
+η•id id       = refl
+η•id (weak η) = cong weak (η•id η)
+η•id (lift η) = refl
+
+lift'-• : ∀ {Γ Δ Δ' a} (η : Γ ≤ Δ) (η' : Δ ≤ Δ') →
+  lift' {a = a} η • lift' η' ≡ lift' (η • η')
+lift'-• id       η'        = refl
+lift'-• (weak η) id        = cong (lift ∘ weak) (sym (η•id η))
+lift'-• (weak η) (weak η') = refl
+lift'-• (weak η) (lift η') = refl
+lift'-• (lift η) id        = refl
+lift'-• (lift η) (weak η') = refl
+lift'-• (lift η) (lift η') = refl
+
 -- Monotonicity / map for variables
 
 var≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Var Δ a) → Var Γ a
@@ -105,3 +120,21 @@ mutual
   nfSpine≤-id : ∀ {i Γ a c} (ns : NfSpine {i} Γ a c) → nfSpine≤ id ns ≡ ns
   nfSpine≤-id ε        = refl
   nfSpine≤-id (ns , n) = cong₂ _,_ (nfSpine≤-id ns) (nf≤-id n)
+
+mutual
+  nf≤-• : ∀ {i Γ₁ Γ₂ Γ₃ a} (η : Γ₁ ≤ Γ₂) (η' : Γ₂ ≤ Γ₃) (n : Nf {i} Γ₃ a) →
+
+    nf≤ η (nf≤ η' n) ≡ nf≤ (η • η') n
+
+  nf≤-• η η' (lam n)   = cong lam
+    (subst (λ z → nf≤ (lift' η) (nf≤ (lift' η') n) ≡ nf≤ z n)
+           (lift'-• η η')
+           (nf≤-• (lift' η) (lift' η') n))
+  nf≤-• η η' (ne x ns) = cong₂ ne (var≤-• η η' x) (nfSpine≤-• η η' ns)
+
+  nfSpine≤-• : ∀ {i Γ₁ Γ₂ Γ₃ a c} (η : Γ₁ ≤ Γ₂) (η' : Γ₂ ≤ Γ₃) (ns : NfSpine {i} Γ₃ a c) →
+
+    nfSpine≤ η (nfSpine≤ η' ns) ≡ nfSpine≤ (η • η') ns
+
+  nfSpine≤-• η η' ε        = refl
+  nfSpine≤-• η η' (ns , n) = cong₂ _,_ (nfSpine≤-• η η' ns) (nf≤-• η η' n)
