@@ -4,6 +4,7 @@
 module ClosedTerms where
 
 open import Library
+open import Spine
 open import Term
 open import Delay
 

@@ -42,6 +42,12 @@ data _≤_ : (Γ Δ : Cxt) → Set where
   weak : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ Δ
   lift : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ (Δ , a)
 
+-- Smart lift, preserves id.
+
+lift' : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ (Δ , a)
+lift' id = id
+lift' η  = lift η
+
 -- Composition
 
 _•_ : ∀ {Γ Δ Δ'} (η : Γ ≤ Δ) (η' : Δ ≤ Δ') → Γ ≤ Δ'
@@ -85,7 +91,7 @@ len (Γ , _) = 1 + len Γ
 
 mutual
   nf≤ : ∀ {i Γ Δ a} (η : Γ ≤ Δ) (t : Nf {i} Δ a) → Nf {i} Γ a
-  nf≤ η (lam t)   = lam (nf≤ (lift η) t)
+  nf≤ η (lam t)   = lam (nf≤ (lift' η) t)
   nf≤ η (ne x ts) = ne (var≤ η x) (nfSpine≤ η ts)
 
   nfSpine≤ : ∀ {i Γ Δ a c} (η : Γ ≤ Δ) (ts : NfSpine {i} Δ a c) → NfSpine {i} Γ a c
@@ -93,5 +99,9 @@ mutual
 
 mutual
   nf≤-id : ∀ {i Γ a} (n : Nf {i} Γ a) → nf≤ id n ≡ n
-  nf≤-id (lam n) = cong lam {!nf≤-id n!}
-  nf≤-id (ne x ns) = cong₂ ne (var≤-id x) {!nfspine≤-id ns!}
+  nf≤-id (lam n)   = cong lam (nf≤-id n)
+  nf≤-id (ne x ns) = cong₂ ne (var≤-id x) (nfSpine≤-id ns)
+
+  nfSpine≤-id : ∀ {i Γ a c} (ns : NfSpine {i} Γ a c) → nfSpine≤ id ns ≡ ns
+  nfSpine≤-id ε        = refl
+  nfSpine≤-id (ns , n) = cong₂ _,_ (nfSpine≤-id ns) (nf≤-id n)
