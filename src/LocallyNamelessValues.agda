@@ -39,11 +39,11 @@ mutual
 
 -- Lifting.
 
-var0 : ∀ Δ {a} → Val (Δ , a) a
-var0 Δ = ne (newLvl Δ) ε
+var0 : ∀ {Δ a} → Val (Δ , a) a
+var0 = ne (newLvl _) ε
 
 liftEnv : ∀ {Γ Δ a} → Env Δ Γ → Env (Δ , a) (Γ , a)
-liftEnv {Δ = Δ} ρ = weakEnv ρ , var0 Δ
+liftEnv {Δ = Δ} ρ = weakEnv ρ , var0
 
 -- Call-by-value evaluation.
 
@@ -74,16 +74,17 @@ mutual
 
 
 -- beta-eta quote
+
 mutual
-  readback : ∀{i Γ a} → Val Γ a → Delay (Nf Γ a) i
-  readback v = later (∞readback v)
 
-  ∞readback : ∀{i Γ a} → Val Γ a → ∞Delay (Nf Γ a) i
-  force (∞readback {a = ★}    (ne x vs)) = ne (ind x) <$> readbackSpine vs
-  force (∞readback {a = a ⇒ b} v       ) =
-    lam <$> (readback {a = b} =<< apply (weakVal v) (ne (newLvl _) ε))
+  readback : ∀{i j Γ a} → Val {j} Γ a → Delay (Nf Γ a) i
+  readback {a = ★} (ne x vs) = ne (ind x) <$> readbackSpine vs
+  readback {a = b ⇒ c}     v = later (∞readback v)
 
-  readbackSpine : ∀{i Γ a c} → ValSpine Γ a c → Delay (NfSpine Γ a c) i
+  ∞readback : ∀{i Γ b c} → Val Γ (b ⇒ c) → ∞Delay (Nf Γ (b ⇒ c)) i
+  force (∞readback v) = lam <$> (readback =<< apply (weakVal v) var0)
+
+  readbackSpine : ∀{i j Γ a c} → ValSpine {j} Γ a c → Delay (NfSpine Γ a c) i
   readbackSpine = mapRSpM readback
 
 -- Monotonicity
@@ -93,11 +94,11 @@ mutual
   env≤ η ε        = ε
   env≤ η (ρ , v)  = env≤ η ρ , val≤ η v
 
-  val≤ : ∀ {i Δ Δ′ c} (η : Δ′ ≤ Δ) (v : Val {i = i} Δ c) → Val {i = i} Δ′ c
+  val≤ : ∀ {i Γ Δ a} (η : Γ ≤ Δ) (v : Val {i = i} Δ a) → Val {i = i} Γ a
   val≤ η (ne {j = j} x vs)  = ne (lvl≤ η x) (valSpine≤ η vs)
   val≤ η (lam t ρ)          = lam t (env≤ η ρ)
 
-  valSpine≤ : ∀ {i Δ Δ′ a c} (η : Δ′ ≤ Δ) (v : ValSpine {i = i} Δ a c) → ValSpine {i = i} Δ′ a c
+  valSpine≤ : ∀ {i Γ Δ a c} (η : Γ ≤ Δ) (vs : ValSpine {i = i} Δ a c) → ValSpine {i = i} Γ a c
   valSpine≤ η vs = mapRSp (val≤ η) vs
 
 -- First functor law.
@@ -108,13 +109,14 @@ mutual
   env≤-id (ρ , v)   = cong₂ _,_ (env≤-id ρ) (val≤-id v)
 
   val≤-id : ∀ {i Δ a} (v : Val {i} Δ a) → val≤ id v ≡ v
-  val≤-id (ne x vs) = cong₂ ne refl (mapRSp-id val≤-id vs)
+  val≤-id (ne x vs) = cong₂ ne refl (valSpine≤-id vs)
   val≤-id (lam t ρ) = cong (lam t) (env≤-id ρ)
 
-{- SUBSUMED
-  rsp≤-id : ∀ {i Δ a c} (vs : ValSpine {i} Δ a c) → mapRSp (val≤ id) vs ≡ vs
-  rsp≤-id ε         = refl
-  rsp≤-id (vs , v)  = cong₂ _,_ (rsp≤-id vs) (val≤-id v)
+  valSpine≤-id : ∀ {i Δ a c} (vs : ValSpine {i} Δ a c) → valSpine≤ id vs ≡ vs
+  valSpine≤-id = mapRSp-id val≤-id
+{-
+  valSpine≤-id ε         = refl
+  valSpine≤-id (vs , v)  = cong₂ _,_ (valSpine≤-id vs) (val≤-id v)
 -}
 
 -- Second functor law.
@@ -127,8 +129,12 @@ mutual
 
   val≤-• : ∀ {i Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (v : Val {i} Δ₃ a) →
     val≤ η (val≤ η' v) ≡ val≤ (η • η') v
-  val≤-• η η' (ne x vs) = cong₂ ne (lvl≤-• η η' x) (mapRSp-∘ (val≤-• η η') vs )
+  val≤-• η η' (ne x vs) = cong₂ ne (lvl≤-• η η' x) (valSpine≤-• η η' vs)
   val≤-• η η' (lam t ρ) = cong (lam t) (env≤-• η η' ρ)
+
+  valSpine≤-• : ∀ {i Δ₁ Δ₂ Δ₃ a c} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (vs : ValSpine {i} Δ₃ a c) →
+    valSpine≤ η (valSpine≤ η' vs) ≡ valSpine≤ (η • η') vs
+  valSpine≤-• η η' = mapRSp-∘ (val≤-• η η')
 
 -- Things we can read back.
 
@@ -149,18 +155,20 @@ data ReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) (ns : NfSpine Δ a c) →
 
 readSpine : ∀ {Δ a c} {vs : ValSpine Δ a c} {ns : NfSpine  Δ a c} →
   ReadSpine vs ns → readbackSpine vs ⇓ ns
-readSpine ε = now⇓
+readSpine ε        = now⇓
 readSpine (rs , r) = {!!}
 
 readSpine≤ : ∀ {Δ a c} {vs : ValSpine Δ a c} {ns : NfSpine  Δ a c}
   {Γ : Cxt} (η : Γ ≤ Δ) →
+
   ReadSpine vs ns → ReadSpine (valSpine≤ η vs) (nfSpine≤ η ns)
+
 readSpine≤ η ε        = ε
 readSpine≤ η (rs , r) = readSpine≤ η rs , read≤ η r
 
 read★ : ∀ {Δ a} (x : Lvl Δ a) {vs : ValSpine Δ a ★} {ns : NfSpine Δ a ★} →
   ReadSpine vs ns → Read (ne x vs) (ne (ind x) ns)
-read★ x {vs} {ns} rs η = later⇓ (map⇓ (ne i') (readSpine rs'))
+read★ x {vs} {ns} rs η = map⇓ (ne i') (readSpine rs')
   where
     i'  = var≤       η (ind x)
     vs' = valSpine≤  η vs
@@ -294,6 +302,7 @@ mutual
 
   reify   : ∀{Γ} a (v : Val Γ a) (〖v〗 : V⟦ a ⟧ v) → readback v ⇓
   reify = {!!}
+
 {-
 mutual
   data Nf (Γ : Cxt) : Ty → Set where
