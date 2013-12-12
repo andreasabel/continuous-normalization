@@ -1,27 +1,11 @@
+{-# OPTIONS --sized-types #-}
+
 -- Syntax: Types, terms and contexts.
 
 module Term where
 
 open import Library
-
-infixr 6 _⇒_
-infixl 1 _,_
-
--- Types and contexts.
-
-data Ty : Set where
-  ★   : Ty
-  _⇒_ : (a b : Ty) → Ty
-
-data Cxt : Set where
-  ε   : Cxt
-  _,_ : (Γ : Cxt) (a : Ty) → Cxt
-
--- Generic reversed Spines (last application available first).
-
-data RSpine (V : Ty → Set) (a : Ty) : (c : Ty) → Set where
-  ε   : RSpine V a a
-  _,_ : ∀ {b c} → RSpine V a (b ⇒ c) → V b → RSpine V a c
+open import Spine
 
 -- Variables and terms.
 
@@ -36,19 +20,19 @@ data Tm (Γ : Cxt) : (a : Ty) → Set where
 
 -- β-normal forms.
 
-data βNf (Γ : Cxt) : Ty → Set where
-  lam : ∀ {a b}  (n : βNf (Γ , a) b)                      → βNf Γ (a ⇒ b)
-  ne  : ∀ {a b}  (x : Var Γ a) (ns : RSpine (βNf Γ) a b)  → βNf Γ b
+data βNf {i : Size} (Γ : Cxt) : Ty → Set where
+  lam : ∀ {j : Size< i} {a b} (n : βNf {j} (Γ , a) b)                      → βNf Γ (a ⇒ b)
+  ne  : ∀ {j : Size< i} {a b} (x : Var Γ a) (ns : RSpine (βNf {j} Γ) a b)  → βNf Γ b
 
 -- η-long β-normal forms.
 
 mutual
-  data Nf (Γ : Cxt) : Ty → Set where
-    lam : ∀ {a b}  (n : Nf (Γ , a) b)                  → Nf Γ (a ⇒ b)
-    ne  : ∀ {a}    (x : Var Γ a) (ns : NfSpine Γ a ★)  → Nf Γ ★
+  data Nf {i : Size} (Γ : Cxt) : Ty → Set where
+    lam : ∀ {j : Size< i} {a b} (n : Nf {j} (Γ , a) b)                  → Nf Γ (a ⇒ b)
+    ne  : ∀ {j : Size< i} {a}   (x : Var Γ a) (ns : NfSpine {j} Γ a ★)  → Nf Γ ★
 
-  NfSpine : (Γ : Cxt) (a c : Ty) → Set
-  NfSpine Γ a c = RSpine (Nf Γ) a c
+  NfSpine : {i : Size} (Γ : Cxt) (a c : Ty) → Set
+  NfSpine {i} Γ a c = RSpine (Nf {i} Γ) a c
 
 -- Additional stuff for contexts.
 -- order preserving embeddings
@@ -97,7 +81,17 @@ len : Cxt → ℕ
 len ε       = 0
 len (Γ , _) = 1 + len Γ
 
--- Monotonicity for normal forms.
+-- Monotonicity for long normal forms.
 
-postulate
-  nf≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Nf Δ a) → Nf Γ a
+mutual
+  nf≤ : ∀ {i Γ Δ a} (η : Γ ≤ Δ) (t : Nf {i} Δ a) → Nf {i} Γ a
+  nf≤ η (lam t)   = lam (nf≤ (lift η) t)
+  nf≤ η (ne x ts) = ne (var≤ η x) (nfSpine≤ η ts)
+
+  nfSpine≤ : ∀ {i Γ Δ a c} (η : Γ ≤ Δ) (ts : NfSpine {i} Δ a c) → NfSpine {i} Γ a c
+  nfSpine≤ η ts = mapRSp (nf≤ η) ts
+
+mutual
+  nf≤-id : ∀ {i Γ a} (n : Nf {i} Γ a) → nf≤ id n ≡ n
+  nf≤-id (lam n) = cong lam {!nf≤-id n!}
+  nf≤-id (ne x ns) = cong₂ ne (var≤-id x) {!nfspine≤-id ns!}

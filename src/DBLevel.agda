@@ -1,6 +1,7 @@
 module DBLevel where
 
 open import Library
+open import Spine
 open import Term
 
 -- De Bruijn Level

@@ -1,8 +1,26 @@
 module Spine where
 
 open import Library
-open import Term
 open import Delay
+
+infixr 6 _⇒_
+infixl 1 _,_
+
+-- Types and contexts.
+
+data Ty : Set where
+  ★   : Ty
+  _⇒_ : (a b : Ty) → Ty
+
+data Cxt : Set where
+  ε   : Cxt
+  _,_ : (Γ : Cxt) (a : Ty) → Cxt
+
+-- Generic reversed Spines (last application available first).
+
+data RSpine (V : Ty → Set) (a : Ty) : (c : Ty) → Set where
+  ε   : RSpine V a a
+  _,_ : ∀ {b c} → RSpine V a (b ⇒ c) → V b → RSpine V a c
 
 -- Functoriality for RSpine
 

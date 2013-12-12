@@ -130,13 +130,11 @@ mutual
 -- Things we can read back.
 
 Read : ∀ {Δ a} (v : Val Δ a) (n : Nf Δ a) → Set
-Read {Δ} v n = {Γ : Cxt} (η : Γ ≤ Δ) → readback (val≤ η v) ⇓ (nf≤ η n)  -- TODO: define nf≤
+Read {Δ} v n = {Γ : Cxt} (η : Γ ≤ Δ) → readback (val≤ η v) ⇓ (nf≤ η n)
 
-CanRead : ∀ {Δ a} (v : Val Δ a) → Set
-CanRead {Δ} v = {Γ : Cxt} (η : Γ ≤ Δ) → readback (val≤ η v) ⇓
-
-canRead≤ : ∀ {Γ Δ a} (η : Γ ≤ Δ) (v : Val Δ a) → CanRead v → CanRead (val≤ η v)
-canRead≤ η v c η' rewrite val≤-• η' η v = c (η' • η)
+read≤ : ∀ {Γ Δ a} (η : Γ ≤ Δ) {v : Val Δ a} {n : Nf Δ a} →
+  Read v n → Read (val≤ η v) (nf≤ η n)
+read≤ η r η' rewrite val≤-• η' η | nf≤-• η' η = {!r (η' • η)!}
 
 data ReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) (ns : NfSpine Δ a c) → Set where
     ε   : ReadSpine ε ε
@@ -145,6 +143,18 @@ data ReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) (ns : NfSpine Δ a c) →
                   {v  : Val      Δ b}
                   {n  : Nf       Δ b} →
           ReadSpine vs ns → Read v n → ReadSpine (vs , v) (ns , n)
+
+readSpine≤ : ∀ {Δ a c} {vs : ValSpine Δ a c} {ns : NfSpine  Δ a c}
+  {Γ : Cxt} (η : Γ ≤ Δ) →
+  ReadSpine vs ns → ReadSpine (valSpine≤ η vs) (nfSpine≤ η ns)
+readSpine≤ η ε        = ε
+readSpine≤ η (rs , r) = readSpine≤ η rs , {!val≤ η v!}
+
+CanRead : ∀ {Δ a} (v : Val Δ a) → Set
+CanRead {Δ} v = {Γ : Cxt} (η : Γ ≤ Δ) → readback (val≤ η v) ⇓
+
+canRead≤ : ∀ {Γ Δ a} (η : Γ ≤ Δ) (v : Val Δ a) → CanRead v → CanRead (val≤ η v)
+canRead≤ η v c η' rewrite val≤-• η' η v = c (η' • η)
 
 data CanReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) → Set where
   ε   : CanReadSpine ε
