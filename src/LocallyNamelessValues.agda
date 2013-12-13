@@ -341,6 +341,13 @@ mutual
 --      η' = lift' η
       have : readback (val≤ (lift' η) v) ⇓ n'
       have = r (lift' η)
+
+      v⇓' : (val≤ (lift' η) <$> later (∞apply (val≤ (weak id) f) var0)) ⇓ val≤ (lift' η) v
+      v⇓' = map⇓ (val≤ (lift' η)) v⇓
+
+      lem : apply (val≤ (weak η) f) var0 ⇓ val≤ (lift' η) v
+      lem = {!map⇓ (val≤ (lift' η)) v⇓!}
+
       goal₃ : (readback =<< apply (val≤ (weak η) f) var0) ⇓ n'
       goal₃ =  {!r (lift' η)!}
 
