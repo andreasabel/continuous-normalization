@@ -167,6 +167,8 @@ lvl≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ �
 lvl≤-• η η' (lvl x i d) = ≅-to-≡ (lvlCong (lev≤-• η η' x d) (var≤-• η η' i) (lookupLev≤-• η η' d))
 -- lvl≤-• η η' (lvl x i d) = ≅-to-≡ (hcong₃ lvl (≡-to-≅ (lev≤-• η η' x d)) (≡-to-≅ (var≤-• η η' i)) (lookupLev≤-• η η' d))
 
+weakLvlLem : ∀ {Δ a c} (x : Lvl Δ c) → weakLvl x ≡ lvl≤ (weak {a = a} id) x
+weakLvlLem (lvl x i x~i) = refl
 
 {-
 -- Implementation of level lookup.

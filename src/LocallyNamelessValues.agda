@@ -34,8 +34,11 @@ mutual
   weakEnv (ρ , v)  = weakEnv ρ , weakVal v
 
   weakVal : ∀ {i Δ a c} → Val {i = i} Δ c → Val {i = i} (Δ , a) c
-  weakVal (ne {j = j} x vs)  = ne (weakLvl x) (mapRSp (weakVal {i = j}) vs)
+  weakVal (ne {j = j} x vs)  = ne (weakLvl x) (weakValSpine {i = j} vs)
   weakVal (lam t ρ)          = lam t (weakEnv ρ)
+
+  weakValSpine : ∀ {i Δ a b c} → ValSpine {i = i} Δ b c → ValSpine {i = i} (Δ , a) b c
+  weakValSpine = mapRSp weakVal
 
 -- Lifting.
 
@@ -136,6 +139,21 @@ mutual
     valSpine≤ η (valSpine≤ η' vs) ≡ valSpine≤ (η • η') vs
   valSpine≤-• η η' = mapRSp-∘ (val≤-• η η')
 
+-- weakVal and weakEnv are special cases
+
+mutual
+  weakEnvLem : ∀ {i Γ Δ a} (ρ : Env {i = i} Δ Γ) → weakEnv ρ ≡ env≤ (weak {a = a} id) ρ
+  weakEnvLem ε       = refl
+  weakEnvLem (ρ , v) = cong₂ _,_ (weakEnvLem ρ) (weakValLem v)
+
+  weakValLem : ∀ {i Δ a c} (v : Val {i = i} Δ c) → weakVal v ≡ val≤ (weak {a = a} id) v
+  weakValLem (ne x vs) = cong₂ ne (weakLvlLem x) (weakValSpineLem vs)
+  weakValLem (lam t ρ) = cong (lam t) (weakEnvLem ρ)
+
+  weakValSpineLem : ∀ {i Δ a b c} (vs : ValSpine {i = i} Δ b c) → weakValSpine vs ≡ valSpine≤ (weak {a = a} id) vs
+  weakValSpineLem ε = refl
+  weakValSpineLem (vs , v) = cong₂ _,_ (weakValSpineLem vs) (weakValLem v)
+
 -- Things we can read back.
 
 Read : ∀ {Δ a} (v : Val Δ a) (n : Nf Δ a) → Set
@@ -177,10 +195,14 @@ read★ x {vs} {ns} rs η = map⇓ (ne i') (readSpine rs')
 
 
 CanRead : ∀ {Δ a} (v : Val Δ a) → Set
-CanRead {Δ} v = {Γ : Cxt} (η : Γ ≤ Δ) → readback (val≤ η v) ⇓
+CanRead v = ∃ λ n → Read v n
 
-canRead≤ : ∀ {Γ Δ a} (η : Γ ≤ Δ) (v : Val Δ a) → CanRead v → CanRead (val≤ η v)
-canRead≤ η v c η' rewrite val≤-• η' η v = c (η' • η)
+canRead≤ : ∀ {Γ Δ a} (η : Γ ≤ Δ) {v : Val Δ a} (c : CanRead v) → CanRead (val≤ η v)
+canRead≤ η (n , r) = nf≤ η n , read≤ η r
+
+canRead★ : ∀ {Δ a} (x : Lvl Δ a) {vs : ValSpine Δ a ★} {ns : NfSpine Δ a ★} →
+  ReadSpine vs ns → CanRead (ne x vs)
+canRead★ x {vs} {ns} rs = ne (ind x) ns , read★ x rs
 
 data CanReadSpine {Δ a} : ∀ {c} (vs : ValSpine Δ a c) → Set where
   ε   : CanReadSpine ε
@@ -226,7 +248,7 @@ mutual
 
 mutual
   V≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) (v : Val Δ a) (〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
-  V≤ {a = ★}     η v 〖v〗             = canRead≤ η v 〖v〗
+  V≤ {a = ★}     η v 〖v〗             = canRead≤ η {v} 〖v〗
   V≤ {a = a ⇒ b} η f 〖f〗 η′ {u} 〖u〗 =
     let v , v⇓ , 〖v〗 = 〖f〗 (η′ • η) 〖u〗
         v⇓'           = subst (λ f' → apply f' u ⇓ v) (sym (val≤-• η′ η f)) v⇓
@@ -289,34 +311,45 @@ sound (app t u) ρ θ = 〖app〗 (sound t ρ θ) (sound u ρ θ)
 -- Reflection and reification
 
 mutual
-  reflect : ∀{Γ a} c (x : Lvl Γ a) (vs : ValSpine Γ a c) →
-           CanReadSpine vs → V⟦ c ⟧ (ne x vs)
-  reflect ★ x vs cr = {!!}
-  reflect (a ⇒ b) x vs cr η {u} 〖u〗 = ne x' vs' , later⇓ now⇓ , reflect b x' vs' ({!!} , {!!})
-    where
-      x'  = lvl≤ η x
-      vs' = valSpine≤ η vs , u
-      ru : readback u ⇓
-      ru = reify a u 〖u〗
-      -- rvs' :
+  reflect : ∀{Γ a} c (x : Lvl Γ a) {vs : ValSpine Γ a c} {ns : NfSpine Γ a c} →
+           ReadSpine vs ns → V⟦ c ⟧ (ne x vs)
+  reflect ★ x rs = canRead★ x rs
+  reflect (a ⇒ b) x {vs} rs η {u} 〖u〗 = let
+       x'  = lvl≤ η x
+       vs' = valSpine≤ η vs , u
+       rs' = readSpine≤ η rs
+       n , r = reify a u 〖u〗
+    in ne x' vs' , later⇓ now⇓ , reflect b x' (rs' , r)
 
-  reify   : ∀{Γ} a (v : Val Γ a) (〖v〗 : V⟦ a ⟧ v) → readback v ⇓
-  reify = {!!}
+  reflect0 : ∀{Γ a} (x : Lvl Γ a) → V⟦ a ⟧ (ne x ε)
+  reflect0 {a = a} x = reflect a x ε
 
-{-
-mutual
-  data Nf (Γ : Cxt) : Ty → Set where
-    lam : ∀{σ τ} → Nf (Γ , σ) τ → Nf Γ (σ ⇒ τ)
-    ne  : Ne Γ ★  → Nf Γ ★
+  reify : ∀{Γ} a (v : Val Γ a) (〖v〗 : V⟦ a ⟧ v) → CanRead v
+  reify ★       v 〖v〗 = 〖v〗
+  reify {Γ} (b ⇒ c) f 〖f〗 =
+    let
+      〖u〗  = reflect0 (newLvl Γ)
+      v , v⇓ , 〖v〗 = 〖f〗 (weak id) {var0} 〖u〗
+      n , r = reify c v 〖v〗
+    in lam n , λ {Δ} η → let
+      f' = val≤ η f
+      n' = nf≤ (lift' η) n
+--      η' = lift' η
+      have : readback (val≤ (lift' η) v) ⇓ n'
+      have = r (lift' η)
+      goal₃ : (readback =<< apply (val≤ (weak η) f) var0) ⇓ n'
+      goal₃ =  {!r (lift' η)!}
 
-  data Ne (Γ : Cxt) : Ty → Set where
-    var : ∀{σ} → Var Γ σ → Ne Γ σ
-    app : ∀{σ τ} → Ne Γ (σ ⇒ τ) → Nf Γ σ → Ne Γ τ
+      goal₂ : (readback =<< apply (val≤ (weak id) f') var0) ⇓ n'
+      goal₂ =  subst (λ z → (readback =<< apply z var0) ⇓ n')
+                    (sym (val≤-• (weak id) η f))
+                    goal₃
 
-mutual
-  reify : ∀{Γ} σ → Val Γ σ → Nf Γ σ
-  reify = ?
+      goal₁ : (readback =<< apply (weakVal f') var0) ⇓ n'
+      goal₁ = subst (λ z → (readback =<< apply z var0) ⇓ n')
+                    (sym (weakValLem f'))
+                    goal₂
+      goal : force (∞readback f') ⇓ nf≤ η (lam n)
+      goal =  map⇓ lam goal₁
+    in later⇓ goal
 
-  reflect : ∀ {Γ} σ → Ne Γ σ → Val Γ σ
-  reflect = ?
--}
