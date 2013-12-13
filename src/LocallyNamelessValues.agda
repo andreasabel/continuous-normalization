@@ -237,8 +237,12 @@ mutual
   V⟦ a ⇒ b ⟧ {Δ = Δ} f = {Γ : Cxt} (η : Γ ≤ Δ) →
     {u : Val Γ a} (〖u〗 : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ η f) u)
 
-  C⟦_⟧ : (a : Ty) {Δ : Cxt} (v? : Delay (Val Δ a) ∞) → Set
-  C⟦ a ⟧ v? = ∃ λ v → v? ⇓ v × V⟦ a ⟧ v
+  record C⟦_⟧ (a : Ty) {Δ : Cxt} (v? : Delay (Val Δ a) ∞) : Set where
+    constructor computation
+    field
+      v  : Val Δ a
+      v⇓ : v? ⇓ v
+      〖v〗 : V⟦ a ⟧ v
 
 ⟪_⟫ : (Γ : Cxt) {Δ : Cxt} (ρ : Env Δ Γ) → Set
 ⟪ ε ⟫     ε       = ⊤
@@ -250,12 +254,12 @@ mutual
   V≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) (v : Val Δ a) (〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
   V≤ {a = ★}     η v 〖v〗             = canRead≤ η {v} 〖v〗
   V≤ {a = a ⇒ b} η f 〖f〗 η′ {u} 〖u〗 =
-    let v , v⇓ , 〖v〗 = 〖f〗 (η′ • η) 〖u〗
+    let computation v v⇓ 〖v〗 = 〖f〗 (η′ • η) 〖u〗
         v⇓'           = subst (λ f' → apply f' u ⇓ v) (sym (val≤-• η′ η f)) v⇓
-    in  v , v⇓' , 〖v〗
+    in  computation v v⇓' 〖v〗
 
   C≤ : ∀ {Δ Δ′ a} (η : Δ′ ≤ Δ) {v? : Delay (Val Δ a) ∞} (v⇓ : C⟦ a ⟧ v?) → C⟦ a ⟧ (val≤ η <$> v?)
-  C≤ η (v , v⇓ , 〖v〗) = val≤ η v , map⇓ (val≤ η) v⇓ , V≤ η v 〖v〗
+  C≤ η (computation v v⇓ 〖v〗) = computation (val≤ η v) (map⇓ (val≤ η) v⇓) (V≤ η v 〖v〗)
 
 CXT≤ : ∀ {Γ Δ Δ′} (η : Δ′ ≤ Δ) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → ⟪ Γ ⟫ (env≤ η ρ)
 CXT≤ η ε       θ        = _
@@ -264,21 +268,21 @@ CXT≤ η (ρ , v) (θ , 〖v〗) = CXT≤ η ρ θ , V≤ η v 〖v〗
 -- Type soundness
 
 〖var〗 : ∀ {Γ Δ a} (x : Var Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (now (lookup x ρ))
-〖var〗 zero    (_ , v) (_ , v⇓) = v , now⇓ , v⇓
+〖var〗 zero    (_ , v) (_ , v⇓) = computation v now⇓ v⇓
 〖var〗 (suc x) (ρ , _) (θ , _ ) = 〖var〗 x ρ θ
 
 sound-β : ∀ {Γ Δ a b} {t : Tm (Γ , a) b} {ρ : Env Δ Γ} {u : Val Δ a} →
 
   C⟦ b ⟧ (〖 t 〗 (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
 
-sound-β (v , v⇓ , ⟦v⟧) = v , later⇓ v⇓ , ⟦v⟧
+sound-β (computation v v⇓ ⟦v⟧) = computation v (later⇓ v⇓) ⟦v⟧
 
 〖abs〗 : ∀ {Γ Δ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) →
 
   ({Δ′ : Cxt} (η : Δ′ ≤ Δ) {u : Val Δ′ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (〖 t 〗 (env≤ η ρ , u))) →
   C⟦ a ⇒ b ⟧ (now (lam t ρ))
 
-〖abs〗 t ρ θ ih = lam t ρ , now⇓ , λ η u⇓ → sound-β (ih η u⇓)
+〖abs〗 t ρ θ ih = computation (lam t ρ) now⇓ (λ η u⇓ → sound-β (ih η u⇓))
 
 sound-app' : ∀ {Δ a b} (f : Val Δ (a ⇒ b)) →
   {u* : Delay (Val Δ a) _} {u : Val Δ a} (u⇓ : u* ⇓ u) →
@@ -298,10 +302,10 @@ sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
   C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
 
-〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) =
-  let v , v⇓ , ⟦v⟧ = ⟦f⟧ id ⟦u⟧
-      v⇓'          = subst (λ f' → later (∞apply f' u) ⇓ _) (val≤-id f) v⇓
-  in  v , sound-app f⇓ u⇓ v⇓' , ⟦v⟧
+〖app〗 (computation f f⇓ ⟦f⟧) (computation u u⇓ ⟦u⟧) =
+  let computation v v⇓ ⟦v⟧ = ⟦f⟧ id ⟦u⟧
+      v⇓'                  = subst (λ f' → later (∞apply f' u) ⇓ _) (val≤-id f) v⇓
+  in  computation v (sound-app f⇓ u⇓ v⇓') ⟦v⟧
 
 sound : ∀ {Γ Δ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
 sound (var x)   ρ θ = 〖var〗 x ρ θ
@@ -319,7 +323,7 @@ mutual
        vs' = valSpine≤ η vs , u
        rs' = readSpine≤ η rs
        n , r = reify a u 〖u〗
-    in ne x' vs' , later⇓ now⇓ , reflect b x' (rs' , r)
+    in computation (ne x' vs') (later⇓ now⇓) (reflect b x' (rs' , r))
 
   reflect0 : ∀{Γ a} (x : Lvl Γ a) → V⟦ a ⟧ (ne x ε)
   reflect0 {a = a} x = reflect a x ε
@@ -329,7 +333,7 @@ mutual
   reify {Γ} (b ⇒ c) f 〖f〗 =
     let
       〖u〗  = reflect0 (newLvl Γ)
-      v , v⇓ , 〖v〗 = 〖f〗 (weak id) {var0} 〖u〗
+      computation v v⇓ 〖v〗 = 〖f〗 (weak id) {var0} 〖u〗
       n , r = reify c v 〖v〗
     in lam n , λ {Δ} η → let
       f' = val≤ η f
