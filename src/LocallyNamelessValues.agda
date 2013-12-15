@@ -8,6 +8,8 @@ open import Delay
 open import Spine
 open import DBLevel
 
+open ≡-Reasoning
+
 -- Values and environments
 
 mutual
@@ -154,24 +156,78 @@ mutual
   weakValSpineLem ε = refl
   weakValSpineLem (vs , v) = cong₂ _,_ (weakValSpineLem vs) (weakValLem v)
 
+-- Monotonicity for lookup
+
+lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
+  val≤ η (lookup x ρ) ≡ lookup x (env≤ η ρ)
+lookup≤ zero    (ρ , v) η = refl
+lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
+
 -- Monotonicity for eval/apply
 
 mutual
 
   eval≤ : ∀ {Γ Δ Δ' a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
     val≤ η <$> (〖 t 〗 ρ) ≡ 〖 t 〗 (env≤ η ρ)
-  eval≤ (var x  ) ρ η = {!lookup≤!}
+  eval≤ (var x  ) ρ η = cong now (lookup≤ x ρ η)
   eval≤ (abs t  ) ρ η = refl
   eval≤ (app t u) ρ η rewrite sym (eval≤ t ρ η) | sym (eval≤ u ρ η)
                       = apply*≤ (〖 t 〗 ρ) (〖 u 〗 ρ) η
 
-  apply*≤ : ∀ {i Γ Δ a b} (f : Delay (Val Δ (a ⇒ b)) i) (v : Delay (Val Δ a) i) (η : Γ ≤ Δ) →
-    val≤ η <$> apply* f v ≡ apply* (val≤ η <$> f) (val≤ η <$> v)
-  apply*≤ f v = {!!}
+  apply*≤ : ∀ {i Γ Δ a b} (f? : Delay (Val Δ (a ⇒ b)) i) (u? : Delay (Val Δ a) i) (η : Γ ≤ Δ) →
+    val≤ η <$> apply* f? u? ≡ apply* (val≤ η <$> f?) (val≤ η <$> u?)
+  apply*≤ f? u? η = begin
+
+      val≤ η <$> apply* f? u?
+
+    ≡⟨⟩
+
+      val≤ η <$> apply =<<2 f? , u?
+
+    ≡⟨⟩
+
+      val≤ η <$> (f? >>= λ f → u? >>= λ u → apply f u)
+
+    ≡⟨⟩
+
+      ((f? >>= λ f → u? >>= λ u → apply f u) >>= λ v → return (val≤ η v))
+
+    ≡⟨ {!!} ⟩
+
+      (f? >>= λ f → u? >>= λ u → val≤ η <$> apply f u)
+
+    ≡⟨ {! apply≤ f u η !} ⟩
+
+      (f? >>= λ f → u? >>= λ u → apply (val≤ η f) (val≤ η u))
+
+    ≡⟨ {!!} ⟩
+
+      ((f? >>= λ f → return (val≤ η f)) >>= λ f' → u? >>= λ u → apply f' (val≤ η u))
+
+    ≡⟨⟩
+
+      ((val≤ η <$> f?) >>= λ f' → u? >>= λ u → apply f' (val≤ η u))
+
+    ≡⟨ {!!} ⟩
+
+      ((val≤ η <$> f?) >>= λ f' → (u? >>= λ u → return (val≤ η u)) >>= λ u' → apply f' u')
+
+    ≡⟨⟩
+
+      ((val≤ η <$> f?) >>= λ f' → (val≤ η <$> u?) >>= λ u' → apply f' u')
+
+    ≡⟨⟩
+
+      apply =<<2 (val≤ η <$> f?) , (val≤ η <$> u?)
+
+    ≡⟨⟩
+
+      apply* (val≤ η <$> f?) (val≤ η <$> u?)
+    ∎
 
   apply≤ : ∀ {i Γ Δ a b} (f : Val {i} Δ (a ⇒ b)) (v : Val {i} Δ a) (η : Γ ≤ Δ) →
     val≤ η <$> apply f v ≡ apply (val≤ η f) (val≤ η v)
-  apply≤ f v = {!!}
+  apply≤ f v η = {!!}
 
 
 -- Things we can read back.
