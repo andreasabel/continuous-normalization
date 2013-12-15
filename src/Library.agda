@@ -37,6 +37,12 @@ open import Function public
 open import Relation.Nullary public
   using (Dec; yes; no)
 
+open import Relation.Binary public
+  using (Setoid; module Setoid)
+
+import Relation.Binary.PreorderReasoning
+module Pre = Relation.Binary.PreorderReasoning
+
 open import Relation.Binary.PropositionalEquality public
   using (_≡_; refl; sym; trans; cong; cong₂; subst; module ≡-Reasoning)
 

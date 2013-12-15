@@ -55,7 +55,7 @@ f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
 mutual
   data _~_ {i : Size} {A : Set} : (a? b? : Delay A ∞) → Set where
     ~now   : ∀ a → now a ~ now a
-    ~later : ∀ {a∞ b∞} → _∞~_ {i} a∞ b∞ → later a∞ ~ later b∞
+    ~later : ∀ {a∞ b∞} (eq : _∞~_ {i} a∞ b∞) → later a∞ ~ later b∞
 
   record _∞~_ {i : Size} {A : Set} (a∞ b∞ : ∞Delay A ∞) : Set where
     field
@@ -73,9 +73,42 @@ mutual
   ∞~refl : ∀ {i A} (a∞ : ∞Delay A ∞) → _∞~_ {i} a∞ a∞
   ~force (∞~refl a∞) = ~refl (force a∞)
 
--- Symmetry: TODO
+-- Symmetry
 
--- Transitivity: TODO
+mutual
+  ~sym : ∀ {i A} {a? b? : Delay A ∞} → _~_ {i} a? b? → _~_ {i} b? a?
+  ~sym (~now a)    = ~now a
+  ~sym (~later eq) = ~later (∞~sym eq)
+
+  ∞~sym : ∀ {i A} {a? b? : ∞Delay A ∞} → _∞~_ {i} a? b? → _∞~_ {i} b? a?
+  ~force (∞~sym eq) = ~sym (~force eq)
+
+-- Transitivity
+
+mutual
+  ~trans : ∀ {i A} {a? b? c? : Delay A ∞}
+    (eq : _~_ {i} a? b?) (eq' : _~_ {i} b? c?) → _~_ {i} a? c?
+  ~trans (~now a)    (~now .a)    = ~now a
+  ~trans (~later eq) (~later eq') = ~later (∞~trans eq eq')
+
+  ∞~trans : ∀ {i A} {a∞ b∞ c∞ : ∞Delay A ∞}
+    (eq : _∞~_ {i} a∞ b∞) (eq' : _∞~_ {i} b∞ c∞) → _∞~_ {i} a∞ c∞
+  ~force (∞~trans eq eq') = ~trans (~force eq) (~force eq')
+
+-- Equality reasoning
+
+~setoid : (A : Set) → Setoid lzero lzero
+~setoid A = record
+  { Carrier       = Delay A ∞
+  ; _≈_           = _~_ {∞}
+  ; isEquivalence = record
+    { refl  = λ {a?} → ~refl a?
+    ; sym   = ~sym
+    ; trans = ~trans
+    }
+  }
+
+module ~-Reasoning {A : Set} = Pre (Setoid.preorder (~setoid A))
 
 -- Monad laws.
 
