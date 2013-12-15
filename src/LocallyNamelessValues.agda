@@ -8,7 +8,7 @@ open import Delay
 open import Spine
 open import DBLevel
 
-open ≡-Reasoning
+-- open ≡-Reasoning
 
 -- Values and environments
 
@@ -168,14 +168,14 @@ lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
 mutual
 
   eval≤ : ∀ {Γ Δ Δ' a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
-    val≤ η <$> (〖 t 〗 ρ) ≡ 〖 t 〗 (env≤ η ρ)
-  eval≤ (var x  ) ρ η = cong now (lookup≤ x ρ η)
-  eval≤ (abs t  ) ρ η = refl
-  eval≤ (app t u) ρ η rewrite sym (eval≤ t ρ η) | sym (eval≤ u ρ η)
-                      = apply*≤ (〖 t 〗 ρ) (〖 u 〗 ρ) η
+    (val≤ η <$> (〖 t 〗 ρ)) ~ 〖 t 〗 (env≤ η ρ)
+  eval≤ (var x  ) ρ η rewrite lookup≤ x ρ η = ~now _
+  eval≤ (abs t  ) ρ η = ~refl _
+  eval≤ (app t u) ρ η = {!!} {-rewrite sym (eval≤ t ρ η) | sym (eval≤ u ρ η)
+                      = apply*≤ (〖 t 〗 ρ) (〖 u 〗 ρ) η -}
 
-  apply*≤ : ∀ {i Γ Δ a b} (f? : Delay (Val Δ (a ⇒ b)) i) (u? : Delay (Val Δ a) i) (η : Γ ≤ Δ) →
-    val≤ η <$> apply* f? u? ≡ apply* (val≤ η <$> f?) (val≤ η <$> u?)
+  apply*≤ : ∀ {Γ Δ a b} (f? : Delay (Val Δ (a ⇒ b)) ∞) (u? : Delay (Val Δ a) ∞) (η : Γ ≤ Δ) →
+    (val≤ η <$> apply* f? u?) ~ apply* (val≤ η <$> f?) (val≤ η <$> u?)
   apply*≤ f? u? η = begin
 
       val≤ η <$> apply* f? u?
@@ -186,21 +186,29 @@ mutual
 
     ≡⟨⟩
 
-      val≤ η <$> (f? >>= λ f → u? >>= λ u → apply f u)
+      val≤ η <$> (f? >>= λ f → u? >>= apply f)
 
     ≡⟨⟩
 
-      ((f? >>= λ f → u? >>= λ u → apply f u) >>= λ v → return (val≤ η v))
+      ((f? >>= (λ f → u? >>= apply f)) >>= λ v → return (val≤ η v))
 
-    ≡⟨ {!!} ⟩
+    ~⟨ bind-assoc f? ⟩
+
+      (f? >>= λ f → (u? >>= apply f) >>= λ v → return (val≤ η v))
+
+    ~⟨ (f? >>=r λ f → bind-assoc u?) ⟩
+
+      (f? >>= λ f → u? >>= λ u → apply f u >>= λ v → return (val≤ η v))
+
+    ≡⟨⟩
 
       (f? >>= λ f → u? >>= λ u → val≤ η <$> apply f u)
 
-    ≡⟨ {! apply≤ f u η !} ⟩
+    ~⟨ (f? >>=r λ f → u? >>=r λ u → apply≤ f u η) ⟩
 
       (f? >>= λ f → u? >>= λ u → apply (val≤ η f) (val≤ η u))
 
-    ≡⟨ {!!} ⟩
+    ~⟨ ~sym (bind-assoc f?)  ⟩
 
       ((f? >>= λ f → return (val≤ η f)) >>= λ f' → u? >>= λ u → apply f' (val≤ η u))
 
@@ -208,7 +216,7 @@ mutual
 
       ((val≤ η <$> f?) >>= λ f' → u? >>= λ u → apply f' (val≤ η u))
 
-    ≡⟨ {!!} ⟩
+    ~⟨ ((val≤ η <$> f?) >>=r λ f' → ~sym (bind-assoc u?)) ⟩
 
       ((val≤ η <$> f?) >>= λ f' → (u? >>= λ u → return (val≤ η u)) >>= λ u' → apply f' u')
 
@@ -223,10 +231,11 @@ mutual
     ≡⟨⟩
 
       apply* (val≤ η <$> f?) (val≤ η <$> u?)
-    ∎
 
-  apply≤ : ∀ {i Γ Δ a b} (f : Val {i} Δ (a ⇒ b)) (v : Val {i} Δ a) (η : Γ ≤ Δ) →
-    val≤ η <$> apply f v ≡ apply (val≤ η f) (val≤ η v)
+    ∎ where open ~-Reasoning
+
+  apply≤ : ∀ {Γ Δ a b} (f : Val {∞} Δ (a ⇒ b)) (v : Val {∞} Δ a) (η : Γ ≤ Δ) →
+    (val≤ η <$> apply f v) ~ apply (val≤ η f) (val≤ η v)
   apply≤ f v η = {!!}
 
 

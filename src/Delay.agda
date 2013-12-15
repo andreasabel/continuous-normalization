@@ -108,7 +108,24 @@ mutual
     }
   }
 
-module ~-Reasoning {A : Set} = Pre (Setoid.preorder (~setoid A))
+module ~-Reasoning {A : Set} where
+  open Pre (Setoid.preorder (~setoid A)) public
+--    using (begin_; _∎) (_≈⟨⟩_ to _~⟨⟩_; _≈⟨_⟩_ to _~⟨_⟩_)
+    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _~⟨_⟩_)
+
+-- Congruence laws.
+
+mutual
+  bind-cong-r : ∀ {i A B} (a? : Delay A ∞) {k l : A → Delay B ∞} →
+    (h : ∀ a → _~_ {i} (k a) (l a)) → _~_ {i} (a? >>= k) (a? >>= l)
+  bind-cong-r (now a)    h = h a
+  bind-cong-r (later a∞) h = ~later (∞bind-cong-r a∞ h)
+
+  ∞bind-cong-r : ∀ {i A B} (a∞ : ∞Delay A ∞) {k l : A → Delay B ∞} →
+    (h : ∀ a → _~_ {i} (k a) (l a)) → _∞~_ {i} (a∞ ∞>>= k)  (a∞ ∞>>= l)
+  ~force (∞bind-cong-r a∞ h) = bind-cong-r (force a∞) h
+
+_>>=r_ = bind-cong-r
 
 -- Monad laws.
 
