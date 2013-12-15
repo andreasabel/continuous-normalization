@@ -154,6 +154,26 @@ mutual
   weakValSpineLem ε = refl
   weakValSpineLem (vs , v) = cong₂ _,_ (weakValSpineLem vs) (weakValLem v)
 
+-- Monotonicity for eval/apply
+
+mutual
+
+  eval≤ : ∀ {Γ Δ Δ' a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
+    val≤ η <$> (〖 t 〗 ρ) ≡ 〖 t 〗 (env≤ η ρ)
+  eval≤ (var x  ) ρ η = {!lookup≤!}
+  eval≤ (abs t  ) ρ η = refl
+  eval≤ (app t u) ρ η rewrite sym (eval≤ t ρ η) | sym (eval≤ u ρ η)
+                      = apply*≤ (〖 t 〗 ρ) (〖 u 〗 ρ) η
+
+  apply*≤ : ∀ {i Γ Δ a b} (f : Delay (Val Δ (a ⇒ b)) i) (v : Delay (Val Δ a) i) (η : Γ ≤ Δ) →
+    val≤ η <$> apply* f v ≡ apply* (val≤ η <$> f) (val≤ η <$> v)
+  apply*≤ f v = {!!}
+
+  apply≤ : ∀ {i Γ Δ a b} (f : Val {i} Δ (a ⇒ b)) (v : Val {i} Δ a) (η : Γ ≤ Δ) →
+    val≤ η <$> apply f v ≡ apply (val≤ η f) (val≤ η v)
+  apply≤ f v = {!!}
+
+
 -- Things we can read back.
 
 Read : ∀ {Δ a} (v : Val Δ a) (n : Nf Δ a) → Set
@@ -314,6 +334,16 @@ sound (app t u) ρ θ = 〖app〗 (sound t ρ θ) (sound u ρ θ)
 
 -- Reflection and reification
 
+readbackLem :
+  ∀ {Δ a b} (f : Val Δ (a ⇒ b)) (v : Val (Δ , a) b) →
+  apply (val≤ (weak id) f) var0 ⇓ v →
+  V⟦ b ⟧ v →
+  (n : Nf (Δ , a) b) →
+  Read v n →
+  ∀ {Γ} (η : Γ ≤ Δ) →
+  (readback =<< apply (val≤ (weak η) f) var0) ⇓ nf≤ (lift' η) n
+readbackLem f v ap 〖v〗 n r η = {!!}
+
 mutual
   reflect : ∀{Γ a} c (x : Lvl Γ a) {vs : ValSpine Γ a c} {ns : NfSpine Γ a c} →
            ReadSpine vs ns → V⟦ c ⟧ (ne x vs)
@@ -338,6 +368,7 @@ mutual
     in lam n , λ {Δ} η → let
       f' = val≤ η f
       n' = nf≤ (lift' η) n
+{-
 --      η' = lift' η
       have : readback (val≤ (lift' η) v) ⇓ n'
       have = r (lift' η)
@@ -347,9 +378,9 @@ mutual
 
       lem : apply (val≤ (weak η) f) var0 ⇓ val≤ (lift' η) v
       lem = {!map⇓ (val≤ (lift' η)) v⇓!}
-
+-}
       goal₃ : (readback =<< apply (val≤ (weak η) f) var0) ⇓ n'
-      goal₃ =  {!r (lift' η)!}
+      goal₃ =  readbackLem f v v⇓  〖v〗 n r η
 
       goal₂ : (readback =<< apply (val≤ (weak id) f') var0) ⇓ n'
       goal₂ =  subst (λ z → (readback =<< apply z var0) ⇓ n')
