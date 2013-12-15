@@ -73,37 +73,25 @@ mutual
   ∞~refl : ∀ {i A} (a∞ : ∞Delay A ∞) → _∞~_ {i} a∞ a∞
   ~force (∞~refl a∞) = ~refl (force a∞)
 
--- Symmetry
+-- Symmetry: TODO
 
--- Transitivity
-
+-- Transitivity: TODO
 
 -- Monad laws.
 
-postulate
---  cong-later : ∀ {i A} {a∞ b∞ : ∞Delay A i} →
---    force a∞ ≡ force b∞ → later a∞ ≡ later b∞
-
-  cong-delay : ∀ {i A} {a∞ b∞ : ∞Delay A i} →
-    (∀ {j : Size< i} → force a∞ {j} ≡ force b∞ {j}) → a∞ ≡ b∞
-
 mutual
-  bind-assoc : ∀ {i A B C} (m : Delay A i) {k : A → Delay B i} {l : B → Delay C i} →
-    ((m >>= k) >>= l) ≡ (m >>= λ a → k a >>= l)
-  bind-assoc (now a) = refl
-  bind-assoc (later a?) = cong later (∞bind-assoc a?)
+  bind-assoc : ∀ {i A B C} (m : Delay A ∞) {k : A → Delay B ∞} {l : B → Delay C ∞} →
 
-  ∞bind-assoc : ∀ {i A B C} (a? : ∞Delay A i) {k : A → Delay B i} {l : B → Delay C i} →
---    (_∞>>=_ {i} (_∞>>=_ {i} a? λ a → k a) l) ≡ (a? ∞>>= λ a → k a >>= l)
-    ((a? ∞>>= λ a → k a) ∞>>= l) ≡ (a? ∞>>= λ a → k a >>= l)
-  ∞bind-assoc {i} a? {k} {l} = cong-delay {i} (λ {j} → {!cong-delay!})
- --   bind-assoc {j} (force a? {j}) {λ a → k a} {λ b → l b})
+    _~_ {i} ((m >>= k) >>= l)  (m >>= λ a → k a >>= l)
 
-{-
-  ∞bind-assoc : ∀ {i A B C} (m : ∞Delay A i) {k : A → ∞Delay B i} {l : B → Delay C i} →
-    ((m ∞>>= λ a → later (k a)) ∞>>= l) ≡ (m ∞>>= λ a → later (k a ∞>>= l))
-  ∞bind-assoc m = {!!}
--}
+  bind-assoc (now a)    = ~refl _
+  bind-assoc (later a∞) = ~later (∞bind-assoc a∞)
+
+  ∞bind-assoc : ∀ {i A B C} (a∞ : ∞Delay A ∞) {k : A → Delay B ∞} {l : B → Delay C ∞} →
+
+    _∞~_ {i} ((a∞ ∞>>= λ a → k a) ∞>>= l) (a∞ ∞>>= λ a → k a >>= l)
+
+  ~force (∞bind-assoc a∞) = bind-assoc (force a∞)
 
 -- Termination/Convergence.  Makes only sense for Delay A ∞.
 
