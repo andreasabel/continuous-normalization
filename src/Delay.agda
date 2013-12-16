@@ -47,6 +47,14 @@ module _ {i : Size} where
   open module DelayMonad = RawMonad (delayMonad {i = i}) public renaming (_⊛_ to _<*>_)
 open Bind public using (_∞>>=_)
 
+-- Map for ∞Delay
+
+_∞<$>_ : ∀ {i A B} (f : A → B) (∞a : ∞Delay A i) → ∞Delay B i
+f ∞<$> ∞a = ∞a ∞>>= λ a → return (f a)
+-- force (f ∞<$> ∞a) = f <$> force ∞a
+
+-- Double bind
+
 _=<<2_,_ : ∀ {i A B C} → (A → B → Delay C i) → Delay A i → Delay B i → Delay C i
 f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
 
@@ -116,6 +124,19 @@ module ~-Reasoning {A : Set} where
 -- Congruence laws.
 
 mutual
+  bind-cong-l : ∀ {i A B} {a? b? : Delay A ∞} (eq : _~_ {i} a? b?)
+    (k : A → Delay B ∞) → _~_ {i} (a? >>= k) (b? >>= k)
+  bind-cong-l (~now a)    k = ~refl _
+  bind-cong-l (~later eq) k = ~later (∞bind-cong-l eq k)
+
+  ∞bind-cong-l : ∀ {i A B} {a∞ b∞ : ∞Delay A ∞} (eq : _∞~_ {i} a∞ b∞) →
+    (k : A → Delay B ∞) →
+    _∞~_ {i} (a∞ ∞>>= k)  (b∞ ∞>>= k)
+  ~force (∞bind-cong-l eq k) = bind-cong-l (~force eq) k
+
+_>>=l_ = bind-cong-l
+
+mutual
   bind-cong-r : ∀ {i A B} (a? : Delay A ∞) {k l : A → Delay B ∞} →
     (h : ∀ a → _~_ {i} (k a) (l a)) → _~_ {i} (a? >>= k) (a? >>= l)
   bind-cong-r (now a)    h = h a
@@ -126,6 +147,20 @@ mutual
   ~force (∞bind-cong-r a∞ h) = bind-cong-r (force a∞) h
 
 _>>=r_ = bind-cong-r
+
+mutual
+  bind-cong : ∀ {i A B}  {a? b? : Delay A ∞} (eq : _~_ {i} a? b?)
+    {k l : A → Delay B ∞} (h : ∀ a → _~_ {i} (k a) (l a)) →
+    _~_ {i} (a? >>= k) (b? >>= l)
+  bind-cong (~now a)    h = h a
+  bind-cong (~later eq) h = ~later (∞bind-cong eq h)
+
+  ∞bind-cong : ∀ {i A B} {a∞ b∞ : ∞Delay A ∞} (eq : _∞~_ {i} a∞ b∞)
+    {k l : A → Delay B ∞} (h : ∀ a → _~_ {i} (k a) (l a)) →
+    _∞~_ {i} (a∞ ∞>>= k)  (b∞ ∞>>= l)
+  ~force (∞bind-cong eq h) = bind-cong (~force eq) h
+
+_~>>=_ = bind-cong
 
 -- Monad laws.
 

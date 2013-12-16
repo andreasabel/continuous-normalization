@@ -163,6 +163,12 @@ lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) 
 lookup≤ zero    (ρ , v) η = refl
 lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
 
+-- Congruence fore eval/apply
+
+~apply* : ∀ {Δ a b} {f1? f2? : Delay (Val Δ (a ⇒ b)) ∞} {u1? u2? : Delay (Val Δ a) ∞} →
+  (eqf : f1? ~ f2?) (equ : u1? ~ u2?) → apply* f1? u1? ~ apply* f2? u2?
+~apply* eqf equ = eqf ~>>= λ f → equ ~>>= λ u → ~refl _
+
 -- Monotonicity for eval/apply
 
 mutual
@@ -171,8 +177,19 @@ mutual
     (val≤ η <$> (〖 t 〗 ρ)) ~ 〖 t 〗 (env≤ η ρ)
   eval≤ (var x  ) ρ η rewrite lookup≤ x ρ η = ~now _
   eval≤ (abs t  ) ρ η = ~refl _
-  eval≤ (app t u) ρ η = {!!} {-rewrite sym (eval≤ t ρ η) | sym (eval≤ u ρ η)
-                      = apply*≤ (〖 t 〗 ρ) (〖 u 〗 ρ) η -}
+  eval≤ (app t u) ρ η = begin
+
+      (val≤ η <$> apply* (〖 t 〗 ρ) (〖 u 〗 ρ))
+
+    ~⟨ apply*≤ (〖 t 〗 ρ) (〖 u 〗 ρ) η ⟩
+
+      apply* (val≤ η <$> 〖 t 〗 ρ) (val≤ η <$> 〖 u 〗 ρ)
+
+    ~⟨ ~apply* (eval≤ t ρ η) (eval≤ u ρ η) ⟩
+
+      apply* (〖 t 〗 (env≤ η ρ)) (〖 u 〗 (env≤ η ρ))
+
+    ∎ where open ~-Reasoning
 
   apply*≤ : ∀ {Γ Δ a b} (f? : Delay (Val Δ (a ⇒ b)) ∞) (u? : Delay (Val Δ a) ∞) (η : Γ ≤ Δ) →
     (val≤ η <$> apply* f? u?) ~ apply* (val≤ η <$> f?) (val≤ η <$> u?)
@@ -236,7 +253,11 @@ mutual
 
   apply≤ : ∀ {Γ Δ a b} (f : Val {∞} Δ (a ⇒ b)) (v : Val {∞} Δ a) (η : Γ ≤ Δ) →
     (val≤ η <$> apply f v) ~ apply (val≤ η f) (val≤ η v)
-  apply≤ f v η = {!!}
+  apply≤ f v η = ~later (∞apply≤ f v η)
+
+  ∞apply≤ : ∀ {Γ Δ a b} (f : Val {∞} Δ (a ⇒ b)) (v : Val {∞} Δ a) (η : Γ ≤ Δ) →
+    (val≤ η ∞<$> ∞apply f v) ∞~ ∞apply (val≤ η f) (val≤ η v)
+  ∞apply≤ f v η = {!!}
 
 
 -- Things we can read back.
