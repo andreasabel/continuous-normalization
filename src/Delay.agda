@@ -105,10 +105,10 @@ mutual
 
 -- Equality reasoning
 
-~setoid : (A : Set) → Setoid lzero lzero
-~setoid A = record
+~setoid : (i : Size) (A : Set) → Setoid lzero lzero
+~setoid i A = record
   { Carrier       = Delay A ∞
-  ; _≈_           = _~_ {∞}
+  ; _≈_           = _~_ {i}
   ; isEquivalence = record
     { refl  = λ {a?} → ~refl a?
     ; sym   = ~sym
@@ -116,8 +116,8 @@ mutual
     }
   }
 
-module ~-Reasoning {A : Set} where
-  open Pre (Setoid.preorder (~setoid A)) public
+module ~-Reasoning {i : Size} {A : Set} where
+  open Pre (Setoid.preorder (~setoid i A)) public
 --    using (begin_; _∎) (_≈⟨⟩_ to _~⟨⟩_; _≈⟨_⟩_ to _~⟨_⟩_)
     renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _~⟨_⟩_)
 

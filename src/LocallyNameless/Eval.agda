@@ -1,4 +1,5 @@
 {-# OPTIONS --copatterns --sized-types #-}
+{-# OPTIONS --show-implicit #-}
 
 module LocallyNameless.Eval where
 
@@ -29,11 +30,12 @@ mutual
   apply* f⊥ v⊥ = apply =<<2 f⊥ , v⊥
 
   apply : ∀ {i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → Delay (Val Δ b) i
-  apply f v = later (∞apply f v)
+  apply (ne x sp) v = now (ne x (sp , v))
+  apply (lam t ρ) v = later (beta t ρ v)
 
-  ∞apply : ∀ {i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → ∞Delay (Val Δ b) i
-  force (∞apply (lam t ρ) v) = 〖 t 〗 (ρ , v)
-  force (∞apply (ne x sp) v) = now (ne x (sp , v))
+  beta : ∀ {i Γ a b} (t : Tm (Γ , a) b)
+    {Δ : Cxt} (ρ : Env Δ Γ) (v : Val Δ a) → ∞Delay (Val Δ b) i
+  force (beta t ρ v) = 〖 t 〗 (ρ , v)
 
 -- β-quoting
 
@@ -63,16 +65,17 @@ mutual
 
 -- Congruence fore eval/apply
 
-~apply* : ∀ {Δ a b} {f1? f2? : Delay (Val Δ (a ⇒ b)) ∞} {u1? u2? : Delay (Val Δ a) ∞} →
-  (eqf : f1? ~ f2?) (equ : u1? ~ u2?) → apply* f1? u1? ~ apply* f2? u2?
+~apply* : ∀ {i Δ a b} {f1? f2? : Delay (Val Δ (a ⇒ b)) ∞} {u1? u2? : Delay (Val Δ a) ∞} →
+  (eqf : _~_ {i} f1? f2?) (equ : _~_ {i} u1? u2?) →
+  _~_ {i} (apply* f1? u1?) (apply* f2? u2?)
 ~apply* eqf equ = eqf ~>>= λ f → equ ~>>= λ u → ~refl _
 
 -- Monotonicity for eval/apply
 
 mutual
 
-  eval≤ : ∀ {Γ Δ Δ' a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
-    (val≤ η <$> (〖 t 〗 ρ)) ~ 〖 t 〗 (env≤ η ρ)
+  eval≤ : ∀ {i Γ Δ Δ' a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
+    _~_ {i} (val≤ η <$> (〖 t 〗 ρ)) (〖 t 〗 (env≤ η ρ))
   eval≤ (var x  ) ρ η rewrite lookup≤ x ρ η = ~now _
   eval≤ (abs t  ) ρ η = ~refl _
   eval≤ (app t u) ρ η = begin
@@ -89,8 +92,8 @@ mutual
 
     ∎ where open ~-Reasoning
 
-  apply*≤ : ∀ {Γ Δ a b} (f? : Delay (Val Δ (a ⇒ b)) ∞) (u? : Delay (Val Δ a) ∞) (η : Γ ≤ Δ) →
-    (val≤ η <$> apply* f? u?) ~ apply* (val≤ η <$> f?) (val≤ η <$> u?)
+  apply*≤ : ∀ {i Γ Δ a b} (f? : Delay (Val Δ (a ⇒ b)) ∞) (u? : Delay (Val Δ a) ∞) (η : Γ ≤ Δ) →
+    _~_ {i} (val≤ η <$> apply* f? u?) (apply* (val≤ η <$> f?) (val≤ η <$> u?))
   apply*≤ f? u? η = begin
 
       val≤ η <$> apply* f? u?
@@ -149,10 +152,12 @@ mutual
 
     ∎ where open ~-Reasoning
 
-  apply≤ : ∀ {Γ Δ a b} (f : Val {∞} Δ (a ⇒ b)) (v : Val {∞} Δ a) (η : Γ ≤ Δ) →
-    (val≤ η <$> apply f v) ~ apply (val≤ η f) (val≤ η v)
-  apply≤ f v η = ~later (∞apply≤ f v η)
+  apply≤ : ∀ {i Γ Δ a b} (f : Val Δ (a ⇒ b)) (v : Val Δ a) (η : Γ ≤ Δ) →
+    _~_ {i} (val≤ {∞} η <$> apply f v) (apply (val≤ {∞} η f) (val≤ {∞} η v))
+  apply≤ (ne x vs) v η = {!~refl _!}  -- PROBLEM with sized types
+  apply≤ (lam t ρ) v η = ~later (beta≤ t ρ v η)
 
-  ∞apply≤ : ∀ {Γ Δ a b} (f : Val {∞} Δ (a ⇒ b)) (v : Val {∞} Δ a) (η : Γ ≤ Δ) →
-    (val≤ η ∞<$> ∞apply f v) ∞~ ∞apply (val≤ η f) (val≤ η v)
-  ~force (∞apply≤ f v η) = {!!}
+  beta≤ : ∀ {i Γ a b} (t : Tm (Γ , a) b)
+    {Δ}  (ρ : Env Δ Γ) (v : Val Δ a) {Δ'} (η : Δ' ≤ Δ) →
+     _∞~_ {i} (val≤ η ∞<$> beta t ρ v) (beta t (env≤ {∞} η ρ) (val≤ {∞} η v))
+  ~force (beta≤ t ρ v η) = eval≤ t (ρ , v) η
