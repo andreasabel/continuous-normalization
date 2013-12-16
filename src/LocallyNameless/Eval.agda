@@ -154,7 +154,7 @@ mutual
 
   apply≤ : ∀ {i Γ Δ a b} (f : Val Δ (a ⇒ b)) (v : Val Δ a) (η : Γ ≤ Δ) →
     _~_ {i} (val≤ {∞} η <$> apply f v) (apply (val≤ {∞} η f) (val≤ {∞} η v))
-  apply≤ (ne x vs) v η = {!~refl _!}  -- PROBLEM with sized types
+  apply≤ (ne {∞} x vs) v η = {!~now _!}  -- PROBLEM with sized types
   apply≤ (lam t ρ) v η = ~later (beta≤ t ρ v η)
 
   beta≤ : ∀ {i Γ a b} (t : Tm (Γ , a) b)

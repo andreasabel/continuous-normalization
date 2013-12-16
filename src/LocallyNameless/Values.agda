@@ -1,4 +1,4 @@
-{-# OPTIONS --copatterns --sized-types #-}
+{-# OPTIONS --copatterns --sized-types --experimental-irrelevance #-}
 
 module LocallyNameless.Values where
 
@@ -11,34 +11,34 @@ open import DBLevel
 -- Values and environments
 
 mutual
-  data Env {i : Size} (Δ : Cxt) : (Γ : Cxt) → Set where
+  data Env ..{i : Size} (Δ : Cxt) : (Γ : Cxt) → Set where
     ε   : Env Δ ε
     _,_ : ∀ {Γ a} (ρ : Env {i = i} Δ Γ) (v : Val {i = i} Δ a) → Env Δ (Γ , a)
 
-  data Val {i : Size} (Δ : Cxt) : (a : Ty) → Set where
-    ne  : ∀ {j : Size< i}{a c} (x : Lvl Δ a) (vs : ValSpine {i = j} Δ a c) → Val Δ c
+  data Val ..{i : Size} (Δ : Cxt) : (a : Ty) → Set where
+    ne  : ∀ .{j : Size< i}{a c} (x : Lvl Δ a) (vs : ValSpine {i = j} Δ a c) → Val Δ c
     lam : ∀ {Γ a b}            (t : Tm (Γ , a) b) (ρ : Env {i = i} Δ Γ)    → Val Δ (a ⇒ b)
 
-  ValSpine : {i : Size} (Δ : Cxt) (a c : Ty) → Set
+  ValSpine : ..{i : Size} (Δ : Cxt) (a c : Ty) → Set
   ValSpine {i = i} Δ = RSpine (Val {i = i} Δ)
 
-lookup : ∀ {i Γ Δ a} → Var Γ a → Env {i = i} Δ Γ → Val {i = i} Δ a
+lookup : ∀ .{i} {Γ Δ a} → Var Γ a → Env {i = i} Δ Γ → Val {i = i} Δ a
 lookup zero    (ρ , v) = v
 lookup (suc x) (ρ , v) = lookup x ρ
 
 -- Weakening.
 
 mutual
-  weakEnv : ∀ {i Γ Δ a} → Env {i = i} Δ Γ → Env {i = i} (Δ , a) Γ
+  weakEnv : ∀ .{i} {Γ Δ a} → Env {i = i} Δ Γ → Env {i = i} (Δ , a) Γ
   weakEnv ε        = ε
   weakEnv (ρ , v)  = weakEnv ρ , weakVal v
 
-  weakVal : ∀ {i Δ a c} → Val {i = i} Δ c → Val {i = i} (Δ , a) c
+  weakVal : ∀ .{i} {Δ a c} → Val {i = i} Δ c → Val {i = i} (Δ , a) c
   weakVal (ne {j = j} x vs)  = ne (weakLvl x) (weakValSpine {i = j} vs)
   weakVal (lam t ρ)          = lam t (weakEnv ρ)
 
-  weakValSpine : ∀ {i Δ a b c} → ValSpine {i = i} Δ b c → ValSpine {i = i} (Δ , a) b c
-  weakValSpine = mapRSp weakVal
+  weakValSpine : ∀ .{i} {Δ a b c} → ValSpine {i = i} Δ b c → ValSpine {i = i} (Δ , a) b c
+  weakValSpine {i} = mapRSp {V = Val {i}} (weakVal {i})
 
 ------------------------------------------------------------------------
 

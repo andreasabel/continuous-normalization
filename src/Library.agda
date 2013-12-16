@@ -5,7 +5,18 @@ module Library where
 open import Level public
   using (Level) renaming (zero to lzero; suc to lsuc)
 
-open import Size public
+-- open import Size public
+
+postulate
+  Size   : Set
+  Size<_ : ..(i : Size) → Set
+  ↑_     : Size → Size
+  ∞      : Size
+
+{-# BUILTIN SIZE    Size   #-}
+{-# BUILTIN SIZELT  Size<_ #-}
+{-# BUILTIN SIZESUC ↑_     #-}
+{-# BUILTIN SIZEINF ∞      #-}
 
 open import Category.Monad public
   using (RawMonad; module RawMonad)
