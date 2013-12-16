@@ -3,9 +3,9 @@
 module LocallyNameless.Eval where
 
 open import Library
+open import Spine
 open import Term
 open import Delay
-open import Spine
 open import DBLevel
 open import LocallyNameless.Values
 
@@ -155,4 +155,4 @@ mutual
 
   ∞apply≤ : ∀ {Γ Δ a b} (f : Val {∞} Δ (a ⇒ b)) (v : Val {∞} Δ a) (η : Γ ≤ Δ) →
     (val≤ η ∞<$> ∞apply f v) ∞~ ∞apply (val≤ η f) (val≤ η v)
-  ∞apply≤ f v η = {!!}
+  ~force (∞apply≤ f v η) = {!!}
