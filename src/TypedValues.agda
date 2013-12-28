@@ -53,11 +53,11 @@ ide (Γ , a) = liftEnv (ide Γ)
 -- Call-by-value evaluation.
 
 mutual
-  〖_〗  : ∀{i}{Γ : Cxt} {a : Ty} → Tm Γ a → {Δ : Cxt} → 
+  eval  : ∀{i}{Γ : Cxt} {a : Ty} → Tm Γ a → {Δ : Cxt} → 
            Env Δ Γ → Delay (Val Δ a) i
-  〖 var x   〗 ρ = now (lookup x ρ)
-  〖 abs t   〗 ρ = now (lam t ρ)
-  〖 app t u 〗 ρ = apply* (〖 t 〗 ρ) (〖 u 〗 ρ)
+  eval (var x) ρ = now (lookup x ρ)
+  eval (abs t) ρ = now (lam t ρ)
+  eval (app t u) ρ = apply* (eval t ρ) (eval u ρ)
 
   apply* : ∀{i Δ a b} → Delay (Val Δ (a ⇒ b)) i → Delay (Val Δ a) i → 
            Delay (Val Δ b) i
@@ -67,11 +67,11 @@ mutual
   apply f v = later (∞apply f v)
 
   ∞apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → ∞Delay (Val Δ b) i
-  force (∞apply (lam t ρ) v) = 〖 t 〗 (ρ , v)
+  force (∞apply (lam t ρ) v) = eval t (ρ , v)
   force (∞apply (ne x sp) v) = now (ne x (sp , v))
 
 β-expand : ∀{Γ Δ a b}{t : Tm (Γ , a) b}{ρ : Env Δ Γ}{u : Val Δ a}{v : Val Δ b}
-           (h : 〖 t 〗 (ρ , u) ⇓ v) → apply (lam t ρ) u ⇓ v
+           (h : eval t (ρ , u) ⇓ v) → apply (lam t ρ) u ⇓ v
 β-expand h = later⇓ h
 
 
@@ -81,7 +81,7 @@ mutual
   β-readback v = later (∞β-readback v)
 
   ∞β-readback : ∀{i Γ a} → Val Γ a → ∞Delay (βNf Γ a) i
-  force (∞β-readback (lam t ρ)) = lam  <$> (β-readback =<< 〖 t 〗 (liftEnv ρ))
+  force (∞β-readback (lam t ρ)) = lam  <$> (β-readback =<< eval t  (liftEnv ρ))
   force (∞β-readback (ne x rs)) = ne x <$> mapRSpM β-readback rs
 
 
@@ -118,19 +118,19 @@ mutual
 
 -- Type soundness
 
-〖var〗 : ∀{Δ Γ a}(x : Var Γ a)(ρ : Env Δ Γ)(θ : ⟪ Γ ⟫ ρ) → 
+⟦var⟧ : ∀{Δ Γ a}(x : Var Γ a)(ρ : Env Δ Γ)(θ : ⟪ Γ ⟫ ρ) → 
             C⟦ a ⟧ (now (lookup x ρ))
-〖var〗 zero    (_ , v) (_ , v⇓) = v , now⇓ , v⇓
-〖var〗 (suc x) (ρ , _) (θ , _ ) = 〖var〗 x ρ θ
+⟦var⟧ zero   (_ , v) (_ , v⇓) = v , now⇓ , v⇓
+⟦var⟧(suc x) (ρ , _) (θ , _ ) = ⟦var⟧ x ρ θ
 
 sound-β : ∀ {Δ Γ a b} {t : Tm (Γ , a) b} {ρ : Env Δ Γ} {u : Val Δ a} →
-          C⟦ b ⟧ (〖 t 〗 (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
+          C⟦ b ⟧ (eval t  (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
 sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
 
-〖abs〗 : ∀ {Δ Γ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) →
-  ({u : Val Δ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (〖 t 〗 (ρ , u))) →
+⟦abs⟧ : ∀ {Δ Γ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) →
+  ({u : Val Δ a} (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (eval t  (ρ , u))) →
   C⟦ a ⇒ b ⟧ (now (lam t ρ))
-〖abs〗 t ρ θ ih = lam t ρ , now⇓ , λ u⇓ → sound-β (ih u⇓)
+⟦abs⟧ t ρ θ ih = lam t ρ , now⇓ , λ u⇓ → sound-β (ih u⇓)
 
 sound-app' : ∀ {Δ a b} (f : Val Δ (a ⇒ b)) →
   {u* : Delay (Val Δ a) _} {u : Val Δ a} (u⇓ : u* ⇓ u) →
@@ -145,18 +145,17 @@ sound-app : ∀ {Δ a b} →
 sound-app  (later⇓ f⇓) u⇓ h = later⇓ (sound-app f⇓ u⇓ h)
 sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
-〖app〗 : ∀ {Δ a b} {f : Delay (Val Δ (a ⇒ b)) _} {u : Delay (Val Δ a) _} →
+⟦app⟧ : ∀ {Δ a b} {f : Delay (Val Δ (a ⇒ b)) _} {u : Delay (Val Δ a) _} →
           C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
-〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = 
+⟦app⟧ (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = 
   let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ⟦u⟧
   in  v , sound-app f⇓ u⇓ v⇓ , ⟦v⟧
 
 -- termination of eval
-term : ∀ {Δ Γ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (〖 t 〗 ρ)
-term (var x)   ρ θ = 〖var〗 x ρ θ
-term (abs t)   ρ θ = 〖abs〗 t ρ θ (λ {u} u⇓ → term t (ρ , u) (θ , u⇓))
-term (app t u) ρ θ = 〖app〗 (term t ρ θ) (term u ρ θ)
-
+term : ∀ {Δ Γ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (eval t ρ)
+term (var x)   ρ θ = ⟦var⟧ x ρ θ
+term (abs t)   ρ θ = ⟦abs⟧ t ρ θ (λ {u} u⇓ → term t (ρ , u) (θ , u⇓))
+term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
 
 --termination of readback
 {-
