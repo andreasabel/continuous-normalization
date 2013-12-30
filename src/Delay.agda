@@ -44,7 +44,8 @@ delayMonad {i} = record
   } where open Bind
 
 module _ {i : Size} where
-  open module DelayMonad = RawMonad (delayMonad {i = i}) public renaming (_⊛_ to _<*>_)
+  open module DelayMonad = RawMonad (delayMonad {i = i}) 
+                           public renaming (_⊛_ to _<*>_)
 open Bind public using (_∞>>=_)
 
 -- Map for ∞Delay
@@ -150,8 +151,8 @@ _>>=r_ = bind-cong-r
 
 mutual
   bind-cong : ∀ {i A B}  {a? b? : Delay A ∞} (eq : _~_ {i} a? b?)
-    {k l : A → Delay B ∞} (h : ∀ a → _~_ {i} (k a) (l a)) →
-    _~_ {i} (a? >>= k) (b? >>= l)
+              {k l : A → Delay B ∞} (h : ∀ a → _~_ {i} (k a) (l a)) →
+              _~_ {i} (a? >>= k) (b? >>= l)
   bind-cong (~now a)    h = h a
   bind-cong (~later eq) h = ~later (∞bind-cong eq h)
 
@@ -165,20 +166,17 @@ _~>>=_ = bind-cong
 -- Monad laws.
 
 mutual
-  bind-assoc : ∀ {i A B C} (m : Delay A ∞) {k : A → Delay B ∞} {l : B → Delay C ∞} →
-
-    _~_ {i} ((m >>= k) >>= l)  (m >>= λ a → k a >>= l)
-
+  bind-assoc : ∀{i A B C}(m : Delay A ∞){k : A → Delay B ∞}{l : B → Delay C ∞} →
+               _~_ {i} ((m >>= k) >>= l)  (m >>= λ a → k a >>= l)
   bind-assoc (now a)    = ~refl _
   bind-assoc (later a∞) = ~later (∞bind-assoc a∞)
 
-  ∞bind-assoc : ∀ {i A B C} (a∞ : ∞Delay A ∞) {k : A → Delay B ∞} {l : B → Delay C ∞} →
-
-    _∞~_ {i} ((a∞ ∞>>= λ a → k a) ∞>>= l) (a∞ ∞>>= λ a → k a >>= l)
-
+  ∞bind-assoc : ∀{i A B C}(a∞ : ∞Delay A ∞)
+                {k : A → Delay B ∞}{l : B → Delay C ∞} →
+                _∞~_ {i} ((a∞ ∞>>= λ a → k a) ∞>>= l) (a∞ ∞>>= λ a → k a >>= l)
   ~force (∞bind-assoc a∞) = bind-assoc (force a∞)
 
--- Termination/Convergence.  Makes only sense for Delay A ∞.
+-- Termination/Convergence.  Makes sense only for Delay A ∞.
 
 data _⇓_ {A : Set} : (a? : Delay A ∞) (a : A) → Set where
   now⇓   : ∀ {a} → now a ⇓ a

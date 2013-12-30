@@ -21,15 +21,15 @@ data Tm (Γ : Cxt) : (a : Ty) → Set where
 -- β-normal forms.
 
 data βNf {i : Size} (Γ : Cxt) : Ty → Set where
-  lam : ∀ {j : Size< i} {a b} (n : βNf {j} (Γ , a) b)                      → βNf Γ (a ⇒ b)
-  ne  : ∀ {j : Size< i} {a b} (x : Var Γ a) (ns : RSpine (βNf {j} Γ) a b)  → βNf Γ b
+  lam : ∀{j : Size< i}{a b}(n : βNf {j} (Γ , a) b) → βNf Γ (a ⇒ b)
+  ne  : ∀{j : Size< i}{a b}(x : Var Γ a)(ns : RSpine (βNf {j} Γ) a b) → βNf Γ b
 
 -- η-long β-normal forms.
 
 mutual
   data Nf {i : Size} (Γ : Cxt) : Ty → Set where
-    lam : ∀ {j : Size< i} {a b} (n : Nf {j} (Γ , a) b)                  → Nf Γ (a ⇒ b)
-    ne  : ∀ {j : Size< i} {a}   (x : Var Γ a) (ns : NfSpine {j} Γ a ★)  → Nf Γ ★
+    lam : ∀{j : Size< i}{a b}(n : Nf {j} (Γ , a) b) → Nf Γ (a ⇒ b)
+    ne  : ∀{j : Size< i}{a}(x : Var Γ a)(ns : NfSpine {j} Γ a ★) → Nf Γ ★
 
   NfSpine : {i : Size} (Γ : Cxt) (a c : Ty) → Set
   NfSpine {i} Γ a c = RSpine (Nf {i} Γ) a c
@@ -102,16 +102,17 @@ len : Cxt → ℕ
 len ε       = 0
 len (Γ , _) = 1 + len Γ
 
--- Monotonicity for long normal forms.
-
+-- Monotonicity / map for long normal forms
 mutual
   nf≤ : ∀ {i Γ Δ a} (η : Γ ≤ Δ) (t : Nf {i} Δ a) → Nf {i} Γ a
   nf≤ η (lam t)   = lam (nf≤ (lift' η) t)
   nf≤ η (ne x ts) = ne (var≤ η x) (nfSpine≤ η ts)
 
-  nfSpine≤ : ∀ {i Γ Δ a c} (η : Γ ≤ Δ) (ts : NfSpine {i} Δ a c) → NfSpine {i} Γ a c
+  nfSpine≤ : ∀ {i Γ Δ a c} (η : Γ ≤ Δ) (ts : NfSpine {i} Δ a c) → 
+             NfSpine {i} Γ a c
   nfSpine≤ η ts = mapRSp (nf≤ η) ts
 
+-- functor law 1
 mutual
   nf≤-id : ∀ {i Γ a} (n : Nf {i} Γ a) → nf≤ id n ≡ n
   nf≤-id (lam n)   = cong lam (nf≤-id n)
@@ -121,20 +122,24 @@ mutual
   nfSpine≤-id ε        = refl
   nfSpine≤-id (ns , n) = cong₂ _,_ (nfSpine≤-id ns) (nf≤-id n)
 
+-- functor law 2
+
+open ≡-Reasoning renaming (begin_ to proof_)
+
 mutual
   nf≤-• : ∀ {i Γ₁ Γ₂ Γ₃ a} (η : Γ₁ ≤ Γ₂) (η' : Γ₂ ≤ Γ₃) (n : Nf {i} Γ₃ a) →
-
-    nf≤ η (nf≤ η' n) ≡ nf≤ (η • η') n
-
-  nf≤-• η η' (lam n)   = cong lam
-    (subst (λ z → nf≤ (lift' η) (nf≤ (lift' η') n) ≡ nf≤ z n)
-           (lift'-• η η')
-           (nf≤-• (lift' η) (lift' η') n))
+          nf≤ η (nf≤ η' n) ≡ nf≤ (η • η') n
+  nf≤-• η η' (lam n)   = proof
+    lam (nf≤ (lift' η) (nf≤ (lift' η') n)) 
+    ≡⟨ cong lam (nf≤-•  (lift' η) (lift' η') n ) ⟩
+    lam (nf≤ (lift' η • lift' η') n)
+    ≡⟨ cong (λ f → lam (nf≤ f n)) (lift'-• η η') ⟩
+    lam (nf≤ (lift' (η • η')) n) 
+    ∎
   nf≤-• η η' (ne x ns) = cong₂ ne (var≤-• η η' x) (nfSpine≤-• η η' ns)
 
-  nfSpine≤-• : ∀ {i Γ₁ Γ₂ Γ₃ a c} (η : Γ₁ ≤ Γ₂) (η' : Γ₂ ≤ Γ₃) (ns : NfSpine {i} Γ₃ a c) →
-
-    nfSpine≤ η (nfSpine≤ η' ns) ≡ nfSpine≤ (η • η') ns
-
+  nfSpine≤-• : ∀{i Γ₁ Γ₂ Γ₃ a c}(η : Γ₁ ≤ Γ₂)(η' : Γ₂ ≤ Γ₃)
+               (ns : NfSpine {i} Γ₃ a c) →
+               nfSpine≤ η (nfSpine≤ η' ns) ≡ nfSpine≤ (η • η') ns
   nfSpine≤-• η η' ε        = refl
   nfSpine≤-• η η' (ns , n) = cong₂ _,_ (nfSpine≤-• η η' ns) (nf≤-• η η' n)

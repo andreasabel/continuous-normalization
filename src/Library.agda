@@ -46,9 +46,12 @@ module Pre = Relation.Binary.PreorderReasoning
 open import Relation.Binary.PropositionalEquality public
   using (_≡_; refl; sym; trans; cong; cong₂; subst; module ≡-Reasoning)
 
+--open ≡-Reasoning renaming (begin_ to proof_) public
+
 open import Relation.Binary.HeterogeneousEquality public
   using (_≅_; refl; ≡-to-≅; module ≅-Reasoning)
-  renaming (sym to hsym; trans to htrans; cong to hcong; cong₂ to hcong₂; subst to hsubst)
+  renaming (sym to hsym; trans to htrans; cong to hcong; 
+            cong₂ to hcong₂; subst to hsubst)
 
 hcong₃ : {A : Set}{B : A → Set}{C : ∀ a → B a → Set}{D : ∀ a b → C a b → Set}
          (f : ∀ a b c → D a b c)
