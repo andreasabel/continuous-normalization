@@ -166,7 +166,8 @@ _~>>=_ = bind-cong
 -- Monad laws.
 
 mutual
-  bind-assoc : ∀{i A B C}(m : Delay A ∞){k : A → Delay B ∞}{l : B → Delay C ∞} →
+  bind-assoc : ∀{i A B C}(m : Delay A ∞)
+               {k : A → Delay B ∞}{l : B → Delay C ∞} →
                _~_ {i} ((m >>= k) >>= l)  (m >>= λ a → k a >>= l)
   bind-assoc (now a)    = ~refl _
   bind-assoc (later a∞) = ~later (∞bind-assoc a∞)

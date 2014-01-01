@@ -104,18 +104,43 @@ mutual
 -- should this be a lemma, or perhaps built into V⟦⟧?
 readback≤ : ∀{Γ Δ}(α : Δ ≤ Γ){a}(v : Val Γ a) → readback v ⇓ → 
             readback (val≤ α v) ⇓
-readback≤ α {a = ★}     v (n , p) = (nf≤ α n) , {!!}
-readback≤ α {a = a ⇒ b} v (n , p) = {!p!}
+readback≤ α {a = ★} v (n , p) = {!!}
+readback≤ α {a ⇒ b} v (lam n , p) = {!!} -- lam (nf≤ (lift α) n) , {!!}
+
+
+∞readback≤ : ∀{Γ Δ}(α : Δ ≤ Γ){a}(v : Val Γ a) → force (∞readback v) ⇓ → 
+            force (∞readback (val≤ α v)) ⇓
+∞readback≤ α {★}     v (n , p) = {!!}
+∞readback≤ α {a ⇒ b} v (lam n , p) = {!!}
+
+-- η *        = id
+-- (k* . l) * = k* . l*
+-- k* . η     = k
+{-
+Left identity:	
+return a >>= f ≡ f a
+Right identity:	
+m >>= return ≡ m
+Associativity:
+(m >>= f) >>= g ≡ m >>= (\x -> f x >>= g)
+-}
+
+
 
 -- Type interpretation
 mutual
   V⟦_⟧_ : ∀{Γ}(a : Ty) → Val Γ a → Set
-  V⟦ ★     ⟧ v = readback v ⇓
+  V⟦ ★ ⟧ ne x vs = _⇓ (Nf.ne x <$> mapRSpM readback vs)
+                   -- readback v ⇓
   V⟦_⟧_ {Γ = Γ} (a ⇒ b) f = ∀{Δ}(ρ : Δ ≤ Γ)(u : Val Δ a) 
     (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ ρ f) u)
 
   C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay (Val Γ a) ∞ → Set
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
+
+  VSp⟦⟧ : ∀{Γ a b} → RSpine (Val Γ) a b → Set
+  VSp⟦⟧ ε = ⊤
+  VSp⟦⟧ (vs , v) = VSp⟦⟧ vs × V⟦ _ ⟧ v
 
 mutual
   env≤-id : ∀ {i Γ Δ} (ρ : Env {i} Δ Γ) → env≤ id ρ ≡ ρ
@@ -146,7 +171,7 @@ mutual
   valSpine≤-• η η' = mapRSp-∘ (val≤-• η η')
 
 V≤ : ∀{Δ Δ′ a}(η : Δ′ ≤ Δ)(v : Val Δ a)(〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
-V≤ {a = ★}     η v p  = readback≤ η v p
+V≤ {a = ★}     η (ne x vs) (n , p)  = nf≤ η n , {!!} -- readback≤ η v p
 V≤ {a = a ⇒ b} η v p {Δ'} ρ u u⇓ = 
   let v' , p' , p'' = p (ρ • η) u u⇓ in 
       v' , subst (λ X → apply X u ⇓ fst (p (ρ • η) u u⇓)) 
@@ -158,11 +183,9 @@ V≤ {a = a ⇒ b} η v p {Δ'} ρ u u⇓ =
 ⟪ ε ⟫     ε       = ⊤
 ⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ v
 
-
 ⟪⟫≤ : ∀ {Γ Δ Δ′} (η : Δ′ ≤ Δ) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → ⟪ Γ ⟫ (env≤ η ρ)
 ⟪⟫≤ η ε       θ        = _
 ⟪⟫≤ η (ρ , v) (θ , 〖v〗) = ⟪⟫≤ η ρ θ , V≤ η v 〖v〗
-
 
 -- Type soundness
 ⟦var⟧ : ∀{Δ Γ a}(x : Var Γ a)(ρ : Env Δ Γ)(θ : ⟪ Γ ⟫ ρ) → 
@@ -173,7 +196,6 @@ V≤ {a = a ⇒ b} η v p {Δ'} ρ u u⇓ =
 sound-β : ∀ {Δ Γ a b} {t : Tm (Γ , a) b} {ρ : Env Δ Γ} {u : Val Δ a} →
           C⟦ b ⟧ (eval t  (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
 sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
-
 
 ⟦abs⟧ : ∀ {Δ Γ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) →
   (∀{Δ'}(α : Δ' ≤ Δ){u : Val Δ' a}(u⇓ : V⟦ a ⟧ u) → 
@@ -212,6 +234,7 @@ term (abs t)   ρ θ = ⟦abs⟧ t ρ θ λ α {u} u⇓ → term t (env≤ α ρ
                                                      (⟪⟫≤ α ρ θ , u⇓)
 term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
 
+
 --termination of readback
 {-
 β-rterm : ∀{Γ a}(v : Val Γ a) →   V⟦ a ⟧ v → β-readback v ⇓
@@ -219,18 +242,22 @@ term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
 β-rterm {Γ}{a = a ⇒ b} v q = {!β-readback v !}
 -}
 
-{-
+
+
 -- I'm expecting these two lemmas which are like reify and reflect here
 mutual
   rterm : ∀{Γ a}(v : Val Γ a) →   V⟦ a ⟧ v → readback v ⇓
-  rterm {a = ★}     v q = q
-  rterm {Γ}{a = a ⇒ b} v q = {!lam (fst y)!} , {! {- uses snd y -}!}
+  rterm {a = ★} (ne x vs) (n , p) = n , {!!} -- q
+  rterm {Γ}{a = a ⇒ b} v p = lam (fst y) , {!snd y!}
     where
-    x = q {{!Val.ne (zero {Γ}{a}) ε!}} {! call to rterm'!} 
+    x = {!!} -- p (weak id) (Val.ne zero ε) (rterm' zero ε {!!}) -- q {{!Val.ne (zero {Γ}{a}) ε!}} {! call to rterm'!} 
         -- need Kripke V⟦⟧ here
     y = rterm (fst x) (snd (snd x))
     
-  rterm' : ∀{Γ a}(x : Var Γ a) (vs : RSpine (Val Γ) a ★) → 
-           readback (ne x vs) ⇓ → V⟦ ★ ⟧ (ne x vs)
-  rterm' x vs = {!!}
--}
+  rterm' : ∀{Γ a b}(x : Var Γ a) (vs : RSpine (Val Γ) a b) → 
+            _⇓ (mapRSpM readback vs) → V⟦ b ⟧ (ne x vs)
+  rterm' {a = ★} x vs (proj₁ , proj₂) = {!!}
+  rterm' {a = a ⇒ b} x vs p = {!!}
+
+var⟦⟧ : ∀{Γ a}(x : Var Γ a) → V⟦ a ⟧ (ne x ε)
+var⟦⟧ x = rterm' x ε (ε , {!!})
