@@ -44,6 +44,35 @@ mutual
   nev≤ α (var x)   = var (var≤ α x)
   nev≤ α (app t u) = app (nev≤ α t) (val≤ α u)
 
+mutual
+  env≤-id : ∀ {Γ Δ} (ρ : Env Δ Γ) → env≤ id ρ ≡ ρ
+  env≤-id ε         = refl
+  env≤-id (ρ , v)   = cong₂ _,_ (env≤-id ρ) (val≤-id v)
+
+  val≤-id : ∀ {Δ a} (v : Val Δ a) → val≤ id v ≡ v
+  val≤-id (ne t) = cong ne (nev≤-id t)
+  val≤-id (lam t ρ) = cong (lam t) (env≤-id ρ)
+
+  nev≤-id : ∀ {Δ a} (t : Ne Val Δ a) → nev≤ id t ≡ t
+  nev≤-id (var x)   = refl
+  nev≤-id (app t u) = cong₂ app (nev≤-id t) (val≤-id u)
+
+mutual
+  env≤-• : ∀ {Γ Δ₁ Δ₂ Δ₃} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (ρ : Env Δ₃ Γ) →
+           env≤ η (env≤ η' ρ) ≡ env≤ (η • η') ρ
+  env≤-• η η' ε       = refl
+  env≤-• η η' (ρ , v) = cong₂ _,_ (env≤-• η η' ρ) (val≤-• η η' v)
+
+  val≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (v : Val Δ₃ a) →
+           val≤ η (val≤ η' v) ≡ val≤ (η • η') v
+  val≤-• η η' (ne t) = cong ne (nev≤-• η η' t)
+  val≤-• η η' (lam t ρ) = cong (lam t) (env≤-• η η' ρ)
+
+  nev≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (t : Ne Val Δ₃ a) →
+           nev≤ η (nev≤ η' t) ≡ nev≤ (η • η') t
+  nev≤-• η η' (var x)   = cong var (var≤-• η η' x)
+  nev≤-• η η' (app t u) = cong₂ app (nev≤-• η η' t) (val≤-• η η' u)
+
 weakVal : ∀ {Δ a c} → Val Δ c → Val (Δ , a) c
 weakVal = val≤ (weak id)
 
@@ -82,3 +111,77 @@ mutual
   force (∞nereadback (app t u)) = 
     nereadback t >>= λ f → readback _ u >>= λ v → now (app f v) 
 
+mutual
+  V⟦_⟧_ : ∀{Γ}(a : Ty) → Val Γ a → Set
+  V⟦ ★ ⟧ ne t = nereadback t ⇓
+  V⟦_⟧_ {Γ = Γ} (a ⇒ b) f = ∀{Δ}(ρ : Δ ≤ Γ)(u : Val Δ a) 
+    (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ ρ f) u)
+
+  C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay (Val Γ a) ∞ → Set
+  C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
+
+V≤ : ∀{Δ Δ′} a (η : Δ′ ≤ Δ)(v : Val Δ a)(〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
+V≤ ★       η (ne t) p        = {!!}
+V≤ (a ⇒ b) η v      p ρ u u⇓ =   
+  let v' , p' , p'' = p (ρ • η) u u⇓ in 
+      v' , subst (λ X → apply X u ⇓ fst (p (ρ • η) u u⇓)) 
+                 ((sym (val≤-• ρ η v))) 
+                 p' 
+         , p'' 
+
+⟪_⟫_ : ∀{Δ}(Γ : Cxt) → Env Δ Γ → Set
+⟪ ε ⟫     ε       = ⊤
+⟪ Γ , a ⟫ (ρ , v) = ⟪ Γ ⟫ ρ × V⟦ a ⟧ v
+
+⟪⟫≤ : ∀ {Γ Δ Δ′} (η : Δ′ ≤ Δ) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → ⟪ Γ ⟫ (env≤ η ρ)
+⟪⟫≤ η ε       θ        = _
+⟪⟫≤ η (ρ , v) (θ , 〖v〗) = ⟪⟫≤ η ρ θ , V≤ _ η v 〖v〗
+
+
+⟦var⟧ : ∀{Δ Γ a}(x : Var Γ a)(ρ : Env Δ Γ)(θ : ⟪ Γ ⟫ ρ) → 
+            C⟦ a ⟧ (now (lookup x ρ))
+⟦var⟧ zero   (_ , v) (_ , v⇓) = v , now⇓ , v⇓
+⟦var⟧(suc x) (ρ , _) (θ , _ ) = ⟦var⟧ x ρ θ
+
+β-expand : ∀{Γ Δ a b}{t : Tm (Γ , a) b}{ρ : Env Δ Γ}{u : Val Δ a}{v : Val Δ b}
+           (h : eval t (ρ , u) ⇓ v) → apply (lam t ρ) u ⇓ v
+β-expand h = later⇓ h
+
+sound-β : ∀ {Δ Γ a b} {t : Tm (Γ , a) b} {ρ : Env Δ Γ} {u : Val Δ a} →
+          C⟦ b ⟧ (eval t  (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
+sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
+
+⟦abs⟧ : ∀ {Δ Γ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) →
+  (∀{Δ'}(α : Δ' ≤ Δ)(u : Val Δ' a)(u⇓ : V⟦ a ⟧ u) → 
+    C⟦ b ⟧ (eval t  (env≤ α ρ , u))) →
+  C⟦ a ⇒ b ⟧ (now (lam t ρ))
+⟦abs⟧ t ρ θ ih = (lam t ρ) , now⇓ , (λ α u p → 
+  sound-β {t = t} {ρ = env≤ α ρ} {u = u} (ih α u p))
+
+sound-app' : ∀ {Δ a b} (f : Val Δ (a ⇒ b)) →
+  {u* : Delay (Val Δ a) _} {u : Val Δ a} (u⇓ : u* ⇓ u) →
+  {v : Val Δ b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
+sound-app' f (later⇓ u⇓) h = later⇓ (sound-app' f u⇓ h)
+sound-app' f  now⇓       h = h
+
+sound-app : ∀ {Δ a b} →
+  {f* : Delay (Val Δ (a ⇒ b)) _} {f : Val Δ (a ⇒ b)} (f⇓ : f* ⇓ f) →
+  {u* : Delay (Val Δ a)       _} {u : Val Δ a}       (u⇓ : u* ⇓ u) →
+  {v : Val Δ b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
+sound-app  (later⇓ f⇓) u⇓ h = later⇓ (sound-app f⇓ u⇓ h)
+sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
+
+⟦app⟧ : ∀ {Δ a b} {f : Delay (Val Δ (a ⇒ b)) _} {u : Delay (Val Δ a) _} →
+          C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
+⟦app⟧ (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = 
+  let v , v⇓ , ⟦v⟧ = ⟦f⟧ id u ⟦u⟧ in
+  v , 
+  sound-app f⇓ u⇓ (subst (λ X → apply X u ⇓ fst (⟦f⟧ id u ⟦u⟧)) 
+                         (val≤-id f) 
+                         v⇓) ,
+  ⟦v⟧
+
+term : ∀ {Δ Γ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C⟦ a ⟧ (eval t ρ)
+term (var x)   ρ θ = ⟦var⟧ x ρ θ
+term (abs t)   ρ θ = ⟦abs⟧ t ρ θ (λ α u p → term t (env≤ α ρ , u) (⟪⟫≤ α ρ θ , p))
+term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
