@@ -24,6 +24,12 @@ mutual
   nen≤ α (var x)   = var (var≤ α x)
   nen≤ α (app t u) = app (nen≤ α t) (nf≤ α u)
 
+mutual
+
+
+  nen≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (t : Ne Nf Δ₃ a) →
+           nen≤ η (nen≤ η' t) ≡ nen≤ (η • η') t
+  nen≤-• = {!!}
 
 -- Values and environments
 mutual
@@ -116,30 +122,41 @@ mutual
   nereadback (app t v) = 
     nereadback t >>= (λ t → readback _ v >>= (λ n → now (app t n)))
 
-
---  nereadback t = later (∞nereadback t)
-{-
-  ∞nereadback : ∀{i Γ a} → Ne Val Γ a → ∞Delay (Ne Nf Γ a) i
-  force (∞nereadback (var x)  ) = now (var x)
-  force (∞nereadback (app t u)) = 
-    nereadback t >>= λ f → readback _ u >>= λ v → now (app f v) 
--}
-
 postulate nereadback≤ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a){n : Ne Nf Γ a} → 
-              nereadback t ⇓ n → nereadback (nev≤ α t) ⇓ nen≤ α n
+                nereadback t ⇓ n → nereadback (nev≤ α t) ⇓ nen≤ α n
+
+
+
+Read : ∀ {Δ a} (v : Val Δ a) (n : Nf Δ a) → Set
+Read {Δ}{a} v n = {Γ : Cxt} (η : Γ ≤ Δ) → readback a (val≤ η v) ⇓ (nf≤ η n)
+
+CanRead : ∀ {Δ a} (v : Val Δ a) → Set
+CanRead v = ∃ λ n → Read v n
+
+NRead : ∀ {Δ a} (v : Ne Val Δ a) (n : Ne Nf Δ a) → Set
+NRead {Δ}{a} v n = {Γ : Cxt} (η : Γ ≤ Δ) → nereadback (nev≤ η v) ⇓ (nen≤ η n)
+
+NCanRead : ∀ {Δ a} (v : Ne Val Δ a) → Set
+NCanRead v = ∃ λ n → NRead v n
 
 
 mutual
   V⟦_⟧_ : ∀{Γ}(a : Ty) → Val Γ a → Set
-  V⟦ ★ ⟧ ne t = nereadback t ⇓
-  V⟦_⟧_ {Γ = Γ} (a ⇒ b) f = ∀{Δ}(ρ : Δ ≤ Γ)(u : Val Δ a) 
+  V⟦ ★ ⟧ ne t = NCanRead t
+  V⟦ a ⇒ b ⟧ f = ∀{Δ}(ρ : Δ ≤ _)(u : Val Δ a) 
     (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ ρ f) u)
 
   C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay (Val Γ a) ∞ → Set
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
 
 V≤ : ∀{Δ Δ′} a (η : Δ′ ≤ Δ)(v : Val Δ a)(〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
-V≤ ★       η (ne t) (n , p)        = nen≤ η n , nereadback≤ η t p
+V≤ ★ η (ne t) (n , p) = 
+  nen≤ η n , 
+  λ ρ → subst (λ X → nereadback X ⇓ nen≤ ρ (nen≤ η n)) 
+              (sym (nev≤-• ρ η t))
+              (subst (λ Y → nereadback (nev≤ (ρ • η) t) ⇓ Y) 
+                     (sym (nen≤-• ρ η n)) 
+                     (p (ρ • η)))
 V≤ (a ⇒ b) η v      p       ρ u u⇓ =   
   let v' , p' , p'' = p (ρ • η) u u⇓ in 
       v' , subst (λ X → apply X u ⇓ fst (p (ρ • η) u u⇓)) 
@@ -204,10 +221,31 @@ term (abs t)   ρ θ =
   ⟦abs⟧ t ρ θ (λ α u p → term t (env≤ α ρ , u) (⟪⟫≤ α ρ θ , p))
 term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
 
+
 mutual
-  rterm : ∀{Γ} a (v : Val Γ a) →   V⟦ a ⟧ v → readback a v ⇓
-  rterm ★        (ne t) (n , p) = 
-     ne n , later⇓ (map⇓ Nf.ne p) 
+  rterm : ∀{Γ} a (v : Val Γ a) → V⟦ a ⟧ v → CanRead v
+  rterm ★ (ne t) (n , p) = ne n , (λ η → later⇓ (map⇓ Nf.ne (p η)))
+  rterm (a ⇒ b) f p =
+    let v , q , r = p (weak id) 
+                      (ne (var zero)) 
+                      (rterm' a (var zero) (var zero , (λ η → now⇓))) 
+        n , s = rterm b v r
+    in lam n , λ η → {! !}
+  rterm' : ∀{Γ} a (t : Ne Val Γ a) → NCanRead t → V⟦ a ⟧ ne t
+  rterm' ★ t p = p
+  rterm' (a ⇒ a₁) t p ρ u u⇓ = 
+    ne (app (nev≤ ρ t) u) , 
+    ({!!} , {!!})
+
+
+{-
+mutual
+  rterm : ∀{Γ} a (v : Val Γ a) →   V⟦ a ⟧ v → CanRead a v
+--  rterm ★        (ne t) (n , p) = 
+--     ne n , later⇓ (map⇓ Nf.ne p) 
+--  rterm ★ (ne t) p = let n , p' = p id in 
+    ne n , 
+    later⇓ (map⇓ ne (subst (λ X → nereadback X ⇓ fst (p id)) (nev≤-id t) p'))
   rterm (a ⇒ b)  f      p       =
     let v , q , r = p (weak id) 
                       (ne (var zero)) 
@@ -219,7 +257,7 @@ mutual
                                    now⇓))
 
   rterm' : ∀{Γ} a(t : Ne Val Γ a) → nereadback t ⇓ → V⟦ a ⟧ ne t
-  rterm' ★ t p = p
+  rterm' ★ t p = {!!}
   rterm' (a ⇒ b) t (n , p) ρ u u⇓ = let n' , p' = rterm a u u⇓
                                         p'' = nereadback≤ ρ t p in
                               ne (app (nev≤ ρ t) u) , 
@@ -230,3 +268,4 @@ mutual
          >>=⇓ (λ t₁ → later (∞readback a u ∞>>= (λ n₁ → now (Ne.app t₁ n₁)))) 
               p''
               (>>=⇓ (λ n₁ → now (Ne.app (nen≤ ρ n) n₁)) p' now⇓))
+-}
