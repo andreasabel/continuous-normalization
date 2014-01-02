@@ -185,3 +185,12 @@ term : ∀ {Δ Γ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : ⟪ Γ ⟫ ρ) → C�
 term (var x)   ρ θ = ⟦var⟧ x ρ θ
 term (abs t)   ρ θ = ⟦abs⟧ t ρ θ (λ α u p → term t (env≤ α ρ , u) (⟪⟫≤ α ρ θ , p))
 term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
+
+mutual
+  rterm : ∀{Γ} a (v : Val Γ a) →   V⟦ a ⟧ v → readback a v ⇓
+  rterm ★       (ne t) p = {!!}
+  rterm (a ⇒ b) f      p = {!!}
+
+  rterm' : ∀{Γ a}(t : Ne Val Γ a) → nereadback t ⇓ → V⟦ a ⟧ ne t
+  rterm' (var x)   p = {!!}
+  rterm' (app t v) p = {!!}
