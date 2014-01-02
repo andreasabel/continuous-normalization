@@ -198,40 +198,25 @@ subst≈⇓ : ∀{A}{t t' : Delay A ∞}{n : A} → t ⇓ n → t ≈ t' → t' 
 subst≈⇓ = ?
 -}
 
-
-lem : ∀{Γ}(t : Ne Val Γ ★) → 
-  (ne <$> nereadback t) ~ (readback ★ (ne t))
-lem t = {!!}
-
-{-
-lem2 : ∀{Γ a b}(f : Val Γ (a ⇒ b))(p : V⟦ a ⇒ b ⟧ f) → 
- (lam <$>
- later
- (∞readback b
-  (fst
-   (p (weak id) (ne (var zero))
-    (rterm' a (var zero) (var zero , now⇓))))))
-  ~ readback (a ⇒ b) f
-lem2 = ?
--}
 mutual
   rterm : ∀{Γ} a (v : Val Γ a) →   V⟦ a ⟧ v → readback a v ⇓
   rterm ★        (ne t) (n , p) = 
-     ne n , subst~⇓ (map⇓ ne p) (lem t )
+     ne n , later⇓ (map⇓ Nf.ne p) 
   rterm (a ⇒ b)  f      p       =
     let v , q , r = p (weak id) 
                       (ne (var zero)) 
                       (rterm' a (var zero) ((var zero) , now⇓)) 
         n , s = rterm b v r
     in    
-      lam n , later⇓ {!q!} -- subst~⇓ (map⇓ lam s) {! q!}
+      lam n , later⇓ (later⇓ (>>=⇓ (λ x → now (lam x)) 
+                                   (>>=⇓ (readback b) (unlater q) s) now⇓))
 
   rterm' : ∀{Γ} a(t : Ne Val Γ a) → nereadback t ⇓ → V⟦ a ⟧ ne t
   rterm' ★ t p = p
   rterm' (a ⇒ b) t (n , p) ρ u u⇓ = let n' , p' = rterm a u u⇓ in 
                               ne (app (nev≤ ρ t) u) , 
-                              {!!} , 
+                              later⇓ now⇓ , 
                               rterm' b 
                                      (app (nev≤ ρ t) u) 
-                                     ({!Ne.app (nen n'!} , {!!})
+                                     ({!!} , {!!})
 

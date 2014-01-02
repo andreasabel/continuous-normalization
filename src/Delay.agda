@@ -205,6 +205,15 @@ subst~⇓ (later⇓ p) (~later eq) = later⇓ (subst~⇓ p (~force eq))
 ⇓>>= f now⇓ q = q
 ⇓>>= f (later⇓ p) (later⇓ q) = ⇓>>= f p q
 
+>>=⇓ : ∀{A B}(f : A → Delay B ∞)
+       {?a : Delay A ∞}{a : A} → ?a ⇓ a → 
+       {b : B} → f a ⇓ b → (?a >>= f) ⇓ b
+>>=⇓ f now⇓ q = q
+>>=⇓ f (later⇓ p) q = later⇓ (>>=⇓ f p q)
+
+-- handy when you can't pattern match like in a let definition
+unlater : ∀{A}{∞a : ∞Delay A ∞}{a : A} → later ∞a ⇓ a → force ∞a ⇓ a
+unlater (later⇓ p) = p 
 
 
 
