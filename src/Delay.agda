@@ -199,6 +199,13 @@ subst~⇓ : ∀{A}{t t' : Delay A ∞}{n : A} → t ⇓ n → t ~ t' → t' ⇓ 
 subst~⇓ now⇓ (~now a) = now⇓
 subst~⇓ (later⇓ p) (~later eq) = later⇓ (subst~⇓ p (~force eq))
 
+-- this should also hold for weak bisimularity right?
+{-
+subst≈⇓ : ∀{A}{t t' : Delay A ∞}{n : A} → t ⇓ n → t ≈ t' → t' ⇓ n
+subst≈⇓ = ?
+-}
+
+
 ⇓>>= : ∀{A B}(f : A → Delay B ∞)
        {?a : Delay A ∞}{a : A} → ?a ⇓ a → 
        {b : B} → (?a >>= f) ⇓ b → f a ⇓ b

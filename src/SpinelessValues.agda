@@ -3,7 +3,7 @@
 module SpinelessValues where
 
 open import Library
-open import Term hiding (Nf; module Nf)
+open import Term hiding (Nf; module Nf; nf≤)
 open import Spine
 open import Delay
 
@@ -14,6 +14,16 @@ data Ne (T : Cxt → Ty → Set)(Γ : Cxt) : Ty → Set where
 data Nf (Γ : Cxt) : Ty → Set where
   lam : ∀{a b}(n : Nf (Γ , a) b) → Nf Γ (a ⇒ b)
   ne  : Ne Nf Γ ★ → Nf Γ ★
+
+mutual
+  nf≤ : ∀{Γ Δ} → Γ ≤ Δ → ∀{a} → Nf Δ a → Nf Γ a
+  nf≤ α (ne t)   = ne (nen≤ α t)
+  nf≤ α (lam t)  = lam (nf≤ (lift α) t)
+
+  nen≤ : ∀{Γ Δ} → Γ ≤ Δ → ∀{a} → Ne Nf Δ a → Ne Nf Γ a
+  nen≤ α (var x)   = var (var≤ α x)
+  nen≤ α (app t u) = app (nen≤ α t) (nf≤ α u)
+
 
 -- Values and environments
 mutual
@@ -115,6 +125,10 @@ mutual
     nereadback t >>= λ f → readback _ u >>= λ v → now (app f v) 
 -}
 
+postulate nereadback≤ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a){n : Ne Nf Γ a} → 
+              nereadback t ⇓ n → nereadback (nev≤ α t) ⇓ nen≤ α n
+
+
 mutual
   V⟦_⟧_ : ∀{Γ}(a : Ty) → Val Γ a → Set
   V⟦ ★ ⟧ ne t = nereadback t ⇓
@@ -125,7 +139,7 @@ mutual
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
 
 V≤ : ∀{Δ Δ′} a (η : Δ′ ≤ Δ)(v : Val Δ a)(〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
-V≤ ★       η (ne t) (n , p)        = {!!}
+V≤ ★       η (ne t) (n , p)        = nen≤ η n , nereadback≤ η t p
 V≤ (a ⇒ b) η v      p       ρ u u⇓ =   
   let v' , p' , p'' = p (ρ • η) u u⇓ in 
       v' , subst (λ X → apply X u ⇓ fst (p (ρ • η) u u⇓)) 
@@ -190,14 +204,6 @@ term (abs t)   ρ θ =
   ⟦abs⟧ t ρ θ (λ α u p → term t (env≤ α ρ , u) (⟪⟫≤ α ρ θ , p))
 term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
 
-
--- this should also hold for weak bisimularity right?
-
-{-
-subst≈⇓ : ∀{A}{t t' : Delay A ∞}{n : A} → t ⇓ n → t ≈ t' → t' ⇓ n
-subst≈⇓ = ?
--}
-
 mutual
   rterm : ∀{Γ} a (v : Val Γ a) →   V⟦ a ⟧ v → readback a v ⇓
   rterm ★        (ne t) (n , p) = 
@@ -209,14 +215,18 @@ mutual
         n , s = rterm b v r
     in    
       lam n , later⇓ (later⇓ (>>=⇓ (λ x → now (lam x)) 
-                                   (>>=⇓ (readback b) (unlater q) s) now⇓))
+                                   (>>=⇓ (readback b) (unlater q) s) 
+                                   now⇓))
 
   rterm' : ∀{Γ} a(t : Ne Val Γ a) → nereadback t ⇓ → V⟦ a ⟧ ne t
   rterm' ★ t p = p
-  rterm' (a ⇒ b) t (n , p) ρ u u⇓ = let n' , p' = rterm a u u⇓ in 
+  rterm' (a ⇒ b) t (n , p) ρ u u⇓ = let n' , p' = rterm a u u⇓
+                                        p'' = nereadback≤ ρ t p in
                               ne (app (nev≤ ρ t) u) , 
                               later⇓ now⇓ , 
                               rterm' b 
-                                     (app (nev≤ ρ t) u) 
-                                     ({!!} , {!!})
-
+                                     (Ne.app (nev≤ ρ t) u) 
+                                     (Ne.app (nen≤ ρ n) n' , 
+         >>=⇓ (λ t₁ → later (∞readback a u ∞>>= (λ n₁ → now (Ne.app t₁ n₁)))) 
+              p''
+              (>>=⇓ (λ n₁ → now (Ne.app (nen≤ ρ n) n₁)) p' now⇓))
