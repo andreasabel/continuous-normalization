@@ -125,7 +125,7 @@ mutual
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
 
 V≤ : ∀{Δ Δ′} a (η : Δ′ ≤ Δ)(v : Val Δ a)(〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
-V≤ ★       η (ne t) (n , p)        = {!Ne.app <$> ?!}
+V≤ ★       η (ne t) (n , p)        = {!!}
 V≤ (a ⇒ b) η v      p       ρ u u⇓ =   
   let v' , p' , p'' = p (ρ • η) u u⇓ in 
       v' , subst (λ X → apply X u ⇓ fst (p (ρ • η) u u⇓)) 
@@ -190,10 +190,6 @@ term (abs t)   ρ θ =
   ⟦abs⟧ t ρ θ (λ α u p → term t (env≤ α ρ , u) (⟪⟫≤ α ρ θ , p))
 term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
 
-subst~⇓ : ∀{A}{t t' : Delay A ∞}{n : A} → t ⇓ n → t ~ t' → t' ⇓ n
-subst~⇓ now⇓ (~now a) = now⇓
-subst~⇓ (later⇓ p) (~later eq) = later⇓ (subst~⇓ p (~force eq))
-
 
 -- this should also hold for weak bisimularity right?
 
@@ -207,6 +203,17 @@ lem : ∀{Γ}(t : Ne Val Γ ★) →
   (ne <$> nereadback t) ~ (readback ★ (ne t))
 lem t = {!!}
 
+{-
+lem2 : ∀{Γ a b}(f : Val Γ (a ⇒ b))(p : V⟦ a ⇒ b ⟧ f) → 
+ (lam <$>
+ later
+ (∞readback b
+  (fst
+   (p (weak id) (ne (var zero))
+    (rterm' a (var zero) (var zero , now⇓))))))
+  ~ readback (a ⇒ b) f
+lem2 = ?
+-}
 mutual
   rterm : ∀{Γ} a (v : Val Γ a) →   V⟦ a ⟧ v → readback a v ⇓
   rterm ★        (ne t) (n , p) = 
@@ -215,9 +222,16 @@ mutual
     let v , q , r = p (weak id) 
                       (ne (var zero)) 
                       (rterm' a (var zero) ((var zero) , now⇓)) 
+        n , s = rterm b v r
     in    
-    lam (fst (rterm b v r)) , {!rterm b v r!}
+      lam n , later⇓ {!q!} -- subst~⇓ (map⇓ lam s) {! q!}
 
   rterm' : ∀{Γ} a(t : Ne Val Γ a) → nereadback t ⇓ → V⟦ a ⟧ ne t
   rterm' ★ t p = p
-  rterm' (a ⇒ b) t p ρ u u⇓ = {!!}
+  rterm' (a ⇒ b) t (n , p) ρ u u⇓ = let n' , p' = rterm a u u⇓ in 
+                              ne (app (nev≤ ρ t) u) , 
+                              {!!} , 
+                              rterm' b 
+                                     (app (nev≤ ρ t) u) 
+                                     ({!Ne.app (nen n'!} , {!!})
+

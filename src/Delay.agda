@@ -194,8 +194,16 @@ map⇓ : ∀ {A B} {a : A} {a? : Delay A ∞}
 map⇓ f now⇓        = now⇓
 map⇓ f (later⇓ a⇓) = later⇓ (map⇓ f a⇓)
 
+-- some lemmas about convergence
+subst~⇓ : ∀{A}{t t' : Delay A ∞}{n : A} → t ⇓ n → t ~ t' → t' ⇓ n
+subst~⇓ now⇓ (~now a) = now⇓
+subst~⇓ (later⇓ p) (~later eq) = later⇓ (subst~⇓ p (~force eq))
 
-
+⇓>>= : ∀{A B}(f : A → Delay B ∞)
+       {?a : Delay A ∞}{a : A} → ?a ⇓ a → 
+       {b : B} → (?a >>= f) ⇓ b → f a ⇓ b
+⇓>>= f now⇓ q = q
+⇓>>= f (later⇓ p) (later⇓ q) = ⇓>>= f p q
 
 
 
