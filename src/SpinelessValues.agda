@@ -222,6 +222,79 @@ term (abs t)   ρ θ =
 term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
 
 
+lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
+  val≤ η (lookup x ρ) ≡ lookup x (env≤ η ρ)
+lookup≤ zero    (ρ , v) η = refl
+lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
+
+~apply* : ∀ {Δ a b} {f1? f2? : Delay (Val Δ (a ⇒ b)) ∞} {u1? u2? : Delay (Val Δ a) ∞} →
+  (eqf : _~_ f1? f2?) (equ : _~_ u1? u2?) →
+  _~_ (apply* f1? u1?) (apply* f2? u2?)
+~apply* eqf equ = eqf ~>>= λ f → equ ~>>= λ u → ~refl _
+
+open ~-Reasoning renaming (begin_ to proof_)
+-- this stuff taken from locallynameless...
+mutual
+  eval≤ : ∀ {i Γ Δ Δ' a} (t : Tm Γ a)(ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
+          _~_ {i} (val≤ η <$> (eval t ρ)) (eval t (env≤ η ρ))
+  eval≤ (var x)   ρ η rewrite lookup≤ x ρ η = ~now _ 
+  eval≤ (abs t)   ρ η = ~now _
+  eval≤ (app t u) ρ η = 
+    proof
+    (val≤ η <$> eval (app t u) ρ) 
+    ≡⟨⟩
+    val≤ η <$> apply* (eval t ρ) (eval u ρ)
+    ~⟨ apply*≤ (eval t ρ) (eval u ρ) η ⟩
+    apply* (val≤ η <$> (eval t ρ)) (val≤ η <$> (eval u ρ))
+    ~⟨ ~apply* (eval≤ t ρ η) (eval≤ u ρ η) ⟩
+    apply* (eval t (env≤ η ρ)) (eval u (env≤ η ρ))
+    ≡⟨⟩
+    eval (app t u) (env≤ η ρ)
+    ∎
+
+  apply*≤ : ∀ {i Γ Δ a b}(f : Delay (Val Δ (a ⇒ b)) ∞)(u : Delay (Val Δ a) ∞)
+            (η : Γ ≤ Δ) →
+            _~_ {i} (val≤ η <$> apply* f u) (apply* (val≤ η <$> f) (val≤ η <$> u))
+  apply*≤ f u η = 
+    proof
+      val≤ η <$> apply* f u
+    ≡⟨⟩
+      val≤ η <$> apply =<<2 f , u
+    ≡⟨⟩
+      val≤ η <$> (f >>= λ f → u >>= apply f)
+    ≡⟨⟩
+      ((f >>= (λ f → u >>= apply f)) >>= λ v → return (val≤ η v))
+    ~⟨ bind-assoc f ⟩
+      (f >>= λ f → (u >>= apply f) >>= λ v → return (val≤ η v))
+    ~⟨ (f >>=r λ f → bind-assoc u) ⟩
+      (f >>= λ f → u >>= λ u → apply f u >>= λ v → return (val≤ η v))
+    ≡⟨⟩
+      (f >>= λ f → u >>= λ u → val≤ η <$> apply f u)
+    ~⟨ (f >>=r λ f → u >>=r λ u → apply≤ f u η) ⟩
+      (f >>= λ f → u >>= λ u → apply (val≤ η f) (val≤ η u))
+    ~⟨ ~sym (bind-assoc f)  ⟩
+      ((f >>= λ f → return (val≤ η f)) >>= λ f' → u >>= λ u → apply f' (val≤ η u))
+    ≡⟨⟩
+      ((val≤ η <$> f) >>= λ f' → u >>= λ u → apply f' (val≤ η u))
+    ~⟨ ((val≤ η <$> f) >>=r λ f' → ~sym (bind-assoc u)) ⟩
+      ((val≤ η <$> f) >>= λ f' → (u >>= λ u → return (val≤ η u)) >>= λ u' → apply f' u')
+    ≡⟨⟩
+      ((val≤ η <$> f) >>= λ f' → (val≤ η <$> u) >>= λ u' → apply f' u')
+    ≡⟨⟩
+      apply =<<2 (val≤ η <$> f) , (val≤ η <$> u)
+    ≡⟨⟩
+      apply* (val≤ η <$> f) (val≤ η <$> u)
+    ∎
+
+  apply≤ : ∀ {i Γ Δ a b} (f : Val Δ (a ⇒ b)) (v : Val Δ a) (η : Γ ≤ Δ) →
+    _~_ {i} (val≤ η <$> apply f v) (apply (val≤ η f) (val≤ η v))
+  apply≤ f v η = ~later (∞apply≤ f v η)
+
+  ∞apply≤ : ∀ {i Γ Δ a b} (f : Val Δ (a ⇒ b)) (v : Val Δ a) (η : Γ ≤ Δ) →
+    _∞~_ {i} (val≤ η ∞<$> ∞apply f v) (∞apply (val≤ η f) (val≤ η v))
+  ~force (∞apply≤ (ne x) v η)    = ~refl _
+  ~force (∞apply≤ (lam t ρ) v η) = eval≤ t (ρ , v) η
+
 mutual
   rterm : ∀{Γ} a (v : Val Γ a) → V⟦ a ⟧ v → CanRead v
   rterm ★ (ne t) (n , p) = ne n , (λ η → later⇓ (map⇓ Nf.ne (p η)))
@@ -230,7 +303,7 @@ mutual
                       (ne (var zero)) 
                       (rterm' a (var zero) (var zero , (λ η → now⇓))) 
         n , s = rterm b v r
-    in lam n , λ η → {! !}
+    in lam n , λ η → later⇓ (later⇓ (subst~⇓ (map⇓ lam (unlater (s (lift η)))) {!unlater q!}))
   rterm' : ∀{Γ} a (t : Ne Val Γ a) → NCanRead t → V⟦ a ⟧ ne t
   rterm' ★ t p = p
   rterm' (a ⇒ a₁) t p ρ u u⇓ = 
@@ -238,7 +311,7 @@ mutual
     ({!!} , {!!})
 
 
-{-
+
 mutual
   rterm : ∀{Γ} a (v : Val Γ a) →   V⟦ a ⟧ v → CanRead a v
 --  rterm ★        (ne t) (n , p) = 
