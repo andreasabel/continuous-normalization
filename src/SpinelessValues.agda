@@ -127,8 +127,8 @@ mutual
     nereadback t >>= (λ t → readback _ v >>= (λ n → now (app t n)))
 
 mutual
-  nereadback≤~ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a) → 
-                 (nen≤ α <$> nereadback t) ~ nereadback (nev≤ α t)
+  nereadback≤~ : ∀{i Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a) → 
+                 _~_ {i} (nen≤ α <$> nereadback t) (nereadback (nev≤ α t))
   nereadback≤~ α (var x) = ~now _
   nereadback≤~ α (app t u) = 
     proof
@@ -176,12 +176,12 @@ mutual
     where open ~-Reasoning
 
 
-  readback≤~ : ∀{Γ Δ} a (α : Δ ≤ Γ)(v : Val Γ a) → 
-                 (nf≤ α <$> readback a v) ~ readback a (val≤ α v)
+  readback≤~ : ∀{i Γ Δ} a (α : Δ ≤ Γ)(v : Val Γ a) → 
+                 _~_ {i} (nf≤ α <$> readback a v) (readback a (val≤ α v))
   readback≤~ a α v = ~later (∞readback≤~ a α v)
 
-  ∞readback≤~ : ∀{Γ Δ} a (α : Δ ≤ Γ)(v : Val Γ a) → 
-                 (nf≤ α ∞<$> ∞readback a v) ∞~ ∞readback a (val≤ α v)
+  ∞readback≤~ : ∀{i Γ Δ} a (α : Δ ≤ Γ)(v : Val Γ a) → 
+                 _∞~_ {i} (nf≤ α ∞<$> ∞readback a v) (∞readback a (val≤ α v))
   ~force (∞readback≤~ ★       α (ne t)) = 
     proof
     ((nereadback t >>= (λ x' → now (ne x'))) >>= (λ a → now (nf≤ α a)))
@@ -211,7 +211,29 @@ mutual
     (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>=
       (λ v → later (∞readback b v)))
         ∞>>= (λ x → now (lam (nf≤ (lift α) x)))
-    ∞~⟨ {!!} ⟩
+    ∞~⟨ ∞bind-assoc (∞apply (val≤ (weak id) f) (ne (var zero))) ⟩
+    (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>= λ v →
+      later (∞readback b v) >>= λ x → now (lam (nf≤ (lift α) x)))
+    ∞~⟨ ∞bind-cong-r (∞apply (val≤ (weak id) f) (ne (var zero))) 
+                     (λ v → ~later (∞~sym (∞bind-assoc (∞readback b v)))) ⟩
+    (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>= λ a → 
+      later (∞readback b a ∞>>= λ x → now (nf≤ (lift α) x)) >>= λ x' → now (lam x'))
+    ∞~⟨ ∞bind-cong-r (∞apply (val≤ (weak id) f) (ne (var zero))) 
+                     (λ a₁ → ~later (∞bind-cong-l (∞readback≤~ b (lift α) a₁)
+                                                  (λ _ → _))) ⟩
+    (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>= λ a → 
+      later (∞readback b (val≤ (lift α) a)) >>= λ x' → now (lam x'))
+    ∞~⟨ ∞~sym (∞bind-assoc (∞apply (val≤ (weak id) f) (ne (var zero)))) ⟩
+    (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>=
+      (λ a₁ → later (∞readback b (val≤ (lift α) a₁))))
+        ∞>>= (λ x' → now (lam x'))
+    ≡⟨⟩
+    (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>= λ a →  
+        now (val≤ (lift α) a) >>=
+           (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x'))
+    ∞~⟨ ∞bind-cong-l (∞~sym (∞bind-assoc (∞apply (val≤ (weak id) f) 
+                                                 (ne (var zero))))) 
+                                         (λ _ → _) ⟩
     ((∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>= 
         (λ a₁ → now (val≤ (lift α) a₁))) ∞>>=
            (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x'))
