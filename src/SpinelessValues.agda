@@ -107,6 +107,12 @@ mutual
 
 
 mutual
+  ∞apply≤~ : ∀{Γ Δ a b} (α : Δ ≤ Γ)(f : Val Γ (a ⇒ b))(v : Val Γ a) → 
+                 (val≤ α ∞<$> ∞apply f v) ∞~ ∞apply (val≤ α f) (val≤ α v)
+  ∞apply≤~ = {!!}
+
+
+mutual
   readback : ∀{i Γ} a → Val Γ a → Delay (Nf Γ a) i
   readback a v = later (∞readback a v)
 
@@ -119,8 +125,6 @@ mutual
   nereadback (var x)   = now (var x)
   nereadback (app t v) = 
     nereadback t >>= (λ t → readback _ v >>= (λ n → now (app t n)))
-
-open ~-Reasoning renaming (begin_ to proof_)
 
 mutual
   nereadback≤~ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a) → 
@@ -169,6 +173,8 @@ mutual
     (nereadback (nev≤ α t) >>=
        (λ t₁ → readback _ (val≤ α u) >>= (λ n → now (app t₁ n))))
     ∎
+    where open ~-Reasoning
+
 
   readback≤~ : ∀{Γ Δ} a (α : Δ ≤ Γ)(v : Val Γ a) → 
                  (nf≤ α <$> readback a v) ~ readback a (val≤ α v)
@@ -188,7 +194,51 @@ mutual
     ~⟨ bind-cong-l (nereadback≤~ α t) (λ x → now (ne x)) ⟩
     (nereadback (nev≤ α t) >>= (λ x' → now (ne x')))
     ∎
-  ~force (∞readback≤~ (a ⇒ b) α f     ) = ~later {!!}
+    where open ~-Reasoning
+
+  ~force (∞readback≤~ (a ⇒ b) α f     ) = ~later (
+    proof
+    ((∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>=
+      (λ v → later (∞readback b v)))
+        ∞>>= (λ x' → now (lam x')))
+          ∞>>= (λ a₁ → now (nf≤ α a₁))
+    ∞~⟨ ∞bind-assoc (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>=
+                               (λ v → later (∞readback b v))) ⟩
+    (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>=
+      (λ v → later (∞readback b v)))
+        ∞>>= (λ x → now (lam x) >>= (λ a → now (nf≤ α a)))
+    ≡⟨⟩
+    (∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>=
+      (λ v → later (∞readback b v)))
+        ∞>>= (λ x → now (lam (nf≤ (lift α) x)))
+    ∞~⟨ {!!} ⟩
+    ((∞apply (val≤ (weak id) f) (ne (var zero)) ∞>>= 
+        (λ a₁ → now (val≤ (lift α) a₁))) ∞>>=
+           (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x'))
+    ∞~⟨ ∞bind-cong-l 
+         (∞bind-cong-l 
+           (∞apply≤~ (lift α) (val≤ (weak id) f) (ne (var zero))) 
+           (λ _ → _)) 
+         (λ _ → _) ⟩
+    (∞apply (val≤ (lift α) (val≤ (weak id) f)) (ne (var zero)) ∞>>=
+      (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x'))
+    ≡⟨ cong (λ f → (∞apply f (ne (var zero)) ∞>>= 
+               (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x')))
+            (val≤-• (lift α) (weak id) f) ⟩
+    (∞apply (val≤ (weak (α • id)) f) (ne (var zero)) ∞>>=
+      (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x'))
+    ≡⟨ cong (λ α → (∞apply (val≤ (weak α) f) (ne (var zero)) ∞>>=
+               (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x')))
+            (η•id α) ⟩
+    (∞apply (val≤ (weak α) f) (ne (var zero)) ∞>>=
+      (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x'))
+    ≡⟨ cong (λ f → (∞apply f (ne (var zero)) ∞>>= 
+               (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x')))
+            (sym (val≤-• (weak id) α f)) ⟩
+    (∞apply (val≤ (weak id) (val≤ α f)) (ne (var zero)) ∞>>=
+      (λ v → later (∞readback b v))) ∞>>= (λ x' → now (lam x'))
+    ∎)
+    where open ∞~-Reasoning
 
 nereadback≤ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a){n : Ne Nf Γ a} → 
               nereadback t ⇓ n → nereadback (nev≤ α t) ⇓ nen≤ α n

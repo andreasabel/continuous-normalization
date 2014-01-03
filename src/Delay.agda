@@ -121,7 +121,24 @@ mutual
 module ~-Reasoning {i : Size} {A : Set} where
   open Pre (Setoid.preorder (~setoid i A)) public
 --    using (begin_; _∎) (_≈⟨⟩_ to _~⟨⟩_; _≈⟨_⟩_ to _~⟨_⟩_)
-    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _~⟨_⟩_)
+    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _~⟨_⟩_; begin_ to proof_)
+
+∞~setoid : (i : Size) (A : Set) → Setoid lzero lzero
+∞~setoid i A = record
+  { Carrier       = ∞Delay A ∞
+  ; _≈_           = _∞~_ {i}
+  ; isEquivalence = record
+    { refl  = λ {a?} → ∞~refl a?
+    ; sym   = ∞~sym
+    ; trans = ∞~trans
+    }
+  }
+
+module ∞~-Reasoning {i : Size} {A : Set} where
+  open Pre (Setoid.preorder (∞~setoid i A)) public
+--    using (begin_; _∎) (_≈⟨⟩_ to _~⟨⟩_; _≈⟨_⟩_ to _~⟨_⟩_)
+    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _∞~⟨_⟩_; begin_ to proof_)
+
 
 -- Congruence laws.
 
