@@ -126,7 +126,49 @@ mutual
   nereadback≤~ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a) → 
                  (nen≤ α <$> nereadback t) ~ nereadback (nev≤ α t)
   nereadback≤~ α (var x) = ~now _
-  nereadback≤~ α (app t u) = {!!}
+  nereadback≤~ α (app t u) = 
+    proof
+    ((nereadback t >>=
+      (λ t₁ → readback _ u >>= (λ n → now (app t₁ n))))
+                                   >>= (λ x' → now (nen≤ α x')))
+    ~⟨ bind-assoc (nereadback t) ⟩
+    (nereadback t >>= (λ x → 
+      (readback _ u >>= (λ n → now (app x n)))
+                                   >>= (λ x' → now (nen≤ α x'))))
+    ~⟨ bind-cong-r (nereadback t) (λ x → bind-assoc (readback _ u)) ⟩
+    (nereadback t >>= (λ x → 
+       readback _ u >>= (λ y → now (app x y) >>= (λ x' → now (nen≤ α x')))))
+    ≡⟨⟩
+    (nereadback t >>=
+      (λ x → (readback _ u >>= (λ y → now (app (nen≤ α x) (nf≤ α y))))))
+    ≡⟨⟩
+    (nereadback t >>=
+           (λ x → (readback _ u >>= (λ x' → now (nf≤ α x') >>=
+               (λ n → now (app (nen≤ α x) n))))))
+    ~⟨ bind-cong-r (nereadback t) (λ x → ~sym (bind-assoc (readback _ u))) ⟩
+    (nereadback t >>=
+           (λ x → ((readback _ u >>= (λ x' → now (nf≤ α x'))) >>=
+               (λ n → now (app (nen≤ α x) n)))))
+    ≡⟨⟩
+    (nereadback t >>= (λ x → now (nen≤ α x) >>=       
+      (λ t₁ → ((readback _ u >>= (λ x' → now (nf≤ α x'))) >>=
+          (λ n → now (app t₁ n))))))
+    ~⟨ ~sym (bind-assoc (nereadback t)) ⟩
+    ((nereadback t >>= (λ x' → now (nen≤ α x'))) >>=
+      (λ t₁ → ((readback _ u >>= (λ x' → now (nf≤ α x'))) >>=
+          (λ n → now (app t₁ n)))))
+    ≡⟨⟩
+    (nen≤ α <$> nereadback t >>=
+       (λ t₁ → nf≤ α <$> readback _ u >>= (λ n → now (app t₁ n))))
+    ~⟨ bind-cong-r (nen≤ α <$> nereadback t) 
+                   (λ x → bind-cong-l (readback≤~ _ α u) 
+                                      (λ x → _)) ⟩
+    (nen≤ α <$> nereadback t >>=
+       (λ t₁ → readback _ (val≤ α u) >>= (λ n → now (app t₁ n))))
+    ~⟨  bind-cong-l (nereadback≤~ α t) (λ x → _) ⟩
+    (nereadback (nev≤ α t) >>=
+       (λ t₁ → readback _ (val≤ α u) >>= (λ n → now (app t₁ n))))
+    ∎
 
   readback≤~ : ∀{Γ Δ} a (α : Δ ≤ Γ)(v : Val Γ a) → 
                  (nf≤ α <$> readback a v) ~ readback a (val≤ α v)
@@ -146,7 +188,7 @@ mutual
     ~⟨ bind-cong-l (nereadback≤~ α t) (λ x → now (ne x)) ⟩
     (nereadback (nev≤ α t) >>= (λ x' → now (ne x')))
     ∎
-  ~force (∞readback≤~ (a ⇒ b) α f     ) = ~later {!quote!}
+  ~force (∞readback≤~ (a ⇒ b) α f     ) = ~later {!!}
 
 nereadback≤ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a){n : Ne Nf Γ a} → 
               nereadback t ⇓ n → nereadback (nev≤ α t) ⇓ nen≤ α n
