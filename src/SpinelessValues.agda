@@ -84,6 +84,10 @@ mutual
 weakVal : ∀ {Δ a c} → Val Δ c → Val (Δ , a) c
 weakVal = val≤ (weak id)
 
+ide : ∀ Γ → Env Γ Γ
+ide ε = ε
+ide (Γ , a) = env≤ (weak id) (ide Γ) , ne (var zero)
+
 mutual
   eval : ∀{i Γ Δ a} → Tm Γ a → Env Δ Γ → Delay (Val Δ a) i
   eval (var x)   γ = now (lookup x γ)
@@ -215,7 +219,7 @@ mutual
                                    (>>=⇓ (readback b) (unlater q) s) 
                                    now⇓))
 
-  rterm' : ∀{Γ} a(t : Ne Val Γ a) → nereadback t ⇓ → V⟦ a ⟧ ne t
+  rterm' : ∀{Γ} a (t : Ne Val Γ a) → nereadback t ⇓ → V⟦ a ⟧ ne t
   rterm' ★ t p = p
   rterm' (a ⇒ b) t (n , p) ρ u u⇓ = let n' , p' = rterm a u u⇓
                                         p'' = nereadback≤ ρ t p in
@@ -227,3 +231,18 @@ mutual
          >>=⇓ (λ t₁ → later (∞readback a u ∞>>= (λ n₁ → now (Ne.app t₁ n₁)))) 
               p''
               (>>=⇓ (λ n₁ → now (Ne.app (nen≤ ρ n) n₁)) p' now⇓))
+
+var⇓ : ∀{Γ a}(x : Var Γ a) → V⟦ a ⟧ ne (var x)
+var⇓ x = rterm' _ (var x) (var x , now⇓)
+
+ide⇓ : ∀ Γ → ⟪ Γ ⟫ ide Γ
+ide⇓ ε       = _
+ide⇓ (Γ , a) = ⟪⟫≤ (weak id) (ide Γ) (ide⇓ Γ) , var⇓ zero
+
+nf : ∀{Γ a}(t : Tm Γ a) → Delay (Nf Γ a) ∞
+nf {Γ}{a} t = eval t (ide Γ) >>= readback a
+
+nterm : ∀{Γ a}(t : Tm Γ a) → ∃ λ n → nf t ⇓ n
+nterm {Γ}{a} t = let v , p , q = term t (ide Γ) (ide⇓ Γ) 
+                     n , r = rterm a v q in 
+                     n , >>=⇓ (readback a) p r
