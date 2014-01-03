@@ -81,6 +81,12 @@ mutual
   nev≤-• η η' (var x)   = cong var (var≤-• η η' x)
   nev≤-• η η' (app t u) = cong₂ app (nev≤-• η η' t) (val≤-• η η' u)
 
+lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
+  val≤ η (lookup x ρ) ≡ lookup x (env≤ η ρ)
+lookup≤ zero    (ρ , v) η = refl
+lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
+
+
 weakVal : ∀ {Δ a c} → Val Δ c → Val (Δ , a) c
 weakVal = val≤ (weak id)
 
@@ -107,9 +113,55 @@ mutual
 
 
 mutual
-  ∞apply≤~ : ∀{Γ Δ a b} (α : Δ ≤ Γ)(f : Val Γ (a ⇒ b))(v : Val Γ a) → 
-                 (val≤ α ∞<$> ∞apply f v) ∞~ ∞apply (val≤ α f) (val≤ α v)
-  ∞apply≤~ = {!!}
+  eval≤~ : ∀ {i Γ Δ Δ' a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
+    _~_ {i} (val≤ η <$> (eval t ρ)) (eval t (env≤ η ρ))
+  eval≤~ (var x)   ρ η rewrite lookup≤ x ρ η = ~now _
+  eval≤~ (abs t)   ρ η = ~now _
+  eval≤~ (app t u) ρ η = 
+    proof
+    ((eval t ρ >>=
+      (λ a → eval u ρ >>= (λ v → later (∞apply a v))))
+        >>= (λ x' → now (val≤ η x')))
+    ~⟨ bind-assoc (eval t ρ) ⟩
+    (eval t ρ >>=
+      λ a → eval u ρ >>= (λ v → later (∞apply a v))
+        >>= (λ x' → now (val≤ η x')))
+    ~⟨ bind-cong-r (eval t ρ) (λ t₁ → bind-assoc (eval u ρ)) ⟩
+    (eval t ρ >>=
+      λ a → eval u ρ >>= λ v → later (∞apply a v)
+        >>= (λ x' → now (val≤ η x')))
+    ~⟨ bind-cong-r (eval t ρ) 
+                   (λ t₁ → bind-cong-r (eval u ρ) 
+                                       (λ u₁ → ~later (∞apply≤~ η t₁ u₁))) ⟩
+    (eval t ρ >>=
+     λ x' → eval u ρ >>= (λ x'' → later (∞apply (val≤ η x') (val≤ η x''))))
+    ≡⟨⟩
+    (eval t ρ >>= λ x' →
+        (eval u ρ >>= λ x'' → now (val≤ η x'') >>= 
+          λ v → later (∞apply (val≤ η x') v)))
+    ~⟨ bind-cong-r (eval t ρ) (λ a → ~sym (bind-assoc (eval u ρ))) ⟩
+    (eval t ρ >>= λ x' →
+        (eval u ρ >>= λ x'' → now (val≤ η x'')) >>= 
+          (λ v → later (∞apply (val≤ η x') v)))
+    ~⟨ bind-cong-r (eval t ρ) (λ x' → bind-cong-l  (eval≤~ u ρ η) (λ _ → _)) ⟩
+    (eval t ρ >>= λ x' →
+        eval u (env≤ η ρ) >>= (λ v → later (∞apply (val≤ η x') v)))
+    ≡⟨⟩
+    (eval t ρ >>= λ x' → now (val≤ η x') >>=
+      (λ a → eval u (env≤ η ρ) >>= (λ v → later (∞apply a v))))
+    ~⟨ ~sym (bind-assoc (eval t ρ)) ⟩
+    ((eval t ρ >>= (λ x' → now (val≤ η x'))) >>=
+      (λ a → eval u (env≤ η ρ) >>= (λ v → later (∞apply a v))))
+    ~⟨ bind-cong-l (eval≤~ t ρ η) (λ _ → _) ⟩
+    (eval t (env≤ η ρ) >>=
+      (λ a → eval u (env≤ η ρ) >>= (λ v → later (∞apply a v))))
+    ∎ 
+    where open ~-Reasoning
+
+  ∞apply≤~ : ∀{i Γ Δ a b} (α : Δ ≤ Γ)(f : Val Γ (a ⇒ b))(v : Val Γ a) → 
+             _∞~_ {i} (val≤ α ∞<$> ∞apply f v) (∞apply (val≤ α f) (val≤ α v))
+  ~force (∞apply≤~ α (ne t)    v) = ~refl _
+  ~force (∞apply≤~ α (lam t ρ) v) = eval≤~ t (ρ , v) α
 
 
 mutual
