@@ -120,11 +120,33 @@ mutual
   nereadback (app t v) = 
     nereadback t >>= (λ t → readback _ v >>= (λ n → now (app t n)))
 
+open ~-Reasoning renaming (begin_ to proof_)
+
 mutual
   nereadback≤~ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a) → 
                  (nen≤ α <$> nereadback t) ~ nereadback (nev≤ α t)
   nereadback≤~ α (var x) = ~now _
-  nereadback≤~ α (app t x) = {!!} 
+  nereadback≤~ α (app t u) = {!!}
+
+  readback≤~ : ∀{Γ Δ} a (α : Δ ≤ Γ)(v : Val Γ a) → 
+                 (nf≤ α <$> readback a v) ~ readback a (val≤ α v)
+  readback≤~ a α v = ~later (∞readback≤~ a α v)
+
+  ∞readback≤~ : ∀{Γ Δ} a (α : Δ ≤ Γ)(v : Val Γ a) → 
+                 (nf≤ α ∞<$> ∞readback a v) ∞~ ∞readback a (val≤ α v)
+  ~force (∞readback≤~ ★       α (ne t)) = 
+    proof
+    ((nereadback t >>= (λ x' → now (ne x'))) >>= (λ a → now (nf≤ α a)))
+    ~⟨ bind-assoc (nereadback t) ⟩ 
+    (nereadback t >>= (λ x → now (ne x) >>= (λ a → now (nf≤ α a))))
+    ≡⟨⟩
+    (nereadback t >>= (λ x → now (ne (nen≤ α x))))
+    ~⟨ ~sym (bind-assoc (nereadback t)) ⟩
+    (nereadback t >>= (λ x' → now (nen≤ α x')) >>= (λ x' → now (ne x')))
+    ~⟨ bind-cong-l (nereadback≤~ α t) (λ x → now (ne x)) ⟩
+    (nereadback (nev≤ α t) >>= (λ x' → now (ne x')))
+    ∎
+  ~force (∞readback≤~ (a ⇒ b) α f     ) = ~later {!quote!}
 
 nereadback≤ : ∀{Γ Δ a}(α : Δ ≤ Γ)(t : Ne Val Γ a){n : Ne Nf Γ a} → 
               nereadback t ⇓ n → nereadback (nev≤ α t) ⇓ nen≤ α n
