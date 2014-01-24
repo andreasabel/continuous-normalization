@@ -95,19 +95,19 @@ ide ε = ε
 ide (Γ , a) = env≤ (weak id) (ide Γ) , ne (var zero)
 
 mutual
-  eval : ∀{i Γ Δ a} → Tm Γ a → Env Δ Γ → Delay (Val Δ a) i
+  eval : ∀{i Γ Δ a} → Tm Γ a → Env Δ Γ → Delay i (Val Δ a)
   eval (var x)   γ = now (lookup x γ)
   eval (abs t)   γ = now (lam t γ)
   eval (app t u) γ = apply* (eval t γ) (eval u γ)
 
   apply* : ∀{i Γ a b} → 
-    Delay (Val Γ (a ⇒ b)) (i) → Delay (Val Γ a) i → Delay (Val Γ b) i
+    Delay i (Val Γ (a ⇒ b)) → Delay i (Val Γ a) → Delay i (Val Γ b)
   apply* f v = apply =<<2 f , v
 
-  apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → Delay (Val Δ b) i
+  apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → Delay i (Val Δ b)
   apply f v = later (∞apply f v)
 
-  ∞apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → ∞Delay (Val Δ b) i
+  ∞apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → ∞Delay i (Val Δ b)
   force (∞apply (ne x)    v) = now (ne (app x v))
   force (∞apply (lam t ρ) v) = eval t (ρ , v)
 
@@ -165,15 +165,15 @@ mutual
 
 
 mutual
-  readback : ∀{i Γ} a → Val Γ a → Delay (Nf Γ a) i
+  readback : ∀{i Γ} a → Val Γ a → Delay i (Nf Γ a)
   readback a v = later (∞readback a v)
 
-  ∞readback : ∀{i Γ} a → Val Γ a → ∞Delay (Nf Γ a) i
+  ∞readback : ∀{i Γ} a → Val Γ a → ∞Delay i (Nf Γ a)
   force (∞readback ★       (ne t)) = ne <$> nereadback t
   force (∞readback (a ⇒ b) v     ) = 
     lam <$> (readback b =<< apply (weakVal v) (ne (var zero)))
 
-  nereadback : ∀{i Γ a} → Ne Val Γ a → Delay (Ne Nf Γ a) i
+  nereadback : ∀{i Γ a} → Ne Val Γ a → Delay i (Ne Nf Γ a)
   nereadback (var x)   = now (var x)
   nereadback (app t v) = 
     nereadback t >>= (λ t → readback _ v >>= (λ n → now (app t n)))
@@ -324,7 +324,7 @@ mutual
   V⟦_⟧_ {Γ = Γ} (a ⇒ b) f = ∀{Δ}(ρ : Δ ≤ Γ)(u : Val Δ a) 
     (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ ρ f) u)
 
-  C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay (Val Γ a) ∞ → Set
+  C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay ∞ (Val Γ a) → Set
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
 
 V≤ : ∀{Δ Δ′} a (η : Δ′ ≤ Δ)(v : Val Δ a)(〖v〗 : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
@@ -365,19 +365,19 @@ sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
   sound-β {t = t} {ρ = env≤ α ρ} {u = u} (ih α u p))
 
 sound-app' : ∀ {Δ a b} (f : Val Δ (a ⇒ b)) →
-  {u* : Delay (Val Δ a) _} {u : Val Δ a} (u⇓ : u* ⇓ u) →
+  {u* : Delay _ (Val Δ a)} {u : Val Δ a} (u⇓ : u* ⇓ u) →
   {v : Val Δ b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
 sound-app' f (later⇓ u⇓) h = later⇓ (sound-app' f u⇓ h)
 sound-app' f  now⇓       h = h
 
 sound-app : ∀ {Δ a b} →
-  {f* : Delay (Val Δ (a ⇒ b)) _} {f : Val Δ (a ⇒ b)} (f⇓ : f* ⇓ f) →
-  {u* : Delay (Val Δ a)       _} {u : Val Δ a}       (u⇓ : u* ⇓ u) →
+  {f* : Delay _ (Val Δ (a ⇒ b))} {f : Val Δ (a ⇒ b)} (f⇓ : f* ⇓ f) →
+  {u* : Delay _ (Val Δ a)      } {u : Val Δ a}       (u⇓ : u* ⇓ u) →
   {v : Val Δ b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
 sound-app  (later⇓ f⇓) u⇓ h = later⇓ (sound-app f⇓ u⇓ h)
 sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
-⟦app⟧ : ∀ {Δ a b} {f : Delay (Val Δ (a ⇒ b)) _} {u : Delay (Val Δ a) _} →
+⟦app⟧ : ∀ {Δ a b} {f : Delay _ (Val Δ (a ⇒ b))} {u : Delay _ (Val Δ a)} →
           C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
 ⟦app⟧ (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = 
   let v , v⇓ , ⟦v⟧ = ⟦f⟧ id u ⟦u⟧ in
@@ -427,7 +427,7 @@ ide⇓ : ∀ Γ → ⟪ Γ ⟫ ide Γ
 ide⇓ ε       = _
 ide⇓ (Γ , a) = ⟪⟫≤ (weak id) (ide Γ) (ide⇓ Γ) , var⇓ zero
 
-nf : ∀{Γ a}(t : Tm Γ a) → Delay (Nf Γ a) ∞
+nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
 nf {Γ}{a} t = eval t (ide Γ) >>= readback a
 
 nterm : ∀{Γ a}(t : Tm Γ a) → ∃ λ n → nf t ⇓ n

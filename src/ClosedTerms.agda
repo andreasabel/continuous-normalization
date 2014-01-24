@@ -25,18 +25,18 @@ lookup (suc x) (ρ , v) = lookup x ρ
 -- Call-by-value evaluation.
 
 mutual
-  〖_〗  : ∀ {i} {Γ : Cxt} {a : Ty} → Tm Γ a → Env Γ → Delay (Val a) i
+  〖_〗  : ∀ {i} {Γ : Cxt} {a : Ty} → Tm Γ a → Env Γ → Delay i (Val a)
   〖 var x   〗 ρ = now (lookup x ρ)
   〖 abs t   〗 ρ = now (lam t ρ)
   〖 app t u 〗 ρ = apply* (〖 t 〗 ρ) (〖 u 〗 ρ)
 
-  apply* : ∀ {i a b} → Delay (Val (a ⇒ b)) i → Delay (Val a) i → Delay (Val b) i
+  apply* : ∀ {i a b} → Delay i (Val (a ⇒ b)) → Delay i (Val a) → Delay i (Val b)
   apply* f⊥ v⊥ = f⊥ >>= λ f → v⊥ >>= λ v → apply f v
 
-  apply : ∀ {i a b} → Val (a ⇒ b) → Val a → Delay (Val b) i
+  apply : ∀ {i a b} → Val (a ⇒ b) → Val a → Delay i (Val b)
   apply f v = later (∞apply f v)
 
-  ∞apply : ∀ {i a b} → Val (a ⇒ b) → Val a → ∞Delay (Val b) i
+  ∞apply : ∀ {i a b} → Val (a ⇒ b) → Val a → ∞Delay i (Val b)
   force (∞apply (lam t ρ) v) = 〖 t 〗 (ρ , v)
 
 β-expand : ∀ {Γ a b} {t : Tm (Γ , a) b} {ρ : Env Γ} {u : Val a} {v : Val b} →
@@ -54,7 +54,7 @@ mutual
   -- strongly computable delayed value:
   -- x is strongly computable if there is exists a v such that x
   -- converges to v and v is strongly computable
-  C⟦_⟧_ : (a : Ty) → Delay (Val a) ∞ → Set
+  C⟦_⟧_ : (a : Ty) → Delay ∞ (Val a) → Set
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
 
 -- strongly computable environment
@@ -79,19 +79,19 @@ sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
 〖abs〗 t ρ θ ih = lam t ρ , now⇓ , λ u⇓ → sound-β (ih u⇓)
 
 sound-app' : ∀ {a b} (f : Val (a ⇒ b)) →
-             {u* : Delay (Val a) _} {u : Val a} (u⇓ : u* ⇓ u) →
+             {u* : Delay _ (Val a)} {u : Val a} (u⇓ : u* ⇓ u) →
              {v : Val b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
 sound-app' f (later⇓ u⇓) h = later⇓ (sound-app' f u⇓ h)
 sound-app' f  now⇓       h = h
 
 sound-app : ∀ {a b} →
-            {f* : Delay (Val (a ⇒ b)) _} {f : Val (a ⇒ b)} (f⇓ : f* ⇓ f) →
-            {u* : Delay (Val a)       _} {u : Val a}       (u⇓ : u* ⇓ u) →
+            {f* : Delay _ (Val (a ⇒ b))} {f : Val (a ⇒ b)} (f⇓ : f* ⇓ f) →
+            {u* : Delay _ (Val a)      } {u : Val a}       (u⇓ : u* ⇓ u) →
             {v : Val b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
 sound-app  (later⇓ f⇓) u⇓ h = later⇓ (sound-app f⇓ u⇓ h)
 sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
-〖app〗 : ∀ {a b} {f : Delay (Val (a ⇒ b)) _} {u : Delay (Val a) _} →
+〖app〗 : ∀ {a b} {f : Delay _ (Val (a ⇒ b))} {u : Delay _ (Val a)} →
           C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
 〖app〗 (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = let v , v⇓                 , ⟦v⟧ = ⟦f⟧ ⟦u⟧
                                        in  v , sound-app f⇓ u⇓ v⇓ , ⟦v⟧

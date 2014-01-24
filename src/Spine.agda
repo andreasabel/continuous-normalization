@@ -51,8 +51,8 @@ mapRSp-∘ fg (rs , r) = cong₂ _,_ (mapRSp-∘ fg rs) (fg r)
 
 -- Traversability of RSpine
 
-mapRSpM : ∀ {i} {V W : Ty → Set} → (∀ {d} → V d → Delay (W d) i) →
-  ∀ {a c} → RSpine V a c → Delay (RSpine W a c) i
+mapRSpM : ∀ {i} {V W : Ty → Set} → (∀ {d} → V d → Delay i (W d)) →
+  ∀ {a c} → RSpine V a c → Delay i (RSpine W a c)
 mapRSpM f ε        = return ε
 mapRSpM f (rs , r) = _,_ <$> mapRSpM f rs <*> f r
 
