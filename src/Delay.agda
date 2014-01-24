@@ -228,17 +228,17 @@ subst≈⇓ = ?
 -}
 
 
-⇓>>= : ∀{A B}(f : A → Delay ∞ B)
+⇓bind : ∀{A B}(f : A → Delay ∞ B)
        {?a : Delay ∞ A}{a : A} → ?a ⇓ a → 
        {b : B} → (?a >>= f) ⇓ b → f a ⇓ b
-⇓>>= f now⇓ q = q
-⇓>>= f (later⇓ p) (later⇓ q) = ⇓>>= f p q
+⇓bind f now⇓ q = q
+⇓bind f (later⇓ p) (later⇓ q) = ⇓bind f p q
 
->>=⇓ : ∀{A B}(f : A → Delay ∞ B)
+bind⇓ : ∀{A B}(f : A → Delay ∞ B)
        {?a : Delay ∞ A}{a : A} → ?a ⇓ a → 
        {b : B} → f a ⇓ b → (?a >>= f) ⇓ b
->>=⇓ f now⇓ q = q
->>=⇓ f (later⇓ p) q = later⇓ (>>=⇓ f p q)
+bind⇓ f now⇓ q = q
+bind⇓ f (later⇓ p) q = later⇓ (bind⇓ f p q)
 
 -- handy when you can't pattern match like in a let definition
 unlater : ∀{A}{∞a : ∞Delay ∞ A}{a : A} → later ∞a ⇓ a → force ∞a ⇓ a
