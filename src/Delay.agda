@@ -200,6 +200,14 @@ mutual
                 ((a∞ ∞>>= λ a → k a) ∞>>= l) ∞~⟨ i ⟩~ (a∞ ∞>>= λ a → k a >>= l)
   ~force (∞bind-assoc a∞) = bind-assoc (force a∞)
 
+map-compose : ∀{i A B C} (a? : Delay ∞ A) {f : A → B} {g : B → C} →
+  (g <$> (f <$> a?)) ~⟨ i ⟩~ ((g ∘ f) <$> a?)
+map-compose a? = bind-assoc a?
+
+map-cong : ∀{i A B}{a? b? : Delay ∞ A} (f : A → B) →
+  a? ~⟨ i ⟩~ b? → (f <$> a?) ~⟨ i ⟩~ (f <$> b?)
+map-cong f eq = bind-cong-l eq (now ∘ f)
+
 -- Termination/Convergence.  Makes sense only for Delay A ∞.
 
 data _⇓_ {A : Set} : (a? : Delay ∞ A) (a : A) → Set where
