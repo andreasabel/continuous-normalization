@@ -91,23 +91,23 @@ mutual
 -- Symmetry
 
 mutual
-  ~sym : ∀ {i A} {a? b? : Delay ∞ A} → _~_ {i} a? b? → _~_ {i} b? a?
+  ~sym : ∀ {i A} {a? b? : Delay ∞ A} → a? ~⟨ i ⟩~ b? → b? ~⟨ i ⟩~ a?
   ~sym (~now a)    = ~now a
   ~sym (~later eq) = ~later (∞~sym eq)
 
-  ∞~sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → _∞~_ {i} a? b? → _∞~_ {i} b? a?
+  ∞~sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → a? ∞~⟨ i ⟩~ b? → b? ∞~⟨ i ⟩~ a?
   ~force (∞~sym eq) = ~sym (~force eq)
 
 -- Transitivity
 
 mutual
   ~trans : ∀ {i A} {a? b? c? : Delay ∞ A}
-    (eq : _~_ {i} a? b?) (eq' : _~_ {i} b? c?) → _~_ {i} a? c?
+    (eq : a? ~⟨ i ⟩~ b?) (eq' : b? ~⟨ i ⟩~ c?) → a? ~⟨ i ⟩~ c?
   ~trans (~now a)    (~now .a)    = ~now a
   ~trans (~later eq) (~later eq') = ~later (∞~trans eq eq')
 
   ∞~trans : ∀ {i A} {a∞ b∞ c∞ : ∞Delay ∞ A}
-    (eq : _∞~_ {i} a∞ b∞) (eq' : _∞~_ {i} b∞ c∞) → _∞~_ {i} a∞ c∞
+    (eq : a∞ ∞~⟨ i ⟩~ b∞) (eq' : b∞ ∞~⟨ i ⟩~ c∞) → a∞ ∞~⟨ i ⟩~ c∞
   ~force (∞~trans eq eq') = ~trans (~force eq) (~force eq')
 
 -- Equality reasoning
@@ -148,12 +148,12 @@ module ∞~-Reasoning {i : Size} {A : Set} where
 -- Congruence laws.
 
 mutual
-  bind-cong-l : ∀ {i A B} {a? b? : Delay ∞ A} (eq : _~_ {i} a? b?)
-    (k : A → Delay ∞ B) → _~_ {i} (a? >>= k) (b? >>= k)
+  bind-cong-l : ∀ {i A B} {a? b? : Delay ∞ A} (eq : a? ~⟨ i ⟩~ b?)
+    (k : A → Delay ∞ B) → (a? >>= k) ~⟨ i ⟩~ (b? >>= k)
   bind-cong-l (~now a)    k = ~refl _
   bind-cong-l (~later eq) k = ~later (∞bind-cong-l eq k)
 
-  ∞bind-cong-l : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : _∞~_ {i} a∞ b∞) →
+  ∞bind-cong-l : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞~⟨ i ⟩~ b∞) →
     (k : A → Delay ∞ B) →
     _∞~_ {i} (a∞ ∞>>= k)  (b∞ ∞>>= k)
   ~force (∞bind-cong-l eq k) = bind-cong-l (~force eq) k
@@ -162,25 +162,25 @@ _>>=l_ = bind-cong-l
 
 mutual
   bind-cong-r : ∀ {i A B} (a? : Delay ∞ A) {k l : A → Delay ∞ B} →
-    (h : ∀ a → _~_ {i} (k a) (l a)) → _~_ {i} (a? >>= k) (a? >>= l)
+    (h : ∀ a → (k a) ~⟨ i ⟩~ (l a)) → (a? >>= k) ~⟨ i ⟩~ (a? >>= l)
   bind-cong-r (now a)    h = h a
   bind-cong-r (later a∞) h = ~later (∞bind-cong-r a∞ h)
 
   ∞bind-cong-r : ∀ {i A B} (a∞ : ∞Delay ∞ A) {k l : A → Delay ∞ B} →
-    (h : ∀ a → _~_ {i} (k a) (l a)) → _∞~_ {i} (a∞ ∞>>= k)  (a∞ ∞>>= l)
+    (h : ∀ a → (k a) ~⟨ i ⟩~ (l a)) → (a∞ ∞>>= k) ∞~⟨ i ⟩~ (a∞ ∞>>= l)
   ~force (∞bind-cong-r a∞ h) = bind-cong-r (force a∞) h
 
 _>>=r_ = bind-cong-r
 
 mutual
-  bind-cong : ∀ {i A B}  {a? b? : Delay ∞ A} (eq : _~_ {i} a? b?)
-              {k l : A → Delay ∞ B} (h : ∀ a → _~_ {i} (k a) (l a)) →
-              _~_ {i} (a? >>= k) (b? >>= l)
+  bind-cong : ∀ {i A B}  {a? b? : Delay ∞ A} (eq : a? ~⟨ i ⟩~ b?)
+              {k l : A → Delay ∞ B} (h : ∀ a → (k a) ~⟨ i ⟩~ (l a)) →
+              (a? >>= k) ~⟨ i ⟩~ (b? >>= l)
   bind-cong (~now a)    h = h a
   bind-cong (~later eq) h = ~later (∞bind-cong eq h)
 
-  ∞bind-cong : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : _∞~_ {i} a∞ b∞)
-    {k l : A → Delay ∞ B} (h : ∀ a → _~_ {i} (k a) (l a)) →
+  ∞bind-cong : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞~⟨ i ⟩~ b∞)
+    {k l : A → Delay ∞ B} (h : ∀ a → (k a) ~⟨ i ⟩~ (l a)) →
     _∞~_ {i} (a∞ ∞>>= k)  (b∞ ∞>>= l)
   ~force (∞bind-cong eq h) = bind-cong (~force eq) h
 
@@ -191,13 +191,13 @@ _~>>=_ = bind-cong
 mutual
   bind-assoc : ∀{i A B C}(m : Delay ∞ A)
                {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
-               _~_ {i} ((m >>= k) >>= l)  (m >>= λ a → k a >>= l)
+               ((m >>= k) >>= l) ~⟨ i ⟩~ (m >>= λ a → k a >>= l)
   bind-assoc (now a)    = ~refl _
   bind-assoc (later a∞) = ~later (∞bind-assoc a∞)
 
   ∞bind-assoc : ∀{i A B C}(a∞ : ∞Delay ∞ A)
                 {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
-                _∞~_ {i} ((a∞ ∞>>= λ a → k a) ∞>>= l) (a∞ ∞>>= λ a → k a >>= l)
+                ((a∞ ∞>>= λ a → k a) ∞>>= l) ∞~⟨ i ⟩~ (a∞ ∞>>= λ a → k a >>= l)
   ~force (∞bind-assoc a∞) = bind-assoc (force a∞)
 
 -- Termination/Convergence.  Makes sense only for Delay A ∞.
