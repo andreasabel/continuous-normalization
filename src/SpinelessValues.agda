@@ -110,9 +110,9 @@ mutual
     {Δ : Cxt} (ρ : Env Δ Γ) (v : Val Δ a) → ∞Delay i (Val Δ b)
   force (beta t ρ v) = eval t (ρ , v)
 
-mutual 
-  eval≤    : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Δ′ ≤ Δ) → 
-             (val≤ η <$> (eval t ρ)) ~⟨ i ⟩~ (eval t (env≤ η ρ))           
+mutual
+  eval≤    : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Δ′ ≤ Δ) →
+             (val≤ η <$> (eval t ρ)) ~⟨ i ⟩~ (eval t (env≤ η ρ))
   eval≤ (var x)   ρ η rewrite lookup≤ x ρ η = ~now _
   eval≤ (abs t)   ρ η = ~now _
   eval≤ (app t u) ρ η =
@@ -156,7 +156,7 @@ mutual
     ∎
     where open ~-Reasoning
 
-  apply≤  : ∀{i Γ Δ a b} (f : Val Γ (a ⇒ b))(v : Val Γ a)(η : Δ ≤ Γ) →       
+  apply≤  : ∀{i Γ Δ a b} (f : Val Γ (a ⇒ b))(v : Val Γ a)(η : Δ ≤ Γ) →
             (val≤ η <$> apply f v) ~⟨ i ⟩~ (apply (val≤ η f) (val≤ η v))
   apply≤ (ne x)    v η = ~refl _
   apply≤ (lam t ρ) v η = ~later (beta≤ t ρ v η)
@@ -183,31 +183,31 @@ mutual
 mutual
   nereadback≤ : ∀{i Γ Δ a}(η : Δ ≤ Γ)(t : Ne Val Γ a) →
                 (nen≤ η <$> nereadback t) ~⟨ i ⟩~ (nereadback (nev≤ η t))
-  nereadback≤ η (var x) = ~now _                                                  
-  nereadback≤ η (app t u) =                                                       
-    proof                                                                         
-    ((nereadback t >>=                                                            
-      (λ t₁ → readback u >>= (λ n → now (app t₁ n))))                             
-                                   >>= (λ x′ → now (nen≤ η x′)))                  
-    ~⟨ bind-assoc (nereadback t) ⟩                                                
-    (nereadback t >>= (λ x →                                                      
-      (readback u >>= (λ n → now (app x n)))                                      
-                                   >>= (λ x′ → now (nen≤ η x′))))                 
-    ~⟨ bind-cong-r (nereadback t) (λ x → bind-assoc (readback u)) ⟩               
-    (nereadback t >>= (λ x →                                                      
-       readback u >>= (λ y → now (app x y) >>= (λ x′ → now (nen≤ η x′)))))        
-    ≡⟨⟩                                                                           
-    (nereadback t >>=                                                             
-      (λ x → (readback u >>= (λ y → now (app (nen≤ η x) (nf≤ η y))))))            
-    ≡⟨⟩                                                                           
-    (nereadback t >>=                                                             
-           (λ x → (readback u >>= (λ x′ → now (nf≤ η x′) >>=                      
-               (λ n → now (app (nen≤ η x) n))))))                                 
-    ~⟨ bind-cong-r (nereadback t) (λ x → ~sym (bind-assoc (readback u))) ⟩        
-    (nereadback t >>=                                                             
-           (λ x → ((readback u >>= (λ x′ → now (nf≤ η x′))) >>=                   
-               (λ n → now (app (nen≤ η x) n)))))                                  
-    ≡⟨⟩                                                                           
+  nereadback≤ η (var x) = ~now _
+  nereadback≤ η (app t u) =
+    proof
+    ((nereadback t >>=
+      (λ t₁ → readback u >>= (λ n → now (app t₁ n))))
+                                   >>= (λ x′ → now (nen≤ η x′)))
+    ~⟨ bind-assoc (nereadback t) ⟩
+    (nereadback t >>= (λ x →
+      (readback u >>= (λ n → now (app x n)))
+                                   >>= (λ x′ → now (nen≤ η x′))))
+    ~⟨ bind-cong-r (nereadback t) (λ x → bind-assoc (readback u)) ⟩
+    (nereadback t >>= (λ x →
+       readback u >>= (λ y → now (app x y) >>= (λ x′ → now (nen≤ η x′)))))
+    ≡⟨⟩
+    (nereadback t >>=
+      (λ x → (readback u >>= (λ y → now (app (nen≤ η x) (nf≤ η y))))))
+    ≡⟨⟩
+    (nereadback t >>=
+           (λ x → (readback u >>= (λ x′ → now (nf≤ η x′) >>=
+               (λ n → now (app (nen≤ η x) n))))))
+    ~⟨ bind-cong-r (nereadback t) (λ x → ~sym (bind-assoc (readback u))) ⟩
+    (nereadback t >>=
+           (λ x → ((readback u >>= (λ x′ → now (nf≤ η x′))) >>=
+               (λ n → now (app (nen≤ η x) n)))))
+    ≡⟨⟩
     (nereadback t >>= (λ x → now (nen≤ η x) >>=
       (λ t₁ → ((readback u >>= (λ x′ → now (nf≤ η x′))) >>=
           (λ n → now (app t₁ n))))))
@@ -228,7 +228,7 @@ mutual
        (λ t₁ → readback (val≤ η u) >>= (λ n → now (app t₁ n))))
     ∎
     where open ~-Reasoning
-    
+
   readback≤   : ∀{i Γ Δ} a (η : Δ ≤ Γ)(v : Val Γ a) →
                 (nf≤ η <$> readback v) ~⟨ i ⟩~ (readback (val≤ η v))
   readback≤ ★ η (ne w) =
@@ -255,7 +255,7 @@ mutual
     eta (val≤ η f) ∞>>= (λ a₁ → now (lam a₁))
     ∎)
     where open ∞~-Reasoning
-  
+
   eta≤  : ∀{i Γ Δ a b} (η : Δ ≤ Γ)(v : Val Γ (a ⇒ b)) →
           (nf≤ (lift η) ∞<$> eta v) ∞~⟨ i ⟩~ (eta (val≤ η v))
   ~force (eta≤ η f) =
@@ -293,7 +293,7 @@ mutual
 mutual
   V⟦_⟧_ : ∀{Γ}(a : Ty) → Val Γ a → Set
   V⟦ ★ ⟧ ne t = nereadback t ⇓
-  V⟦_⟧_ {Γ = Γ} (a ⇒ b) f = ∀{Δ}(ρ : Δ ≤ Γ)(u : Val Δ a) 
+  V⟦_⟧_ {Γ = Γ} (a ⇒ b) f = ∀{Δ}(ρ : Δ ≤ Γ)(u : Val Δ a)
     (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ ρ f) u)
 
   C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay ∞ (Val Γ a) → Set
