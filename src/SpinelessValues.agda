@@ -3,7 +3,7 @@
 module SpinelessValues where
 
 open import Library
-open import Term hiding (Nf; module Nf; nf≤)
+open import Term hiding (Nf; module Nf; nf≤; NfFun; nf≤-id; nf≤-•)
 open import Spine
 open import Delay
 
@@ -24,6 +24,54 @@ mutual
   nen≤ α (var x)   = var (var≤ α x)
   nen≤ α (app t u) = app (nen≤ α t) (nf≤ α u)
 
+{-
+-- first functor law
+mutual
+  nf≤-id : ∀ {Δ a} (n : Nf Δ a) → nf≤ id n ≡ n
+  nf≤-id (lam n) = cong lam {!!} -- need lift' trick/unique OPEs
+  nf≤-id (ne n)  = cong ne (nen≤-id n)
+
+  nen≤-id : ∀ {Δ a} (n : Ne Nf Δ a) → nen≤ id n ≡ n
+  nen≤-id (var x)    = refl
+  nen≤-id (app n n') = cong₂ app (nen≤-id n) (nf≤-id n')
+-}
+-- second functor law
+mutual
+  nf≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (n : Nf Δ₃ a) →
+          nf≤ η (nf≤ η' n) ≡ nf≤ (η • η') n
+  nf≤-• η η' (lam n) = proof
+    lam (nf≤ (lift η) (nf≤ (lift η') n)) 
+    ≡⟨ cong lam (nf≤-•  (lift η) (lift η') n ) ⟩
+    lam (nf≤ (lift η • lift η') n)
+    ≡⟨⟩
+    lam (nf≤ (lift (η • η')) n) 
+    ∎
+    where open ≡-Reasoning renaming (begin_ to proof_)
+  nf≤-• η η' (ne n)  = cong ne (nen≤-• η η' n)
+
+  nen≤-• : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Δ₁ ≤ Δ₂) (η' : Δ₂ ≤ Δ₃) (n : Ne Nf Δ₃ a) →
+          nen≤ η (nen≤ η' n) ≡ nen≤ (η • η') n
+  nen≤-• η η' (var x)   = cong var (var≤-• η η' x)
+  nen≤-• η η' (app n n') = cong₂ app (nen≤-• η η' n) (nf≤-• η η' n')
+
+-- nf≤ forms a functor from the category of OPEs
+{-
+NfFun : Fun OPECat (Fam Ty Nf)
+NfFun = record 
+  { OMap  = idf
+  ; HMap  = nf≤ 
+  ; fid   = iext λ a → ext λ n → ≡-to-≅ (nf≤-id n)
+  ; fcomp = λ {_ _ _ f g} → iext λ a → ext λ n → ≡-to-≅ (sym (nf≤-• g f n))
+  }
+
+NeNFun : Fun OPECat (Fam Ty (Ne Nf))
+NeNFun = record 
+  { OMap  = idf
+  ; HMap  = nen≤ 
+  ; fid   = iext λ a → ext λ n → ≡-to-≅ (nen≤-id n)
+  ; fcomp = λ {_ _ _ f g} → iext λ a → ext λ n → ≡-to-≅ (sym (nen≤-• g f n))
+  }
+-}
 
 -- Values and environments
 mutual
@@ -44,7 +92,7 @@ mutual
   val≤ α (ne t) = ne (nev≤ α t)
   val≤ α (lam t ρ)  = lam t (env≤ α ρ)
 
-  env≤ : ∀{Γ Δ E} →  Δ ≤ Γ → Env Γ E → Env Δ E
+  env≤ : ∀{Γ Δ}(η : Δ ≤ Γ){E} → Env Γ E → Env Δ E
   env≤ α ε       = ε
   env≤ α (ρ , v) = env≤ α ρ , val≤ α v
 
@@ -80,6 +128,31 @@ mutual
            nev≤ η (nev≤ η' t) ≡ nev≤ (η • η') t
   nev≤-• η η' (var x)   = cong var (var≤-• η η' x)
   nev≤-• η η' (app t u) = cong₂ app (nev≤-• η η' t) (val≤-• η η' u)
+
+-- val≤ forms a functor from the category of OPEs
+ValFun : Fun OPECat (Fam Ty Val)
+ValFun = record 
+  { OMap  = idf
+  ; HMap  = val≤ 
+  ; fid   = iext λ a → ext λ n → ≡-to-≅ (val≤-id n)
+  ; fcomp = λ {_ _ _ f g} → iext λ a → ext λ n → ≡-to-≅ (sym (val≤-• g f n))
+  }
+
+NeVFun : Fun OPECat (Fam Ty (Ne Val))
+NeVFun = record 
+  { OMap  = idf
+  ; HMap  = nev≤ 
+  ; fid   = iext λ a → ext λ n → ≡-to-≅ (nev≤-id n)
+  ; fcomp = λ {_ _ _ f g} → iext λ a → ext λ n → ≡-to-≅ (sym (nev≤-• g f n))
+  }
+
+EnvFun : Fun OPECat (Fam Cxt Env)
+EnvFun = record 
+  { OMap  = idf
+  ; HMap  = env≤ 
+  ; fid   = iext λ a → ext λ n → ≡-to-≅ (env≤-id n)
+  ; fcomp = λ {_ _ _ f g} → iext λ a → ext λ n → ≡-to-≅ (sym (env≤-• g f n))
+  }
 
 lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env Δ Γ) (η : Δ' ≤ Δ) →
   val≤ η (lookup x ρ) ≡ lookup x (env≤ η ρ)
