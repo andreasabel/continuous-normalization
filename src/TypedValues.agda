@@ -60,19 +60,19 @@ ide (Γ , a) = liftEnv (ide Γ)
 
 mutual
   eval  : ∀{i}{Γ : Cxt} {a : Ty} → Tm Γ a → {Δ : Cxt} → 
-           Env Δ Γ → Delay (Val Δ a) i
+           Env Δ Γ → Delay i (Val Δ a)
   eval (var x) ρ = now (lookup x ρ)
   eval (abs t) ρ = now (lam t ρ)
   eval (app t u) ρ = apply* (eval t ρ) (eval u ρ)
 
-  apply* : ∀{i Δ a b} → Delay (Val Δ (a ⇒ b)) i → Delay (Val Δ a) i → 
-           Delay (Val Δ b) i
+  apply* : ∀{i Δ a b} → Delay i (Val Δ (a ⇒ b)) → Delay i (Val Δ a) → 
+           Delay i (Val Δ b)
   apply* f⊥ v⊥ = apply =<<2 f⊥ , v⊥
 
-  apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → Delay (Val Δ b) i
+  apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → Delay i (Val Δ b)
   apply f v = later (∞apply f v)
 
-  ∞apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → ∞Delay (Val Δ b) i
+  ∞apply : ∀{i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → ∞Delay i (Val Δ b)
   force (∞apply (lam t ρ) v) = eval t (ρ , v)
   force (∞apply (ne x sp) v) = now (ne x (sp , v))
 
@@ -83,20 +83,20 @@ mutual
 
 -- beta quote
 mutual
-  β-readback : ∀{i Γ a} → Val Γ a → Delay (βNf Γ a) i
+  β-readback : ∀{i Γ a} → Val Γ a → Delay i (βNf Γ a)
   β-readback v = later (∞β-readback v)
 
-  ∞β-readback : ∀{i Γ a} → Val Γ a → ∞Delay (βNf Γ a) i
+  ∞β-readback : ∀{i Γ a} → Val Γ a → ∞Delay i (βNf Γ a)
   force (∞β-readback (lam t ρ)) = lam  <$> (β-readback =<< eval t  (liftEnv ρ))
   force (∞β-readback (ne x rs)) = ne x <$> mapRSpM β-readback rs
 
 
 -- beta-eta quote
 mutual
-  readback : ∀{i Γ a} → Val Γ a → Delay (Nf Γ a) i
+  readback : ∀{i Γ a} → Val Γ a → Delay i (Nf Γ a)
   readback v = later (∞readback v)
 
-  ∞readback : ∀{i Γ a} → Val Γ a → ∞Delay (Nf Γ a) i
+  ∞readback : ∀{i Γ a} → Val Γ a → ∞Delay i (Nf Γ a)
   force (∞readback {a = ★}    (ne x vs)) = ne x <$> mapRSpM readback vs
   force (∞readback {a = a ⇒ b} v) = 
     lam <$> (readback {a = b} =<< apply (weakVal v) (ne zero ε))
@@ -135,7 +135,7 @@ mutual
   V⟦_⟧_ {Γ = Γ} (a ⇒ b) f = ∀{Δ}(ρ : Δ ≤ Γ)(u : Val Δ a) 
     (u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (apply (val≤ ρ f) u)
 
-  C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay (Val Γ a) ∞ → Set
+  C⟦_⟧_ : ∀{Γ}(a : Ty) → Delay ∞ (Val Γ a) → Set
   C⟦ a ⟧ x = ∃ λ v → x ⇓ v × V⟦ a ⟧ v
 
   VSp⟦⟧ : ∀{Γ a b} → RSpine (Val Γ) a b → Set
@@ -205,19 +205,19 @@ sound-β (v , v⇓ , ⟦v⟧) = v , β-expand v⇓ , ⟦v⟧
   sound-β {t = t} {ρ = env≤ α ρ} {u = u} (ih α p))
 
 sound-app' : ∀ {Δ a b} (f : Val Δ (a ⇒ b)) →
-  {u* : Delay (Val Δ a) _} {u : Val Δ a} (u⇓ : u* ⇓ u) →
+  {u* : Delay _ (Val Δ a)} {u : Val Δ a} (u⇓ : u* ⇓ u) →
   {v : Val Δ b} →  later (∞apply f u) ⇓ v → (u* >>= λ u → apply f u) ⇓ v
 sound-app' f (later⇓ u⇓) h = later⇓ (sound-app' f u⇓ h)
 sound-app' f  now⇓       h = h
 
 sound-app : ∀ {Δ a b} →
-  {f* : Delay (Val Δ (a ⇒ b)) _} {f : Val Δ (a ⇒ b)} (f⇓ : f* ⇓ f) →
-  {u* : Delay (Val Δ a)       _} {u : Val Δ a}       (u⇓ : u* ⇓ u) →
+  {f* : Delay _ (Val Δ (a ⇒ b))} {f : Val Δ (a ⇒ b)} (f⇓ : f* ⇓ f) →
+  {u* : Delay _ (Val Δ a)      } {u : Val Δ a}       (u⇓ : u* ⇓ u) →
   {v : Val Δ b} →  later (∞apply f u) ⇓ v → apply* f* u* ⇓ v
 sound-app  (later⇓ f⇓) u⇓ h = later⇓ (sound-app f⇓ u⇓ h)
 sound-app {f = f} now⇓ u⇓ h = sound-app' f u⇓ h
 
-⟦app⟧ : ∀ {Δ a b} {f : Delay (Val Δ (a ⇒ b)) _} {u : Delay (Val Δ a) _} →
+⟦app⟧ : ∀ {Δ a b} {f : Delay _ (Val Δ (a ⇒ b))} {u : Delay _ (Val Δ a)} →
           C⟦ a ⇒ b ⟧ f → C⟦ a ⟧ u → C⟦ b ⟧ (apply* f u)
 ⟦app⟧ (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) = 
   let v , v⇓ , ⟦v⟧ = ⟦f⟧ id u ⟦u⟧ in

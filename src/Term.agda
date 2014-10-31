@@ -1,4 +1,4 @@
-{-# OPTIONS --sized-types #-}
+{-# OPTIONS --sized-types --copatterns #-}
 
 -- Syntax: Types, terms and contexts.
 
@@ -42,12 +42,6 @@ data _≤_ : (Γ Δ : Cxt) → Set where
   weak : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ Δ
   lift : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ (Δ , a)
 
--- Smart lift, preserves id.
-
-lift' : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ (Δ , a)
-lift' id = id
-lift' η  = lift η
-
 -- Composition
 
 _•_ : ∀ {Γ Δ Δ'} (η : Γ ≤ Δ) (η' : Δ ≤ Δ') → Γ ≤ Δ'
@@ -62,6 +56,36 @@ lift η • lift η' = lift (η • η')
 η•id (weak η) = cong weak (η•id η)
 η•id (lift η) = refl
 
+•ass : ∀ {Γ Δ Δ' Δ''} (η : Γ ≤ Δ) (η' : Δ ≤ Δ')(η'' : Δ' ≤ Δ'') → 
+       η • (η' • η'') ≡ (η • η') • η''
+•ass id       η'        η''        = refl
+•ass (weak η) η'        η''        = cong weak (•ass η η' η'')
+•ass (lift η) id        η''        = refl
+•ass (lift η) (weak η') η''        = cong weak (•ass η η' η'')
+•ass (lift η) (lift η') id         = refl
+•ass (lift η) (lift η') (weak η'') = cong weak (•ass η η' η'')
+•ass (lift η) (lift η') (lift η'') = cong lift (•ass η η' η'')
+
+--OPEs form a category
+OPECat : Cat 
+Obj  OPECat = Cxt
+Hom  OPECat = _≤_
+iden OPECat = id
+comp OPECat = λ f g → g • f
+idl  OPECat = ≡-to-≅ (η•id _)
+idr  OPECat = refl
+ass  OPECat = λ {_ _ _ _ f g h} → ≡-to-≅ (•ass h g f)
+
+-- Smart lift, preserves id (first functor law)
+
+-- lift preserves id too our representation of OPEs is not unique, 
+-- hence this trick
+
+lift' : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ (Δ , a)
+lift' id = id
+lift' η  = lift η
+
+-- smart lift, preserves composition (second functor law)
 lift'-• : ∀ {Γ Δ Δ' a} (η : Γ ≤ Δ) (η' : Δ ≤ Δ') →
   lift' {a = a} η • lift' η' ≡ lift' (η • η')
 lift'-• id       η'        = refl
@@ -72,21 +96,21 @@ lift'-• (lift η) id        = refl
 lift'-• (lift η) (weak η') = refl
 lift'-• (lift η) (lift η') = refl
 
--- Monotonicity / map for variables
+-- lift' forms an endofunctor on OPECat
+liftFun :  Ty → Fun OPECat OPECat
+OMap  (liftFun a) = λ Γ → Γ , a
+HMap  (liftFun a) = lift'
+fid   (liftFun a) = refl
+fcomp (liftFun a) = λ {_ _ _ η η'} →  ≡-to-≅ (sym (lift'-• η' η))
 
-var≤ : ∀ {Γ Δ a} → (η : Γ ≤ Δ) (x : Var Δ a) → Var Γ a
+-- Monotonicity / map for variables
+var≤ : ∀ {Γ Δ}(η : Γ ≤ Δ){a} (x : Var Δ a) → Var Γ a
 var≤ id        x      = x
 var≤ (weak η)  x      = suc (var≤ η x)
 var≤ (lift η)  zero   = zero
 var≤ (lift η) (suc x) = suc (var≤ η x)
 
--- First functor law.
-
-var≤-id : ∀ {Γ a} (x : Var Γ a) → var≤ id x ≡ x
-var≤-id x = refl
-
 -- Second functor law.
-
 var≤-• : ∀ {Γ₁ Γ₂ Γ₃ a} (η : Γ₁ ≤ Γ₂) (η' : Γ₂ ≤ Γ₃) (x : Var Γ₃ a) →
   var≤ η (var≤ η' x) ≡ var≤ (η • η') x
 var≤-• id       η'        x       = refl
@@ -96,15 +120,34 @@ var≤-• (lift η) (weak η') x       = cong suc (var≤-• η η' x)
 var≤-• (lift η) (lift η') zero    = refl
 var≤-• (lift η) (lift η') (suc x) = cong suc (var≤-• η η' x)
 
--- Length.
+--category of polymorphic functions from ∀ {a} → T Γ a → T Δ a
+Fam : (I : Set)(T : Cxt → I → Set) → Cat
+Fam I T = record
+  { Obj = Cxt
+  ; Hom = λ Γ Δ → ∀ {a} → T Δ a → T Γ a
+  ; iden = idf
+  ; comp = λ f g → g ∘ f
+  ; idl = refl
+  ; idr = refl
+  ; ass = refl
+  }
 
+-- var≤ forms a functor from the category of OPEs
+VarFun : Fun OPECat (Fam Ty Var)
+VarFun = record 
+  { OMap  = idf
+  ; HMap  = var≤ 
+  ; fid   = refl 
+  ; fcomp = λ{ _ _ _ f g} → iext λ a → ext λ x → ≡-to-≅ (sym (var≤-• g f x)) }
+
+-- Length.
 len : Cxt → ℕ
 len ε       = 0
 len (Γ , _) = 1 + len Γ
 
 -- Monotonicity / map for long normal forms
 mutual
-  nf≤ : ∀ {i Γ Δ a} (η : Γ ≤ Δ) (t : Nf {i} Δ a) → Nf {i} Γ a
+  nf≤ : ∀ {i Γ Δ} (η : Γ ≤ Δ){a} (t : Nf {i} Δ a) → Nf {i} Γ a
   nf≤ η (lam t)   = lam (nf≤ (lift' η) t)
   nf≤ η (ne x ts) = ne (var≤ η x) (nfSpine≤ η ts)
 
@@ -116,7 +159,7 @@ mutual
 mutual
   nf≤-id : ∀ {i Γ a} (n : Nf {i} Γ a) → nf≤ id n ≡ n
   nf≤-id (lam n)   = cong lam (nf≤-id n)
-  nf≤-id (ne x ns) = cong₂ ne (var≤-id x) (nfSpine≤-id ns)
+  nf≤-id (ne x ns) = cong (ne x) (nfSpine≤-id ns)
 
   nfSpine≤-id : ∀ {i Γ a c} (ns : NfSpine {i} Γ a c) → nfSpine≤ id ns ≡ ns
   nfSpine≤-id ε        = refl
@@ -143,3 +186,11 @@ mutual
                nfSpine≤ η (nfSpine≤ η' ns) ≡ nfSpine≤ (η • η') ns
   nfSpine≤-• η η' ε        = refl
   nfSpine≤-• η η' (ns , n) = cong₂ _,_ (nfSpine≤-• η η' ns) (nf≤-• η η' n)
+
+-- nf≤ forms a functor from the category of OPEs
+NfFun : Fun OPECat (Fam Ty Nf)
+NfFun = record 
+  { OMap  = idf
+  ; HMap  = nf≤ 
+  ; fid   = iext λ a → ext λ n → ≡-to-≅ (nf≤-id n)
+  ; fcomp = λ {_ _ _ f g} → iext λ a → ext λ n → ≡-to-≅ (sym (nf≤-• g f n))}
