@@ -26,6 +26,11 @@ open ∞Delay public
 later! : ∀ {A i} → Delay A i → Delay A (↑ i)
 later! x = later (delay x)
 
+-- Example: non-termination.
+
+never : ∀ {A i} → ∞Delay A i
+force never = later never
+
 -- Monad instance.
 
 module Bind where
@@ -44,7 +49,7 @@ delayMonad {i} = record
   } where open Bind
 
 module _ {i : Size} where
-  open module DelayMonad = RawMonad (delayMonad {i = i}) 
+  open module DelayMonad = RawMonad (delayMonad {i = i})
                            public renaming (_⊛_ to _<*>_)
 open Bind public using (_∞>>=_)
 
@@ -67,6 +72,7 @@ mutual
     ~later : ∀ {a∞ b∞} (eq : _∞~_ {i} a∞ b∞) → later a∞ ~ later b∞
 
   record _∞~_ {i : Size} {A : Set} (a∞ b∞ : ∞Delay A ∞) : Set where
+    coinductive
     constructor ~delay
     field
       ~force : {j : Size< i} → _~_ {j} (force a∞) (force b∞)
@@ -224,20 +230,20 @@ subst≈⇓ = ?
 
 
 ⇓>>= : ∀{A B}(f : A → Delay B ∞)
-       {?a : Delay A ∞}{a : A} → ?a ⇓ a → 
+       {?a : Delay A ∞}{a : A} → ?a ⇓ a →
        {b : B} → (?a >>= f) ⇓ b → f a ⇓ b
 ⇓>>= f now⇓ q = q
 ⇓>>= f (later⇓ p) (later⇓ q) = ⇓>>= f p q
 
 >>=⇓ : ∀{A B}(f : A → Delay B ∞)
-       {?a : Delay A ∞}{a : A} → ?a ⇓ a → 
+       {?a : Delay A ∞}{a : A} → ?a ⇓ a →
        {b : B} → f a ⇓ b → (?a >>= f) ⇓ b
 >>=⇓ f now⇓ q = q
 >>=⇓ f (later⇓ p) q = later⇓ (>>=⇓ f p q)
 
 -- handy when you can't pattern match like in a let definition
 unlater : ∀{A}{∞a : ∞Delay A ∞}{a : A} → later ∞a ⇓ a → force ∞a ⇓ a
-unlater (later⇓ p) = p 
+unlater (later⇓ p) = p
 
 
 
