@@ -10,7 +10,7 @@ open import Library
 mutual
 
   data Delay (i : Size) (A : Set) : Set where
-    now   : A → Delay i A
+    now   : A          → Delay i A
     later : ∞Delay i A → Delay i A
 
   record ∞Delay (i : Size) (A : Set) : Set where

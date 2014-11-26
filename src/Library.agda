@@ -24,6 +24,7 @@ open import Data.Nat public
 
 open import Data.Product public
   using (∃; _×_; _,_) renaming (proj₁ to fst; proj₂ to snd)
+--infixr 1 _,_
 
 open import Data.Sum public
   using (_⊎_; [_,_]′) renaming (inj₁ to inl; inj₂ to inr)

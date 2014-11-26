@@ -383,11 +383,11 @@ nereadback≤⇓ η t {n} p = subst~⇓ (map⇓ (nen≤ η) p) (nereadback≤ η
 V⟦⟧≤ : ∀{Δ Δ′} a (η : Δ′ ≤ Δ)(v : Val Δ a)(⟦v⟧ : V⟦ a ⟧ v) → V⟦ a ⟧ (val≤ η v)
 V⟦⟧≤ ★       η (ne t) (n , p)        = nen≤ η n , nereadback≤⇓ η t p
 V⟦⟧≤ (a ⇒ b) η v      p       ρ u u⇓ =
-  let v′ , p′ , p′′ = p (ρ • η) u u⇓ in
-      v′ , subst (λ X → apply X u ⇓ fst (p (ρ • η) u u⇓))
+  let v′ , (p′ , p′′) = p (ρ • η) u u⇓ in
+      v′ , (subst (λ X → apply X u ⇓ fst (p (ρ • η) u u⇓))
                  ((sym (val≤-• ρ η v)))
                  p′
-         , p′′
+         , p′′)
 
 E⟦⟧≤ : ∀{Γ Δ Δ′} (η : Δ′ ≤ Δ) (ρ : Env Δ Γ) (θ : E⟦ Γ ⟧ ρ) → E⟦ Γ ⟧ (env≤ η ρ)
 E⟦⟧≤ η ε       θ        = _
@@ -395,22 +395,22 @@ E⟦⟧≤ η (ρ , v) (θ , ⟦v⟧) = E⟦⟧≤ η ρ θ , V⟦⟧≤ _ η v 
 
 ⟦var⟧ : ∀{Δ Γ a} (x : Var Γ a) (ρ : Env Δ Γ) (θ : E⟦ Γ ⟧ ρ) →
             C⟦ a ⟧ (now (lookup x ρ))
-⟦var⟧ zero   (_ , v) (_ , v⇓) = v , now⇓ , v⇓
+⟦var⟧ zero   (_ , v) (_ , v⇓) = v , (now⇓ , v⇓)
 ⟦var⟧(suc x) (ρ , _) (θ , _ ) = ⟦var⟧ x ρ θ
 
 sound-β : ∀ {Δ Γ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (u : Val Δ a) →
           C⟦ b ⟧ (eval t  (ρ , u)) → C⟦ b ⟧ (apply (lam t ρ) u)
-sound-β t ρ u (v , v⇓ , ⟦v⟧) = v , later⇓ v⇓ , ⟦v⟧
+sound-β t ρ u (v , (v⇓ , ⟦v⟧)) = v , (later⇓ v⇓ , ⟦v⟧)
 
 ⟦abs⟧ : ∀ {Δ Γ a b} (t : Tm (Γ , a) b) (ρ : Env Δ Γ) (θ : E⟦ Γ ⟧ ρ) →
   (∀{Δ′}(η : Δ′ ≤ Δ)(u : Val Δ′ a)(u⇓ : V⟦ a ⟧ u) → C⟦ b ⟧ (eval t (env≤ η ρ , u))) →
   C⟦ a ⇒ b ⟧ (now (lam t ρ))
-⟦abs⟧ t ρ θ ih = lam t ρ , now⇓ , (λ η u p → sound-β t (env≤ η ρ) u (ih η u p))
+⟦abs⟧ t ρ θ ih = lam t ρ , (now⇓ , (λ η u p → sound-β t (env≤ η ρ) u (ih η u p)))
 
 ⟦app⟧ : ∀ {Δ a b} {f? : Delay _ (Val Δ (a ⇒ b))} {u? : Delay _ (Val Δ a)} →
           C⟦ a ⇒ b ⟧ f? → C⟦ a ⟧ u? → C⟦ b ⟧ (f? >>= λ f → u? >>= apply f)
-⟦app⟧ {u? = u?} (f , f⇓ , ⟦f⟧) (u , u⇓ , ⟦u⟧) =
-  let v , v⇓ , ⟦v⟧ = ⟦f⟧ id u ⟦u⟧
+⟦app⟧ {u? = u?} (f , (f⇓ , ⟦f⟧)) (u , (u⇓ , ⟦u⟧)) =
+  let v , (v⇓ , ⟦v⟧) = ⟦f⟧ id u ⟦u⟧
       v⇓′          = bind⇓ (λ f′ → u? >>= apply f′)
                     f⇓
                     (bind⇓ (apply f)
@@ -418,7 +418,7 @@ sound-β t ρ u (v , v⇓ , ⟦v⟧) = v , later⇓ v⇓ , ⟦v⟧
                           (subst (λ X → apply X u ⇓ v)
                                  (val≤-id f)
                                  v⇓))
-  in  v , v⇓′ , ⟦v⟧
+  in  v , (v⇓′ , ⟦v⟧)
 
 term : ∀ {Δ Γ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : E⟦ Γ ⟧ ρ) → C⟦ a ⟧ (eval t ρ)
 term (var x)   ρ θ = ⟦var⟧ x ρ θ
@@ -433,7 +433,7 @@ mutual
   reify (a ⇒ b)  f      ⟦f⟧      =
     let u           = ne (var zero)
         ⟦u⟧          = reflect a (var zero) (var zero , now⇓)
-        v , v⇓ , ⟦v⟧ = ⟦f⟧ wk u ⟦u⟧
+        v , (v⇓ , ⟦v⟧) = ⟦f⟧ wk u ⟦u⟧
         n , ⇓n = reify b v ⟦v⟧
         ⇓λn    = later⇓ (bind⇓ (λ x → now (lam x))
                                (bind⇓ readback v⇓ ⇓n)
@@ -451,7 +451,7 @@ mutual
                    bind⇓ (λ m → app m <$> readback u)
                         ⇓m
                         (bind⇓ (λ n → now (app m′ n)) ⇓n now⇓))
-    in  ne wu , now⇓ , ⟦wu⟧
+    in  ne wu , (now⇓ , ⟦wu⟧)
 
 var↑ : ∀{Γ a}(x : Var Γ a) → V⟦ a ⟧ ne (var x)
 var↑ x = reflect _ (var x) (var x , now⇓)
@@ -464,6 +464,6 @@ nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
 nf t = eval t (ide _) >>= readback
 
 normalize : ∀ Γ a (t : Tm Γ a) → ∃ λ n → nf t ⇓ n
-normalize Γ a t = let v , v⇓ , ⟦v⟧ = term t (ide Γ) (⟦ide⟧ Γ)
+normalize Γ a t = let v , (v⇓ , ⟦v⟧) = term t (ide Γ) (⟦ide⟧ Γ)
                       n , ⇓n      = reify a v ⟦v⟧
                   in  n , bind⇓ readback v⇓ ⇓n
