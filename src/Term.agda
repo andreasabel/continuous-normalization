@@ -34,9 +34,10 @@ mutual
   NfSpine : {i : Size} (Γ : Cxt) (a c : Ty) → Set
   NfSpine {i} Γ a c = RSpine (Nf {i} Γ) a c
 
+
 -- Additional stuff for contexts.
 -- order preserving embeddings
-
+{-
 data _≤_ : (Γ Δ : Cxt) → Set where
   id   : ∀ {Γ} → Γ ≤ Γ
   weak : ∀ {Γ Δ a} → Γ ≤ Δ → (Γ , a) ≤ Δ
@@ -194,3 +195,4 @@ NfFun = record
   ; HMap  = nf≤ 
   ; fid   = iext λ a → ext λ n → ≡-to-≅ (nf≤-id n)
   ; fcomp = λ {_ _ _ f g} → iext λ a → ext λ n → ≡-to-≅ (sym (nf≤-• g f n))}
+-}
