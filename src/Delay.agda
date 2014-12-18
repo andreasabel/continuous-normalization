@@ -255,9 +255,6 @@ bind⇓ f (later⇓ p) q = later⇓ (bind⇓ f p q)
 unlater : ∀{A}{∞a : ∞Delay ∞ A}{a : A} → later ∞a ⇓ a → force ∞a ⇓ a
 unlater (later⇓ p) = p
 
--- Weak bisimilarity.
-------------------------------------------------------------------------
-
 
 
 
