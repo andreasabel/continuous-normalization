@@ -66,151 +66,149 @@ f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
 
 -- Strong bisimilarity
 
-
 mutual
-  data _~_ {i : Size} {A : Set} : (a? b? : Delay ∞ A) → Set where
-    ~now   : ∀ a → now a ~ now a
-    ~later : ∀ {a∞ b∞} (eq : a∞ ∞~⟨ i ⟩~ b∞) → later a∞ ~ later b∞
+  data _≈_ {i : Size} {A : Set} : (a? b? : Delay ∞ A) → Set where
+    ≈now   : ∀ a → now a ≈ now a
+    ≈later : ∀ {a∞ b∞} (eq : a∞ ∞≈⟨ i ⟩≈ b∞) → later a∞ ≈ later b∞
 
-  _~⟨_⟩~_ = λ {A} a? i b? → _~_ {i}{A} a? b?
+  _≈⟨_⟩≈_ = λ {A} a? i b? → _≈_ {i}{A} a? b?
 
-  record _∞~⟨_⟩~_ {A} (a∞ : ∞Delay ∞ A) i (b∞ : ∞Delay ∞ A) : Set where
+  record _∞≈⟨_⟩≈_ {A} (a∞ : ∞Delay ∞ A) i (b∞ : ∞Delay ∞ A) : Set where
     coinductive
     field
-      ~force : {j : Size< i} → force a∞ ~⟨ j ⟩~ force b∞
+      ≈force : {j : Size< i} → force a∞ ≈⟨ j ⟩≈ force b∞
 
-_∞~_ = λ {i} {A} a∞ b∞ → _∞~⟨_⟩~_ {A} a∞ i b∞
-open _∞~⟨_⟩~_ public
+_∞≈_ = λ {i} {A} a∞ b∞ → _∞≈⟨_⟩≈_ {A} a∞ i b∞
+open _∞≈⟨_⟩≈_ public
 
 -- Reflexivity
 
 mutual
-  ~refl  : ∀ {i A} (a? : Delay ∞ A) → a? ~⟨ i ⟩~ a?
-  ~refl (now a)    = ~now a
-  ~refl (later a∞) = ~later (∞~refl a∞)
+  ≈refl  : ∀ {i A} (a? : Delay ∞ A) → a? ≈⟨ i ⟩≈ a?
+  ≈refl (now a)    = ≈now a
+  ≈refl (later a∞) = ≈later (∞≈refl a∞)
 
-  ∞~refl : ∀ {i A} (a∞ : ∞Delay ∞ A) → _∞~_ {i} a∞ a∞
-  ~force (∞~refl a∞) = ~refl (force a∞)
-
+  ∞≈refl : ∀ {i A} (a∞ : ∞Delay ∞ A) → _∞≈_ {i} a∞ a∞
+  ≈force (∞≈refl a∞) = ≈refl (force a∞)
 
 -- Symmetry
 
 mutual
-  ~sym : ∀ {i A} {a? b? : Delay ∞ A} → a? ~⟨ i ⟩~ b? → b? ~⟨ i ⟩~ a?
-  ~sym (~now a)    = ~now a
-  ~sym (~later eq) = ~later (∞~sym eq)
+  ≈sym : ∀ {i A} {a? b? : Delay ∞ A} → a? ≈⟨ i ⟩≈ b? → b? ≈⟨ i ⟩≈ a?
+  ≈sym (≈now a)    = ≈now a
+  ≈sym (≈later eq) = ≈later (∞≈sym eq)
 
-  ∞~sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → a? ∞~⟨ i ⟩~ b? → b? ∞~⟨ i ⟩~ a?
-  ~force (∞~sym eq) = ~sym (~force eq)
+  ∞≈sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → a? ∞≈⟨ i ⟩≈ b? → b? ∞≈⟨ i ⟩≈ a?
+  ≈force (∞≈sym eq) = ≈sym (≈force eq)
 
 -- Transitivity
 
 mutual
-  ~trans : ∀ {i A} {a? b? c? : Delay ∞ A}
-    (eq : a? ~⟨ i ⟩~ b?) (eq' : b? ~⟨ i ⟩~ c?) → a? ~⟨ i ⟩~ c?
-  ~trans (~now a)    (~now .a)    = ~now a
-  ~trans (~later eq) (~later eq') = ~later (∞~trans eq eq')
+  ≈trans : ∀ {i A} {a? b? c? : Delay ∞ A}
+    (eq : a? ≈⟨ i ⟩≈ b?) (eq' : b? ≈⟨ i ⟩≈ c?) → a? ≈⟨ i ⟩≈ c?
+  ≈trans (≈now a)    (≈now .a)    = ≈now a
+  ≈trans (≈later eq) (≈later eq') = ≈later (∞≈trans eq eq')
 
-  ∞~trans : ∀ {i A} {a∞ b∞ c∞ : ∞Delay ∞ A}
-    (eq : a∞ ∞~⟨ i ⟩~ b∞) (eq' : b∞ ∞~⟨ i ⟩~ c∞) → a∞ ∞~⟨ i ⟩~ c∞
-  ~force (∞~trans eq eq') = ~trans (~force eq) (~force eq')
+  ∞≈trans : ∀ {i A} {a∞ b∞ c∞ : ∞Delay ∞ A}
+    (eq : a∞ ∞≈⟨ i ⟩≈ b∞) (eq' : b∞ ∞≈⟨ i ⟩≈ c∞) → a∞ ∞≈⟨ i ⟩≈ c∞
+  ≈force (∞≈trans eq eq') = ≈trans (≈force eq) (≈force eq')
 
 -- Equality reasoning
 
-~setoid : (i : Size) (A : Set) → Setoid lzero lzero
-~setoid i A = record
+≈setoid : (i : Size) (A : Set) → Setoid lzero lzero
+≈setoid i A = record
   { Carrier       = Delay ∞ A
-  ; _≈_           = _~_ {i}
+  ; _≈_           = _≈_ {i}
   ; isEquivalence = record
-    { refl  = λ {a?} → ~refl a?
-    ; sym   = ~sym
-    ; trans = ~trans
+    { refl  = λ {a?} → ≈refl a?
+    ; sym   = ≈sym
+    ; trans = ≈trans
     }
   }
 
-module ~-Reasoning {i : Size} {A : Set} where
-  open Pre (Setoid.preorder (~setoid i A)) public
---    using (begin_; _∎) (_≈⟨⟩_ to _~⟨⟩_; _≈⟨_⟩_ to _~⟨_⟩_)
-    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _~⟨_⟩_; begin_ to proof_)
+module ≈-Reasoning {i : Size} {A : Set} where
+  open Pre (Setoid.preorder (≈setoid i A)) public
+--    using (begin_; _∎) (_≈⟨⟩_ to _≈⟨⟩_; _≈⟨_⟩_ to _≈⟨_⟩_)
+    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_; begin_ to proof_)
 
-∞~setoid : (i : Size) (A : Set) → Setoid lzero lzero
-∞~setoid i A = record
+∞≈setoid : (i : Size) (A : Set) → Setoid lzero lzero
+∞≈setoid i A = record
   { Carrier       = ∞Delay ∞ A
-  ; _≈_           = _∞~_ {i}
+  ; _≈_           = _∞≈_ {i}
   ; isEquivalence = record
-    { refl  = λ {a?} → ∞~refl a?
-    ; sym   = ∞~sym
-    ; trans = ∞~trans
+    { refl  = λ {a?} → ∞≈refl a?
+    ; sym   = ∞≈sym
+    ; trans = ∞≈trans
     }
   }
 
-module ∞~-Reasoning {i : Size} {A : Set} where
-  open Pre (Setoid.preorder (∞~setoid i A)) public
---    using (begin_; _∎) (_≈⟨⟩_ to _~⟨⟩_; _≈⟨_⟩_ to _~⟨_⟩_)
-    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _∞~⟨_⟩_; begin_ to proof_)
+module ∞≈-Reasoning {i : Size} {A : Set} where
+  open Pre (Setoid.preorder (∞≈setoid i A)) public
+--    using (begin_; _∎) (_≈⟨⟩_ to _≈⟨⟩_; _≈⟨_⟩_ to _≈⟨_⟩_)
+    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _∞≈⟨_⟩_; begin_ to proof_)
 
 
 -- Congruence laws.
 
 mutual
-  bind-cong-l : ∀ {i A B} {a? b? : Delay ∞ A} (eq : a? ~⟨ i ⟩~ b?)
-    (k : A → Delay ∞ B) → (a? >>= k) ~⟨ i ⟩~ (b? >>= k)
-  bind-cong-l (~now a)    k = ~refl _
-  bind-cong-l (~later eq) k = ~later (∞bind-cong-l eq k)
+  bind-cong-l : ∀ {i A B} {a? b? : Delay ∞ A} (eq : a? ≈⟨ i ⟩≈ b?)
+    (k : A → Delay ∞ B) → (a? >>= k) ≈⟨ i ⟩≈ (b? >>= k)
+  bind-cong-l (≈now a)    k = ≈refl _
+  bind-cong-l (≈later eq) k = ≈later (∞bind-cong-l eq k)
 
-  ∞bind-cong-l : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞~⟨ i ⟩~ b∞) →
+  ∞bind-cong-l : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞≈⟨ i ⟩≈ b∞) →
     (k : A → Delay ∞ B) →
-    _∞~_ {i} (a∞ ∞>>= k)  (b∞ ∞>>= k)
-  ~force (∞bind-cong-l eq k) = bind-cong-l (~force eq) k
+    _∞≈_ {i} (a∞ ∞>>= k)  (b∞ ∞>>= k)
+  ≈force (∞bind-cong-l eq k) = bind-cong-l (≈force eq) k
 
 _>>=l_ = bind-cong-l
 
 mutual
   bind-cong-r : ∀ {i A B} (a? : Delay ∞ A) {k l : A → Delay ∞ B} →
-    (h : ∀ a → (k a) ~⟨ i ⟩~ (l a)) → (a? >>= k) ~⟨ i ⟩~ (a? >>= l)
+    (h : ∀ a → (k a) ≈⟨ i ⟩≈ (l a)) → (a? >>= k) ≈⟨ i ⟩≈ (a? >>= l)
   bind-cong-r (now a)    h = h a
-  bind-cong-r (later a∞) h = ~later (∞bind-cong-r a∞ h)
+  bind-cong-r (later a∞) h = ≈later (∞bind-cong-r a∞ h)
 
   ∞bind-cong-r : ∀ {i A B} (a∞ : ∞Delay ∞ A) {k l : A → Delay ∞ B} →
-    (h : ∀ a → (k a) ~⟨ i ⟩~ (l a)) → (a∞ ∞>>= k) ∞~⟨ i ⟩~ (a∞ ∞>>= l)
-  ~force (∞bind-cong-r a∞ h) = bind-cong-r (force a∞) h
+    (h : ∀ a → (k a) ≈⟨ i ⟩≈ (l a)) → (a∞ ∞>>= k) ∞≈⟨ i ⟩≈ (a∞ ∞>>= l)
+  ≈force (∞bind-cong-r a∞ h) = bind-cong-r (force a∞) h
 
 _>>=r_ = bind-cong-r
 
 mutual
-  bind-cong : ∀ {i A B}  {a? b? : Delay ∞ A} (eq : a? ~⟨ i ⟩~ b?)
-              {k l : A → Delay ∞ B} (h : ∀ a → (k a) ~⟨ i ⟩~ (l a)) →
-              (a? >>= k) ~⟨ i ⟩~ (b? >>= l)
-  bind-cong (~now a)    h = h a
-  bind-cong (~later eq) h = ~later (∞bind-cong eq h)
+  bind-cong : ∀ {i A B}  {a? b? : Delay ∞ A} (eq : a? ≈⟨ i ⟩≈ b?)
+              {k l : A → Delay ∞ B} (h : ∀ a → (k a) ≈⟨ i ⟩≈ (l a)) →
+              (a? >>= k) ≈⟨ i ⟩≈ (b? >>= l)
+  bind-cong (≈now a)    h = h a
+  bind-cong (≈later eq) h = ≈later (∞bind-cong eq h)
 
-  ∞bind-cong : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞~⟨ i ⟩~ b∞)
-    {k l : A → Delay ∞ B} (h : ∀ a → (k a) ~⟨ i ⟩~ (l a)) →
-    _∞~_ {i} (a∞ ∞>>= k)  (b∞ ∞>>= l)
-  ~force (∞bind-cong eq h) = bind-cong (~force eq) h
+  ∞bind-cong : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞≈⟨ i ⟩≈ b∞)
+    {k l : A → Delay ∞ B} (h : ∀ a → (k a) ≈⟨ i ⟩≈ (l a)) →
+    _∞≈_ {i} (a∞ ∞>>= k)  (b∞ ∞>>= l)
+  ≈force (∞bind-cong eq h) = bind-cong (≈force eq) h
 
-_~>>=_ = bind-cong
+_≈>>=_ = bind-cong
 
 -- Monad laws.
 
 mutual
   bind-assoc : ∀{i A B C}(m : Delay ∞ A)
                {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
-               ((m >>= k) >>= l) ~⟨ i ⟩~ (m >>= λ a → k a >>= l)
-  bind-assoc (now a)    = ~refl _
-  bind-assoc (later a∞) = ~later (∞bind-assoc a∞)
+               ((m >>= k) >>= l) ≈⟨ i ⟩≈ (m >>= λ a → k a >>= l)
+  bind-assoc (now a)    = ≈refl _
+  bind-assoc (later a∞) = ≈later (∞bind-assoc a∞)
 
   ∞bind-assoc : ∀{i A B C}(a∞ : ∞Delay ∞ A)
                 {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
-                ((a∞ ∞>>= λ a → k a) ∞>>= l) ∞~⟨ i ⟩~ (a∞ ∞>>= λ a → k a >>= l)
-  ~force (∞bind-assoc a∞) = bind-assoc (force a∞)
+                ((a∞ ∞>>= λ a → k a) ∞>>= l) ∞≈⟨ i ⟩≈ (a∞ ∞>>= λ a → k a >>= l)
+  ≈force (∞bind-assoc a∞) = bind-assoc (force a∞)
 
 map-compose : ∀{i A B C} (a? : Delay ∞ A) {f : A → B} {g : B → C} →
-  (g <$> (f <$> a?)) ~⟨ i ⟩~ ((g ∘ f) <$> a?)
+  (g <$> (f <$> a?)) ≈⟨ i ⟩≈ ((g ∘ f) <$> a?)
 map-compose a? = bind-assoc a?
 
 map-cong : ∀{i A B}{a? b? : Delay ∞ A} (f : A → B) →
-  a? ~⟨ i ⟩~ b? → (f <$> a?) ~⟨ i ⟩~ (f <$> b?)
+  a? ≈⟨ i ⟩≈ b? → (f <$> a?) ≈⟨ i ⟩≈ (f <$> b?)
 map-cong f eq = bind-cong-l eq (now ∘ f)
 
 -- Termination/Convergence.  Makes sense only for Delay A ∞.
@@ -230,9 +228,9 @@ map⇓ f now⇓        = now⇓
 map⇓ f (later⇓ a⇓) = later⇓ (map⇓ f a⇓)
 
 -- some lemmas about convergence
-subst~⇓ : ∀{A}{t t' : Delay ∞ A}{n : A} → t ⇓ n → t ~ t' → t' ⇓ n
-subst~⇓ now⇓ (~now a) = now⇓
-subst~⇓ (later⇓ p) (~later eq) = later⇓ (subst~⇓ p (~force eq))
+subst≈⇓ : ∀{A}{t t' : Delay ∞ A}{n : A} → t ⇓ n → t ≈ t' → t' ⇓ n
+subst≈⇓ now⇓ (≈now a) = now⇓
+subst≈⇓ (later⇓ p) (≈later eq) = later⇓ (subst≈⇓ p (≈force eq))
 
 -- this should also hold for weak bisimularity right?
 {-
@@ -256,6 +254,9 @@ bind⇓ f (later⇓ p) q = later⇓ (bind⇓ f p q)
 -- handy when you can't pattern match like in a let definition
 unlater : ∀{A}{∞a : ∞Delay ∞ A}{a : A} → later ∞a ⇓ a → force ∞a ⇓ a
 unlater (later⇓ p) = p
+
+-- Weak bisimilarity.
+------------------------------------------------------------------------
 
 
 

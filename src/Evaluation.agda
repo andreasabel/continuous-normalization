@@ -46,23 +46,23 @@ mutual
 
 mutual
   reneval    : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Ren Δ′ Δ) →
-             (renval η <$> (eval t ρ)) ~⟨ i ⟩~ (eval t (renenv η ρ))
-  reneval (var x)   ρ η rewrite lookup≤ x ρ η = ~now _
-  reneval (abs t)   ρ η = ~now _
+             (renval η <$> (eval t ρ)) ≈⟨ i ⟩≈ (eval t (renenv η ρ))
+  reneval (var x)   ρ η rewrite lookup≤ x ρ η = ≈now _
+  reneval (abs t)   ρ η = ≈now _
   reneval (app t u) ρ η =
     proof
     ((eval t ρ >>=
       (λ f → eval u ρ >>= (λ v → apply f v)))
         >>= (λ x′ → now (renval η x′)))
-    ~⟨ bind-assoc (eval t ρ) ⟩
+    ≈⟨ bind-assoc (eval t ρ) ⟩
     (eval t ρ >>=
       λ f → eval u ρ >>= (λ v → apply f v)
         >>= (λ x′ → now (renval η x′)))
-    ~⟨ bind-cong-r (eval t ρ) (λ t₁ → bind-assoc (eval u ρ)) ⟩
+    ≈⟨ bind-cong-r (eval t ρ) (λ t₁ → bind-assoc (eval u ρ)) ⟩
     (eval t ρ >>=
       λ f → eval u ρ >>= λ v → apply f v
         >>= (λ x′ → now (renval η x′)))
-    ~⟨ bind-cong-r (eval t ρ)
+    ≈⟨ bind-cong-r (eval t ρ)
                    (λ t₁ → bind-cong-r (eval u ρ)
                                        (λ u₁ → renapply t₁ u₁ η )) ⟩
     (eval t ρ >>=
@@ -71,34 +71,34 @@ mutual
     (eval t ρ >>= λ x′ →
         (eval u ρ >>= λ x′′ → now (renval η x′′) >>=
           λ v → apply (renval η x′) v))
-    ~⟨ bind-cong-r (eval t ρ) (λ a → ~sym (bind-assoc (eval u ρ))) ⟩
+    ≈⟨ bind-cong-r (eval t ρ) (λ a → ≈sym (bind-assoc (eval u ρ))) ⟩
     (eval t ρ >>= λ x′ →
         (eval u ρ >>= λ x′′ → now (renval η x′′)) >>=
           (λ v → apply (renval η x′) v))
-    ~⟨ bind-cong-r (eval t ρ) (λ x′ → bind-cong-l  (reneval u ρ η) (λ _ → _)) ⟩
+    ≈⟨ bind-cong-r (eval t ρ) (λ x′ → bind-cong-l  (reneval u ρ η) (λ _ → _)) ⟩
     (eval t ρ >>= λ x′ →
         eval u (renenv η ρ) >>= (λ v → apply (renval η x′) v))
     ≡⟨⟩
     (eval t ρ >>= λ x′ → now (renval η x′) >>=
       (λ f → eval u (renenv η ρ) >>= (λ v → apply f v)))
-    ~⟨ ~sym (bind-assoc (eval t ρ)) ⟩
+    ≈⟨ ≈sym (bind-assoc (eval t ρ)) ⟩
     ((eval t ρ >>= (λ x′ → now (renval η x′))) >>=
       (λ f → eval u (renenv η ρ) >>= (λ v → apply f v)))
-    ~⟨ bind-cong-l (reneval t ρ η) (λ _ → _) ⟩
+    ≈⟨ bind-cong-l (reneval t ρ η) (λ _ → _) ⟩
     (eval t (renenv η ρ) >>=
       (λ f → eval u (renenv η ρ) >>= (λ v → apply f v)))
     ∎
-    where open ~-Reasoning
+    where open ≈-Reasoning
 
   renapply  : ∀{i Γ Δ a b} (f : Val Γ (a ⇒ b))(v : Val Γ a)(η : Ren Δ Γ) →
-            (renval η <$> apply f v) ~⟨ i ⟩~ (apply (renval η f) (renval η v))
-  renapply (ne x)    v η = ~refl _
-  renapply (lam t ρ) v η = ~later (renbeta t ρ v η)
+            (renval η <$> apply f v) ≈⟨ i ⟩≈ (apply (renval η f) (renval η v))
+  renapply (ne x)    v η = ≈refl _
+  renapply (lam t ρ) v η = ≈later (renbeta t ρ v η)
 
   renbeta : ∀ {i Γ Δ E a b} (t : Tm (Γ , a) b)(ρ : Env Δ Γ) (v : Val Δ a) →
           (η : Ren E Δ) →
-          (renval η ∞<$> (beta t ρ v)) ∞~⟨ i ⟩~ beta t (renenv η ρ) (renval η v)
-  ~force (renbeta t ρ v η) = reneval t (ρ , v) η
+          (renval η ∞<$> (beta t ρ v)) ∞≈⟨ i ⟩≈ beta t (renenv η ρ) (renval η v)
+  ≈force (renbeta t ρ v η) = reneval t (ρ , v) η
 
 mutual
   readback : ∀{i Γ a} → Val Γ a → Delay i (Nf Γ a)
@@ -116,18 +116,18 @@ mutual
 
 mutual
   rennereadback : ∀{i Γ Δ a}(η : Ren Δ Γ)(t : NeVal Γ a) →
-                (rennen η <$> nereadback t) ~⟨ i ⟩~ (nereadback (rennev η t))
-  rennereadback η (var x) = ~now _
+                (rennen η <$> nereadback t) ≈⟨ i ⟩≈ (nereadback (rennev η t))
+  rennereadback η (var x) = ≈now _
   rennereadback η (app t u) =
     proof
     ((nereadback t >>=
       (λ t₁ → readback u >>= (λ n → now (app t₁ n))))
                                    >>= (λ x′ → now (rennen η x′)))
-    ~⟨ bind-assoc (nereadback t) ⟩
+    ≈⟨ bind-assoc (nereadback t) ⟩
     (nereadback t >>= (λ x →
       (readback u >>= (λ n → now (app x n)))
                                    >>= (λ x′ → now (rennen η x′))))
-    ~⟨ bind-cong-r (nereadback t) (λ x → bind-assoc (readback u)) ⟩
+    ≈⟨ bind-cong-r (nereadback t) (λ x → bind-assoc (readback u)) ⟩
     (nereadback t >>= (λ x →
        readback u >>= (λ y → now (app x y) >>= (λ x′ → now (rennen η x′)))))
     ≡⟨⟩
@@ -137,7 +137,7 @@ mutual
     (nereadback t >>=
            (λ x → (readback u >>= (λ x′ → now (rennf η x′) >>=
                (λ n → now (app (rennen η x) n))))))
-    ~⟨ bind-cong-r (nereadback t) (λ x → ~sym (bind-assoc (readback u))) ⟩
+    ≈⟨ bind-cong-r (nereadback t) (λ x → ≈sym (bind-assoc (readback u))) ⟩
     (nereadback t >>=
            (λ x → ((readback u >>= (λ x′ → now (rennf η x′))) >>=
                (λ n → now (app (rennen η x) n)))))
@@ -145,72 +145,72 @@ mutual
     (nereadback t >>= (λ x → now (rennen η x) >>=
       (λ t₁ → ((readback u >>= (λ x′ → now (rennf η x′))) >>=
           (λ n → now (app t₁ n))))))
-    ~⟨ ~sym (bind-assoc (nereadback t)) ⟩
+    ≈⟨ ≈sym (bind-assoc (nereadback t)) ⟩
     ((nereadback t >>= (λ x′ → now (rennen η x′))) >>=
       (λ t₁ → ((readback u >>= (λ x′ → now (rennf η x′))) >>=
           (λ n → now (app t₁ n)))))
     ≡⟨⟩
     (rennen η <$> nereadback t >>=
        (λ t₁ → rennf η <$> readback u >>= (λ n → now (app t₁ n))))
-    ~⟨ bind-cong-r (rennen η <$> nereadback t)
+    ≈⟨ bind-cong-r (rennen η <$> nereadback t)
                    (λ x → bind-cong-l (renreadback _ η u)
                                       (λ x → _)) ⟩
     (rennen η <$> nereadback t >>=
        (λ t₁ → readback (renval η u) >>= (λ n → now (app t₁ n))))
-    ~⟨  bind-cong-l (rennereadback η t) (λ x → _) ⟩
+    ≈⟨  bind-cong-l (rennereadback η t) (λ x → _) ⟩
     (nereadback (rennev η t) >>=
        (λ t₁ → readback (renval η u) >>= (λ n → now (app t₁ n))))
     ∎
-    where open ~-Reasoning
+    where open ≈-Reasoning
 
   renreadback   : ∀{i Γ Δ} a (η : Ren Δ Γ)(v : Val Γ a) →
-                (rennf η <$> readback v) ~⟨ i ⟩~ (readback (renval η v))
+                (rennf η <$> readback v) ≈⟨ i ⟩≈ (readback (renval η v))
   renreadback ★ η (ne w) =
     proof
-      rennf η  <$>  (ne  <$> nereadback w)   ~⟨ map-compose (nereadback w) ⟩
+      rennf η  <$>  (ne  <$> nereadback w)   ≈⟨ map-compose (nereadback w) ⟩
       (rennf η ∘ ne)     <$> nereadback w     ≡⟨⟩
-      (Nf.ne ∘ rennen η) <$> nereadback w     ~⟨ ~sym (map-compose (nereadback w)) ⟩
-      ne <$>  (rennen η  <$> nereadback w)    ~⟨ map-cong ne (rennereadback η w) ⟩
+      (Nf.ne ∘ rennen η) <$> nereadback w     ≈⟨ ≈sym (map-compose (nereadback w)) ⟩
+      ne <$>  (rennen η  <$> nereadback w)    ≈⟨ map-cong ne (rennereadback η w) ⟩
       ne <$>   nereadback (rennev η w)
     ∎
-    where open ~-Reasoning
-  renreadback (a ⇒ b) η f      = ~later (
+    where open ≈-Reasoning
+  renreadback (a ⇒ b) η f      = ≈later (
     proof
     (eta f ∞>>= (λ a₁ → now (lam a₁))) ∞>>= (λ x' → now (rennf η x'))
-    ∞~⟨ ∞bind-assoc (eta f) ⟩
+    ∞≈⟨ ∞bind-assoc (eta f) ⟩
     (eta f ∞>>= λ a₁ → now (lam a₁) >>= λ x' → now (rennf η x'))
     ≡⟨⟩
     (eta f ∞>>= (λ a₁ → now (lam (rennf (wk η) a₁))))
     ≡⟨⟩
     (eta f ∞>>= λ a₁ → now (rennf (wk η) a₁) >>= λ a₁ → now (lam a₁))
-    ∞~⟨ ∞~sym (∞bind-assoc (eta f)) ⟩
+    ∞≈⟨ ∞≈sym (∞bind-assoc (eta f)) ⟩
     (eta f ∞>>= (λ a₁ → now (rennf (wk η) a₁))) ∞>>= (λ a₁ → now (lam a₁))
-    ∞~⟨ ∞bind-cong-l (reneta η f) (λ a → now (lam a)) ⟩
+    ∞≈⟨ ∞bind-cong-l (reneta η f) (λ a → now (lam a)) ⟩
     eta (renval η f) ∞>>= (λ a₁ → now (lam a₁))
     ∎)
-    where open ∞~-Reasoning
+    where open ∞≈-Reasoning
 
   reneta  : ∀{i Γ Δ a b} (η : Ren Δ Γ)(v : Val Γ (a ⇒ b)) →
-          (rennf (wk η) ∞<$> eta v) ∞~⟨ i ⟩~ (eta (renval η v))
-  ~force (reneta η f) =
+          (rennf (wk η) ∞<$> eta v) ∞≈⟨ i ⟩≈ (eta (renval η v))
+  ≈force (reneta η f) =
     proof
     ((apply (weakVal f) (ne (var zero)) >>= readback)
       >>= (λ a → now (rennf (wk η) a)))
-    ~⟨ bind-assoc (apply (weakVal f) (ne (var zero))) ⟩
+    ≈⟨ bind-assoc (apply (weakVal f) (ne (var zero))) ⟩
     (apply (weakVal f) (ne (var zero)) >>=
          (λ z → readback z >>= (λ x' → now (rennf (wk η) x'))))
-    ~⟨ bind-cong-r (apply (weakVal f) (ne (var zero)))
+    ≈⟨ bind-cong-r (apply (weakVal f) (ne (var zero)))
                    (λ x → renreadback _ (wk η) x) ⟩
     (apply (weakVal f) (ne (var zero)) >>=
       (λ x' → readback (renval (wk η) x')))
     ≡⟨⟩
     (apply (weakVal f) (ne (var zero)) >>=
           (λ x' → now (renval (wk η) x') >>= readback))
-    ~⟨ ~sym (bind-assoc (apply (weakVal f) (ne (var zero))))  ⟩
+    ≈⟨ ≈sym (bind-assoc (apply (weakVal f) (ne (var zero))))  ⟩
     ((apply (weakVal f) (ne (var zero)) >>=
           (λ x' → now (renval (wk η) x')))
          >>= readback)
-    ~⟨ bind-cong-l (renapply (weakVal f) (ne (var zero)) (wk η)) readback ⟩
+    ≈⟨ bind-cong-l (renapply (weakVal f) (ne (var zero)) (wk η)) readback ⟩
     (apply (renval (wk η) (renval suc f)) (ne (var zero)) >>= readback)
     ≡⟨ cong (λ f₁ → apply f₁ (ne (var zero)) >>= readback)
              (renvalcomp (wk η) suc f) ⟩
@@ -222,4 +222,4 @@ mutual
             (sym (renvalcomp suc η f)) ⟩
     (apply (weakVal (renval η f)) (ne (var zero)) >>= readback)
     ∎
-    where open ~-Reasoning
+    where open ≈-Reasoning

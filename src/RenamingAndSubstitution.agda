@@ -199,6 +199,12 @@ subId = var
 subComp : ∀{B Γ Δ} → Sub Δ Γ → Sub Γ B → Sub Δ B
 subComp f g = sub f ∘ g
 
+-- Extension of substitution.
+
+subSnoc : ∀{Γ Δ σ} → Sub Δ Γ → Tm Δ σ → Sub Δ (Γ , σ)
+subSnoc f t zero    = t
+subSnoc f t (suc x) = f x
+
 -- Functoriality of substitution.
 
 -- First functor law (identity substitution).

@@ -24,7 +24,7 @@ E⟦ Γ , a ⟧ (ρ , v) = E⟦ Γ ⟧ ρ × V⟦ a ⟧ v
 
 rennereadback⇓ : ∀{Γ Δ a}(η : Ren Δ Γ)(t : NeVal Γ a){n : Ne Γ a} →
               nereadback t ⇓ n → nereadback (rennev η t) ⇓ rennen η n
-rennereadback⇓ η t {n} p = subst~⇓ (map⇓ (rennen η) p) (rennereadback η t)
+rennereadback⇓ η t {n} p = subst≈⇓ (map⇓ (rennen η) p) (rennereadback η t)
 
 renV⟦⟧ : ∀{Δ Δ′} a (η : Ren Δ′ Δ)(v : Val Δ a)(⟦v⟧ : V⟦ a ⟧ v) → V⟦ a ⟧ (renval η v)
 renV⟦⟧ ★       η (ne t) (n , p)        = rennen η n , rennereadback⇓ η t p
