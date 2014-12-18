@@ -33,7 +33,7 @@ open import Data.Unit  public
   using (⊤)
 
 open import Function public
-  using (_∘_; case_of_)
+  using (_∘_; flip; case_of_)
   renaming (id to idf)
 
 open import Relation.Nullary public
@@ -52,7 +52,7 @@ open import Relation.Binary.PropositionalEquality public
 
 open import Relation.Binary.HeterogeneousEquality public
   using (_≅_; refl; ≡-to-≅; module ≅-Reasoning)
-  renaming (sym to hsym; trans to htrans; cong to hcong; 
+  renaming (sym to hsym; trans to htrans; cong to hcong;
             cong₂ to hcong₂; subst to hsubst)
 
 hcong₃ : {A : Set}{B : A → Set}{C : ∀ a → B a → Set}{D : ∀ a b → C a b → Set}
@@ -73,23 +73,23 @@ record Cat : Set1 where
         comp : ∀{X Y Z} → Hom Y Z → Hom X Y → Hom X Z
         idl  : ∀{X Y}{f : Hom X Y} → comp iden f ≅ f
         idr  : ∀{X Y}{f : Hom X Y} → comp f iden ≅ f
-        ass  : ∀{W X Y Z}{f : Hom Y Z}{g : Hom X Y}{h : Hom W X} → 
+        ass  : ∀{W X Y Z}{f : Hom Y Z}{g : Hom X Y}{h : Hom W X} →
                comp (comp f g) h ≅ comp f (comp g h)
-open Cat public 
+open Cat public
 
 record Fun (C D : Cat) : Set where
   open Cat
   field OMap  : Obj C → Obj D
         HMap  : ∀{X Y} → Hom C X Y → Hom D (OMap X) (OMap Y)
         fid   : ∀{X} → HMap (iden C {X}) ≅ iden D {OMap X}
-        fcomp : ∀{X Y Z}{f : Hom C Y Z}{g : Hom C X Y} → 
+        fcomp : ∀{X Y Z}{f : Hom C Y Z}{g : Hom C X Y} →
                 HMap (comp C f g) ≅ comp D (HMap f) (HMap g)
 
 open Fun public
 
-postulate ext : {A : Set}{B B' : A → Set}{f : ∀ a → B a}{g : ∀ a → B' a} → 
+postulate ext : {A : Set}{B B' : A → Set}{f : ∀ a → B a}{g : ∀ a → B' a} →
                 (∀ a → f a ≅ g a) → f ≅ g
 
-postulate iext : {A : Set}{B B' : A → Set}{f : ∀ {a} → B a}{g : ∀{a} → B' a} → 
-                 (∀ a → f {a} ≅ g {a}) → 
+postulate iext : {A : Set}{B B' : A → Set}{f : ∀ {a} → B a}{g : ∀{a} → B' a} →
+                 (∀ a → f {a} ≅ g {a}) →
                  _≅_ {_}{ {a : A} → B a} f { {a : A} → B' a} g
