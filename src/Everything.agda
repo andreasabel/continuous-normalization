@@ -1,16 +1,11 @@
 module Everything where
 
 import Library
-import Spine
-import Term
+import Syntax
 import Delay
 import DelayError
-import DBLevel
-
-import ClosedTerms
-import TypedValues
-
-import LocallyNameless.Values
-import LocallyNameless.Eval
-import LocallyNamelessValues
-import UntypedValues
+import RenamingAndSubstitution
+import Evaluation
+import Termination
+import Completeness
+import Soundness

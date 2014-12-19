@@ -48,9 +48,33 @@ renE~ η {ρ , v} {ρ' , v'} (ρ~ρ' , v~v') = (renE~ η ρ~ρ') , (renV~ _ η v
 DEnv : ∀ Γ Δ → Set
 DEnv Γ Δ = ∀{a} → Var Δ a → Delay ∞ (Val Γ a)
 
-evalS : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → DEnv Γ Δ′
-evalS σ ρ = λ x → eval (σ x) ρ
+sequence : ∀{Γ} Δ → DEnv Γ Δ → Delay ∞ (Env Γ Δ)
+sequence ε f = now ε
+sequence (Δ , a) f = _,_ <$> sequence Δ (f ∘ suc) <*> f zero
 
+evalS₀ : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → DEnv Γ Δ′
+evalS₀ σ ρ = λ x → eval (σ x) ρ
+
+evalS : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → Delay ∞ (Env Γ Δ′)
+evalS {Δ′ = Δ′} σ ρ = sequence Δ′ (evalS₀ σ ρ)
+
+evalS-ε : ∀{Γ Δ} (σ : Sub Δ ε) (ρ : Env Γ Δ) → evalS σ ρ ≡ now ε
+evalS-ε σ ρ = refl
+
+substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′ Δ) →
+  a C∋ (lookup x <$> evalS σ ρ) ~ eval (σ x) ρ
+-- substitution-var {Δ′ = ε} x σ ρ = {!!}
+-- substitution-var {Δ′ = Δ′ , a} x σ ρ = {!!}
+substitution-var {ε} () σ ρ
+substitution-var {Γ , a} zero σ ρ = {!!}
+  --  a C∋ lookup zero <$> evalS σ ρ ~ eval (σ zero) ρ
+substitution-var {Γ , a} (suc x) σ ρ = {!!}
+
+substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′ Δ) →
+  a C∋ (eval t =<< evalS σ ρ) ~ eval (sub σ t) ρ
+substitution (var x) σ ρ = {!!}
+substitution (abs t) σ ρ = {!!}
+substitution (app t t₁) σ ρ = {!!}
 
 -- Extensional equality of typed terms (evaluate to bisimilar values).
 

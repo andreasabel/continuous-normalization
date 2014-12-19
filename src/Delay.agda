@@ -64,6 +64,18 @@ f ∞<$> ∞a = ∞a ∞>>= λ a → return (f a)
 _=<<2_,_ : ∀ {i A B C} → (A → B → Delay i C) → Delay i A → Delay i B → Delay i C
 f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
 
+-- Lifting a predicate to Delay (without convergence).
+
+mutual
+  data Delay₁ {A : Set} (P : A → Set) : Delay ∞ A → Set where
+    now₁   : ∀{a}  → (p : P a) → Delay₁ P (now a)
+    later₁ : ∀{a∞} → ∞Delay₁ P a∞ → Delay₁ P (later a∞)
+
+  record ∞Delay₁ {A : Set} (P : A → Set) (a∞ : ∞Delay ∞ A) : Set where
+    coinductive
+    constructor delay₁
+    field force₁ : Delay₁ P (force a∞)
+
 -- Strong bisimilarity
 
 mutual
