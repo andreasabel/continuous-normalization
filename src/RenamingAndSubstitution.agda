@@ -107,7 +107,7 @@ rencomp f g (abs t)   =
 mutual
   rennf : ∀{Γ Δ} → Ren Γ Δ → ∀{a} → Nf Δ a → Nf Γ a
   rennf α (ne t)   = ne (rennen α t)
-  rennf α (lam t)  = lam (rennf (wk α) t)
+  rennf α (abs t)  = abs (rennf (wk α) t)
 
   rennen : ∀{Γ Δ} → Ren Γ Δ → ∀{a} → Ne Δ a → Ne Γ a
   rennen α (var x) = var (α x)

@@ -220,6 +220,15 @@ data _⇓_ {A : Set} : (a? : Delay ∞ A) (a : A) → Set where
 _⇓ : {A : Set} (x : Delay ∞ A) → Set
 x ⇓ = ∃ λ a → x ⇓ a
 
+-- Lifting a predicate to Delay using convergence.
+
+record Delay⇓ {A : Set} (P : A → Set) (a? : Delay ∞ A) : Set where
+  constructor delay⇓
+  field
+    a  : A
+    a⇓ : a? ⇓ a
+    pa : P a
+
 -- Monotonicity.
 
 map⇓ : ∀ {A B} {a : A} {a? : Delay ∞ A}

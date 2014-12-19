@@ -41,8 +41,18 @@ mutual
   Ne = GNe Nf
 
   data Nf (Γ : Cxt) : Ty → Set where
-    lam : ∀{a b}  (o : Nf (Γ , a) b)  → Nf Γ (a ⇒ b)
+    abs : ∀{a b}  (o : Nf (Γ , a) b)  → Nf Γ (a ⇒ b)
     ne  :         (n : Ne Γ ★)        → Nf Γ ★
+
+mutual
+
+  embNe : ∀{Γ a} → Ne Γ a → Tm Γ a
+  embNe (var x) = var x
+  embNe (app t u) = app (embNe t) (embNf u)
+
+  embNf : ∀{Γ a} → Nf Γ a → Tm Γ a
+  embNf (ne t) = embNe t
+  embNf (abs t) = abs (embNf t)
 
 -- Values and environments.
 

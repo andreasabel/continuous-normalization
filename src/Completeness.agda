@@ -16,7 +16,7 @@ mutual
 
   _V∋_~_ : ∀{Γ}(a : Ty) (v v' : Val Γ a) → Set
   -- ★ V∋ ne t ~ ne t' = nereadback t ~ nereadback t'
-  _V∋_~_         ★       (ne t) (ne t') = nereadback t ~ nereadback t'
+  _V∋_~_         ★       (ne n) (ne n') = nereadback n ~ nereadback n'
   _V∋_~_ {Γ = Γ} (a ⇒ b) f     f'       = ∀{Δ}(ρ : Ren Δ Γ)(u u' : Val Δ a)
     (u~u' : a V∋ u ~ u') → b C∋ (apply (renval ρ f) u) ~ (apply (renval ρ f') u')
 

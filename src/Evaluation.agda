@@ -103,7 +103,7 @@ mutual
 mutual
   readback : ∀{i Γ a} → Val Γ a → Delay i (Nf Γ a)
   readback {a = ★} (ne w) = ne  <$> nereadback w
-  readback {a = _ ⇒ _} v = lam <$> later (eta v)
+  readback {a = _ ⇒ _} v = abs <$> later (eta v)
 
   eta : ∀{i Γ a b} → Val Γ (a ⇒ b) → ∞Delay i (Nf (Γ , a) b)
   force (eta v) = readback =<< apply (weakVal v) (ne (var zero))
@@ -176,17 +176,17 @@ mutual
     where open ≈-Reasoning
   renreadback (a ⇒ b) η f      = ≈later (
     proof
-    (eta f ∞>>= (λ a₁ → now (lam a₁))) ∞>>= (λ x' → now (rennf η x'))
+    (eta f ∞>>= (λ a₁ → now (abs a₁))) ∞>>= (λ x' → now (rennf η x'))
     ∞≈⟨ ∞bind-assoc (eta f) ⟩
-    (eta f ∞>>= λ a₁ → now (lam a₁) >>= λ x' → now (rennf η x'))
+    (eta f ∞>>= λ a₁ → now (abs a₁) >>= λ x' → now (rennf η x'))
     ≡⟨⟩
-    (eta f ∞>>= (λ a₁ → now (lam (rennf (wk η) a₁))))
+    (eta f ∞>>= (λ a₁ → now (abs (rennf (wk η) a₁))))
     ≡⟨⟩
-    (eta f ∞>>= λ a₁ → now (rennf (wk η) a₁) >>= λ a₁ → now (lam a₁))
+    (eta f ∞>>= λ a₁ → now (rennf (wk η) a₁) >>= λ a₁ → now (abs a₁))
     ∞≈⟨ ∞≈sym (∞bind-assoc (eta f)) ⟩
-    (eta f ∞>>= (λ a₁ → now (rennf (wk η) a₁))) ∞>>= (λ a₁ → now (lam a₁))
-    ∞≈⟨ ∞bind-cong-l (reneta η f) (λ a → now (lam a)) ⟩
-    eta (renval η f) ∞>>= (λ a₁ → now (lam a₁))
+    (eta f ∞>>= (λ a₁ → now (rennf (wk η) a₁))) ∞>>= (λ a₁ → now (abs a₁))
+    ∞≈⟨ ∞bind-cong-l (reneta η f) (λ a → now (abs a)) ⟩
+    eta (renval η f) ∞>>= (λ a₁ → now (abs a₁))
     ∎)
     where open ∞≈-Reasoning
 

@@ -87,10 +87,10 @@ mutual
         ⟦u⟧          = reflect a (var zero) (var zero , now⇓)
         v , (v⇓ , ⟦v⟧) = ⟦f⟧ suc u ⟦u⟧
         n , ⇓n = reify b v ⟦v⟧
-        ⇓λn    = later⇓ (bind⇓ (λ x → now (lam x))
+        ⇓λn    = later⇓ (bind⇓ (λ x → now (abs x))
                                (bind⇓ readback v⇓ ⇓n)
                                now⇓)
-    in  lam n , ⇓λn
+    in  abs n , ⇓λn
 
   reflect : ∀{Γ} a (w : NeVal Γ a) → nereadback w ⇓ → V⟦ a ⟧ (ne w)
   reflect ★ w w⇓ = w⇓
