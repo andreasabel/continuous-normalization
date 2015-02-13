@@ -10,9 +10,12 @@ open import Delay
 
 mutual
   data Delay_∋_~_ {i}{A}(R : A → A → Set) : (a? b? : Delay ∞ A) → Set where
-    ~now   : ∀{a b a? b?} → a? ⇓ a → b? ⇓ b → R a b → Delay R ∋ a? ~ b?
-    ~later : ∀{a∞ b∞} → ∞Delay R ∋ a∞ ~⟨ i ⟩~ b∞ →
-             Delay R ∋ later a∞ ~ later b∞
+    ~now   : ∀{a b a? b?}
+           → (a⇓ : a? ⇓ a) (b⇓ : b? ⇓ b) (aRb : R a b)
+           → Delay R ∋ a? ~ b?
+    ~later : ∀{a∞ b∞}
+           → (∞p : ∞Delay R ∋ a∞ ~⟨ i ⟩~ b∞)
+           → Delay R ∋ later a∞ ~ later b∞
 
   Delay_∋_~⟨_⟩~_ = λ {A} R a? i b? → Delay_∋_~_ {i}{A} R a? b?
 
@@ -44,7 +47,8 @@ mutual
   ∞≈→~ : ∀{i A}{a∞ b∞ : ∞Delay ∞ A} → a∞ ∞≈⟨ i ⟩≈ b∞ → a∞ ∞~⟨ i ⟩~ b∞
   ~force (∞≈→~ eq) = ≈→~ (≈force eq)
 
--- if two computations converge to the same value they are bisimilar
+-- two computations are weakly bisimilar, and one converges,
+-- so does the other, and to the same value
 
 subst~⇓ : ∀{A}{t t' : Delay ∞ A}{n : A} → t ⇓ n → t ~⟨ ∞ ⟩~ t' → t' ⇓ n
 subst~⇓ now⇓       (~now now⇓ q refl)       = q
@@ -67,7 +71,7 @@ mutual
   ~sym (~later p)   = ~later (∞~sym p)
 
   ∞~sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → a? ∞~⟨ i ⟩~ b? → b? ∞~⟨ i ⟩~ a?
-  ~force (∞~sym p) = ~sym (~force p) 
+  ~force (∞~sym p) = ~sym (~force p)
 
 -- Transitivity
 
