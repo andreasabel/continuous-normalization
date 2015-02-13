@@ -72,13 +72,16 @@ mutual
 -- Transitivity
 
 mutual
+
+mutual
   ~trans : ∀ {i A} {a? b? c? : Delay ∞ A}
-    (eq : a? ~⟨ i ⟩~ b?) (eq' : b? ~⟨ i ⟩~ c?) → a? ~⟨ i ⟩~ c?
+    (eq : a? ~⟨ ∞ ⟩~ b?) (eq' : b? ~⟨ ∞ ⟩~ c?) → a? ~⟨ i ⟩~ c?
   ~trans (~now p q refl) (~now p' q' refl) = ~now p q' (uniq⇓ q p')
-  ~trans (~now p q r)    p'                = ~now p (subst~⇓ q {!p'!}) r
-  ~trans p               (~now p' q' r')   = ~now (subst~⇓ p' {!p!}) q' r'
+  ~trans (~now p q r)    p'                = ~now p (subst~⇓ q  p') r
+  ~trans p               (~now p' q' r')   = ~now (subst~⇓ p' (~sym p)) q' r'
   ~trans (~later p)      (~later p')       = ~later (∞~trans p p')
 
   ∞~trans : ∀ {i A} {a∞ b∞ c∞ : ∞Delay ∞ A}
-    (eq : a∞ ∞~⟨ i ⟩~ b∞) (eq' : b∞ ∞~⟨ i ⟩~ c∞) → a∞ ∞~⟨ i ⟩~ c∞
+    (eq : a∞ ∞~⟨ ∞ ⟩~ b∞) (eq' : b∞ ∞~⟨ ∞ ⟩~ c∞) → a∞ ∞~⟨ i ⟩~ c∞
   ~force (∞~trans p p') = ~trans (~force p) (~force p')
+
