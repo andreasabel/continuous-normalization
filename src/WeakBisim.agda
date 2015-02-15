@@ -27,6 +27,39 @@ mutual
 
 ∞Delay_∋_~_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_~⟨_⟩~_ {A} R a∞ i b∞
 
+
+-- Delaying left only
+
+mutual
+  ~laterl : ∀{i A} {R : A → A → Set} {a∞ : ∞Delay ∞ A} {b? : Delay ∞ A} →
+    (p : Delay R ∋ force a∞ ~⟨ i ⟩~ b?) → Delay R ∋ later a∞ ~⟨ i ⟩~ b?
+  ~laterl {a∞ = a∞} p with force a∞ {∞} | inspect (λ a∞ → force a∞ {∞}) a∞
+  ~laterl (~now a⇓ b⇓ aRb) | ._ | [ eq ] with eq
+  ~laterl (~now a⇓ b⇓ aRb) | ._ | [ eq ] | refl = ~now (later⇓ a⇓) b⇓ aRb
+  ~laterl {A = A}{R} (~later ∞p) | ._ | [ eq ] = ~later (aux eq ∞p)
+     where
+
+       aux' : ∀ {i} {a∞ a∞₁ b∞ : ∞Delay ∞ A}
+            → (eq : force a∞ ≡ later a∞₁)
+            → (∞p : ∞Delay R ∋ a∞₁ ~⟨ i ⟩~ b∞)
+            → {j : Size< i} → Delay R ∋ force a∞ ~⟨ j ⟩~ force b∞
+       aux' eq ∞p rewrite eq = ~laterl (∞Delay_∋_~⟨_⟩~_.~force ∞p)
+
+       aux : ∀ {i} {a∞ a∞₁ b∞ : ∞Delay ∞ A}
+           → (eq : force a∞ ≡ later a∞₁)
+           → (∞p : ∞Delay R ∋ a∞₁ ~⟨ i ⟩~ b∞)
+           → ∞Delay R ∋ a∞ ~⟨ i ⟩~ b∞
+       ∞Delay_∋_~⟨_⟩~_.~force (aux {a∞ = a∞} eq ∞p) {j} = aux' {a∞ = a∞} eq ∞p {j}
+         -- NYI: rewrite with copatterns.  Thus, we need aux'.
+
+~laterl′ : ∀{i A} {R : A → A → Set} {a? : Delay ∞ A} {b? : Delay ∞ A} →
+  (p : Delay R ∋ a? ~⟨ i ⟩~ b?) → Delay R ∋ later (delay a?) ~⟨ i ⟩~ b?
+~laterl′ p = ~laterl p
+
+∞~laterl : ∀{i A} {R : A → A → Set} {a∞ : ∞Delay ∞ A} {b∞ : ∞Delay ∞ A} →
+  (p : ∞Delay R ∋ a∞ ~⟨ i ⟩~ b∞) → ∞Delay R ∋ delay (later a∞) ~⟨ i ⟩~ b∞
+∞Delay_∋_~⟨_⟩~_.~force (∞~laterl p) = ~laterl ( ∞Delay_∋_~⟨_⟩~_.~force p)
+
 -- Instantiation of R to propositional equality.
 
 _~⟨_⟩~_ = λ {A} a i b → Delay_∋_~⟨_⟩~_ {A} _≡_ a i b

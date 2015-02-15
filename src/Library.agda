@@ -46,7 +46,8 @@ import Relation.Binary.PreorderReasoning
 module Pre = Relation.Binary.PreorderReasoning
 
 open import Relation.Binary.PropositionalEquality public
-  using (_≡_; refl; sym; trans; cong; cong₂; subst; module ≡-Reasoning)
+  using ( _≡_; refl; sym; trans; cong; cong₂; subst; module ≡-Reasoning
+        ; inspect; [_])
 
 --open ≡-Reasoning renaming (begin_ to proof_) public
 
