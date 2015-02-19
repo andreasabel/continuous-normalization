@@ -109,8 +109,6 @@ mutual
 -- Transitivity
 
 mutual
-
-mutual
   ~trans : ∀ {i A} {a? b? c? : Delay ∞ A}
     (eq : a? ~⟨ ∞ ⟩~ b?) (eq' : b? ~⟨ ∞ ⟩~ c?) → a? ~⟨ i ⟩~ c?
   ~trans (~now p q refl) (~now p' q' refl) = ~now p q' (uniq⇓ q p')
