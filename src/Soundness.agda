@@ -35,11 +35,20 @@ mutual
   a C∋ t ~ v? = Delay₁ (VLR a t) v?
 
 _~E_ : ∀{Γ Δ} (σ : Sub Γ Δ) (ρ : Env Γ Δ) → Set
-σ ~E ρ = {!!}
+ε       ~E ε       = ⊤
+(σ , t) ~E (ρ , v) = σ ~E ρ × _ V∋ t ~ v
+
+looksound : ∀{Γ a} (x : Var Γ a) →
+  ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
+  a V∋ looks σ x ~ lookup x ρ
+looksound zero    {σ = σ , t} {ρ , v} (_ , p) = p
+looksound (suc x) {σ = σ , t} {ρ , v} (p , _) = looksound x p
 
 -- Fundamental theorem.
 
 soundness : ∀{Γ a} (t : Tm Γ a) →
   ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
   a C∋ sub σ t ~ eval t ρ
-soundness t = {!!}
+soundness (var x)   p = now₁ (looksound x p)
+soundness (abs t)   p = {!!}
+soundness (app t u) p = {!soundness t p !}
