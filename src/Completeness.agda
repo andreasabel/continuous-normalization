@@ -53,7 +53,7 @@ sequence ε f = now ε
 sequence (Δ , a) f = _,_ <$> sequence Δ (f ∘ suc) <*> f zero
 
 evalS₀ : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → DEnv Γ Δ′
-evalS₀ σ ρ = λ x → eval (σ x) ρ
+evalS₀ σ ρ = λ x → eval (looks σ x) ρ
 
 evalS : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → Delay ∞ (Env Γ Δ′)
 evalS {Δ′ = Δ′} σ ρ = sequence Δ′ (evalS₀ σ ρ)
@@ -62,7 +62,7 @@ evalS-ε : ∀{Γ Δ} (σ : Sub Δ ε) (ρ : Env Γ Δ) → evalS σ ρ ≡ now 
 evalS-ε σ ρ = refl
 
 substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′ Δ) →
-  a C∋ (lookup x <$> evalS σ ρ) ~ eval (σ x) ρ
+  a C∋ (lookup x <$> evalS σ ρ) ~ eval (looks σ x) ρ
 -- substitution-var {Δ′ = ε} x σ ρ = {!!}
 -- substitution-var {Δ′ = Δ′ , a} x σ ρ = {!!}
 substitution-var {ε} () σ ρ

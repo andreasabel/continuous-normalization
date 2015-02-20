@@ -3,6 +3,7 @@
 module Library where
 
 open import Function public
+  hiding (_∋_)
 
 open import Level public
   using (Level) renaming (zero to lzero; suc to lsuc)

@@ -29,8 +29,8 @@ rennereadback⇓ η t {n} p = subst≈⇓ (map⇓ (rennen η) p) (rennereadback 
 renV⟦⟧ : ∀{Δ Δ′} a (η : Ren Δ′ Δ)(v : Val Δ a)(⟦v⟧ : V⟦ a ⟧ v) → V⟦ a ⟧ (renval η v)
 renV⟦⟧ ★       η (ne t) (n , p)        = rennen η n , rennereadback⇓ η t p
 renV⟦⟧ (a ⇒ b) η v      ih       ρ u u⇓ =
-  let delay⇓ v′ v⇓ pv = ih (ρ ∘ η) u u⇓
-      v⇓′ = (subst (λ X → apply X u ⇓ Delay⇓.a (ih (ρ ∘ η) u u⇓))
+  let delay⇓ v′ v⇓ pv = ih (renComp ρ η) u u⇓
+      v⇓′ = (subst (λ X → apply X u ⇓ Delay⇓.a (ih (renComp ρ η) u u⇓))
                  ((sym (renvalcomp ρ η v)))
                  v⇓)
   in  delay⇓ v′ v⇓′ pv
@@ -85,7 +85,7 @@ mutual
   reify (a ⇒ b)  f      ⟦f⟧      =
     let u           = ne (var zero)
         ⟦u⟧          = reflect a (var zero) (var zero , now⇓)
-        delay⇓ v v⇓ ⟦v⟧ = ⟦f⟧ suc u ⟦u⟧
+        delay⇓ v v⇓ ⟦v⟧ = ⟦f⟧ (wkr renId) u ⟦u⟧
         n , ⇓n = reify b v ⟦v⟧
         ⇓λn    = later⇓ (bind⇓ (λ x → now (abs x))
                                (bind⇓ readback v⇓ ⇓n)
@@ -112,7 +112,7 @@ var↑ x = reflect _ (var x) (var x , now⇓)
 
 ⟦ide⟧ : ∀ Γ → E⟦ Γ ⟧ (ide Γ)
 ⟦ide⟧ ε       = _
-⟦ide⟧ (Γ , a) = renE⟦⟧ suc (ide Γ) (⟦ide⟧ Γ) , var↑ zero
+⟦ide⟧ (Γ , a) = renE⟦⟧ (wkr renId) (ide Γ) (⟦ide⟧ Γ) , var↑ zero
 
 nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
 nf t = eval t (ide _) >>= readback
@@ -121,4 +121,3 @@ normalize : ∀ Γ a (t : Tm Γ a) → ∃ λ n → nf t ⇓ n
 normalize Γ a t = let delay⇓ v v⇓ ⟦v⟧ = term t (ide Γ) (⟦ide⟧ Γ)
                       n , ⇓n      = reify a v ⟦v⟧
                   in  n , bind⇓ readback v⇓ ⇓n
-
