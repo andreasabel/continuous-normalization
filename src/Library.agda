@@ -2,6 +2,8 @@
 
 module Library where
 
+open import Function public
+
 open import Level public
   using (Level) renaming (zero to lzero; suc to lsuc)
 

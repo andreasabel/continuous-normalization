@@ -11,7 +11,7 @@ open import RenamingAndSubstitution
 
 ide : ∀ Γ → Env Γ Γ
 ide ε = ε
-ide (Γ , a) = renenv suc (ide Γ) , ne (var zero)
+ide (Γ , a) = renenv (wkr renId) (ide Γ) , ne (var zero)
 
 -- Looking up in an environment.
 
@@ -27,7 +27,7 @@ lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
 -- Weakening a value to an extended context.
 
 weakVal : ∀ {Δ a c} → Val Δ c → Val (Δ , a) c
-weakVal = renval suc
+weakVal = renval (wkr renId)
 
 mutual
   eval : ∀{i Γ Δ a} → Tm Γ a → Env Δ Γ → Delay i (Val Δ a)
@@ -113,7 +113,6 @@ mutual
   nereadback (app w v) =
     nereadback w >>= λ m → app m <$> readback v
 
-
 mutual
   rennereadback : ∀{i Γ Δ a}(η : Ren Δ Γ)(t : NeVal Γ a) →
                 (rennen η <$> nereadback t) ≈⟨ i ⟩≈ (nereadback (rennev η t))
@@ -180,46 +179,55 @@ mutual
     ∞≈⟨ ∞bind-assoc (eta f) ⟩
     (eta f ∞>>= λ a₁ → now (abs a₁) >>= λ x' → now (rennf η x'))
     ≡⟨⟩
-    (eta f ∞>>= (λ a₁ → now (abs (rennf (wk η) a₁))))
+    (eta f ∞>>= (λ a₁ → now (abs (rennf (liftr η) a₁))))
     ≡⟨⟩
-    (eta f ∞>>= λ a₁ → now (rennf (wk η) a₁) >>= λ a₁ → now (abs a₁))
+    (eta f ∞>>= λ a₁ → now (rennf (liftr η) a₁) >>= λ a₁ → now (abs a₁))
     ∞≈⟨ ∞≈sym (∞bind-assoc (eta f)) ⟩
-    (eta f ∞>>= (λ a₁ → now (rennf (wk η) a₁))) ∞>>= (λ a₁ → now (abs a₁))
+    (eta f ∞>>= (λ a₁ → now (rennf (liftr η) a₁))) ∞>>= (λ a₁ → now (abs a₁))
     ∞≈⟨ ∞bind-cong-l (reneta η f) (λ a → now (abs a)) ⟩
     eta (renval η f) ∞>>= (λ a₁ → now (abs a₁))
     ∎)
     where open ∞≈-Reasoning
 
+
   reneta  : ∀{i Γ Δ a b} (η : Ren Δ Γ)(v : Val Γ (a ⇒ b)) →
-          (rennf (wk η) ∞<$> eta v) ∞≈⟨ i ⟩≈ (eta (renval η v))
-  ≈force (reneta η f) =
+          (rennf (liftr η) ∞<$> eta v) ∞≈⟨ i ⟩≈ (eta (renval η v))
+  ≈force (reneta η f) = 
     proof
     ((apply (weakVal f) (ne (var zero)) >>= readback)
-      >>= (λ a → now (rennf (wk η) a)))
+      >>= (λ a → now (rennf (liftr η) a)))
     ≈⟨ bind-assoc (apply (weakVal f) (ne (var zero))) ⟩
     (apply (weakVal f) (ne (var zero)) >>=
-         (λ z → readback z >>= (λ x' → now (rennf (wk η) x'))))
+         (λ z → readback z >>= (λ x' → now (rennf (liftr η) x'))))
     ≈⟨ bind-cong-r (apply (weakVal f) (ne (var zero)))
-                   (λ x → renreadback _ (wk η) x) ⟩
+                   (λ x → renreadback _ (liftr η) x) ⟩
     (apply (weakVal f) (ne (var zero)) >>=
-      (λ x' → readback (renval (wk η) x')))
+      (λ x' → readback (renval (liftr η) x')))
     ≡⟨⟩
     (apply (weakVal f) (ne (var zero)) >>=
-          (λ x' → now (renval (wk η) x') >>= readback))
+          (λ x' → now (renval (liftr η) x') >>= readback))
     ≈⟨ ≈sym (bind-assoc (apply (weakVal f) (ne (var zero))))  ⟩
     ((apply (weakVal f) (ne (var zero)) >>=
-          (λ x' → now (renval (wk η) x')))
+          (λ x' → now (renval (liftr η) x')))
          >>= readback)
-    ≈⟨ bind-cong-l (renapply (weakVal f) (ne (var zero)) (wk η)) readback ⟩
-    (apply (renval (wk η) (renval suc f)) (ne (var zero)) >>= readback)
+    ≈⟨ bind-cong-l (renapply (weakVal f) (ne (var zero)) (liftr η)) readback ⟩
+    (apply (renval (liftr η) (renval (wkr renId) f)) (ne (var zero)) >>= readback)
     ≡⟨ cong (λ f₁ → apply f₁ (ne (var zero)) >>= readback)
-             (renvalcomp (wk η) suc f) ⟩
-    (apply (renval (suc ∘ η) f) (ne (var zero)) >>= readback)
-    ≡⟨ cong (λ (η₁ : Ren _ _) → apply (renval (suc ∘ η₁) f) (ne (var zero)) >>= readback)
-            refl  ⟩ -- is this step needed?
-    (apply (renval (suc ∘ η) f) (ne (var zero)) >>= readback)
+             (renvalcomp (liftr η) (wkr renId) f) ⟩
+    (apply (renval (renComp (liftr η) (wkr renId)) f) (ne (var zero)) >>= readback)
+    ≡⟨ cong (λ xs → apply (renval xs f) (ne (var zero)) >>= readback)
+            (lemrr (wkr η) zero renId) ⟩
+    (apply (renval (renComp (wkr η) renId) f) (ne (var zero)) >>= readback)
+    ≡⟨ cong (λ xs → apply (renval xs f) (ne (var zero)) >>= readback)
+            (ridr (wkr η)) ⟩
+    (apply (renval (wkr η) f) (ne (var zero)) >>= readback)
+    ≡⟨ cong (λ xs → apply (renval xs f) (ne (var zero)) >>= readback)
+            (sym $ cong wkr (lidr η)) ⟩
+    (apply (renval (wkr (renComp renId η)) f) (ne (var zero)) >>= readback)
+    ≡⟨ cong (λ xs → apply (renval xs f) (ne (var zero)) >>= readback)
+            (sym $ wkrcomp renId η) ⟩
+    (apply (renval (renComp (wkr renId) η) f) (ne (var zero)) >>= readback)
     ≡⟨ cong (λ f₁ → apply f₁ (ne (var zero)) >>= readback)
-            (sym (renvalcomp suc η f)) ⟩
-    (apply (weakVal (renval η f)) (ne (var zero)) >>= readback)
-    ∎
-    where open ≈-Reasoning
+            (sym (renvalcomp (wkr renId) η f)) ⟩
+    (readback =<< apply (weakVal (renval η f)) (ne (var zero))) ∎
+          where open ≈-Reasoning
