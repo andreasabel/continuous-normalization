@@ -23,5 +23,6 @@ data _≡βη_ {Γ : Cxt} : ∀{σ} → Tm Γ σ → Tm Γ σ → Set where
           app (abs t) u ≡βη sub (subId , u) t
   eta≡   : ∀{σ τ}{t : Tm Γ (σ ⇒ τ)} →
            abs (app (ren (wkr renId) t) (var zero)) ≡βη t
+  refl≡  : ∀{a}{t : Tm Γ a} → t ≡βη t
   sym≡   : ∀{a}{t t' : Tm Γ a} → t ≡βη t' → t' ≡βη t
   trans≡ : ∀{a}{t₁ t₂ t₃ : Tm Γ a} → t₁ ≡βη t₂ → t₂ ≡βη t₃ → t₁ ≡βη t₃

@@ -44,11 +44,47 @@ looksound : ∀{Γ a} (x : Var Γ a) →
 looksound zero    {σ = σ , t} {ρ , v} (_ , p) = p
 looksound (suc x) {σ = σ , t} {ρ , v} (p , _) = looksound x p
 
+≡to≡βη : ∀{Γ a}{t t' : Tm Γ a} → t ≡ t' → t ≡βη t'
+≡to≡βη refl = refl≡
+
+ren≡βη : ∀{Γ a} {t : Tm Γ a}{t' : Tm Γ a} → t ≡βη t' → ∀{Δ}(σ : Ren Δ Γ) →
+        ren σ t ≡βη ren σ t'
+ren≡βη (var≡ p)     σ = var≡ (cong (lookr σ) p)
+ren≡βη (abs≡ p)     σ = abs≡ (ren≡βη p (liftr σ)) 
+ren≡βη (app≡ p q)   σ = app≡ (ren≡βη p σ) (ren≡βη q σ)
+ren≡βη (beta≡ {t = t}{u = u})        σ = trans≡ beta≡ $ ≡to≡βη $
+  trans (subren (subId , ren σ u) (liftr σ) t)
+        (trans (cong (λ xs → sub xs t)
+                     (cong₂ Sub._,_
+                            (trans (lemsr subId (ren σ u) σ)
+                            (trans (sidl (ren2sub σ)) (sym $ sidr (ren2sub σ))))
+                            (ren2subren σ u)))
+               (sym $ rensub σ (subId , u) t))
+ren≡βη (eta≡ {t = t}) σ = trans≡ (abs≡ (app≡ (≡to≡βη (trans (sym $ rencomp (liftr σ) (wkr renId) t) (trans (cong (λ xs → ren xs t) (trans (lemrr (wkr σ) zero renId) (trans (ridr (wkr σ)) (trans (cong wkr (sym $ lidr σ)) (sym $ wkrcomp renId σ))))) (rencomp (wkr renId) σ t)))) refl≡)) eta≡
+ren≡βη refl≡        σ = refl≡
+ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
+ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
+
+lem' : ∀{Γ} a {t : Tm Γ a}{u : Ne Γ a} → t ≡βη embNe u → ∀{Δ}(σ : Ren Δ Γ) →
+     ren σ t ≡βη embNe (rennen σ u ) 
+lem' a p σ  = trans≡ (ren≡βη p σ) (≡to≡βη (renembNe _ σ))
+
+lem : ∀{Γ} a {t : Tm Γ a}{u :  NeVal Γ a} →
+      Delay₁ (λ n → t ≡βη embNe n) (nereadback u) → 
+      ∀{Δ}(σ : Ren Δ Γ) →
+      Delay₁ (λ n → ren σ t ≡βη embNe n) (nereadback (rennev σ u))
+lem a p σ = {!!}
+
+rensound : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
+           ∀{Δ}(σ : Ren Δ Γ) → a V∋ ren σ t ~ renval σ v
+rensound ★       {t}{ne u} p σ = {!!}
+rensound (a ⇒ b)           p σ ρ s u s~u = {!p (renComp ρ σ) ? ? ? !}
+
 -- Fundamental theorem.
 
 soundness : ∀{Γ a} (t : Tm Γ a) →
   ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
   a C∋ sub σ t ~ eval t ρ
 soundness (var x)   p = now₁ (looksound x p)
-soundness (abs t)   p = {!!}
+soundness (abs t)   p = {!soundness t ?!}
 soundness (app t u) p = {!soundness t p !}
