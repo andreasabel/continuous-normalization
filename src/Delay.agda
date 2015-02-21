@@ -93,6 +93,9 @@ mutual
 _∞≈_ = λ {i} {A} a∞ b∞ → _∞≈⟨_⟩≈_ {A} a∞ i b∞
 open _∞≈⟨_⟩≈_ public
 
+≡to≈ : ∀{A}{a a' : A} → a ≡ a' → now a ≈ now a'
+≡to≈ refl = ≈now _
+
 -- Reflexivity
 
 mutual
@@ -202,6 +205,14 @@ mutual
 _≈>>=_ = bind-cong
 
 -- Monad laws.
+
+mutual -- why don't I need size i here?
+  bind-now : ∀{A}(m : Delay ∞ A) → m ≈ (m >>= now)
+  bind-now (now a)   = ≈now a
+  bind-now (later m) = ≈later (∞bind-now m)
+
+  ∞bind-now : ∀{A}(m : ∞Delay ∞ A) → m ∞≈ (m ∞>>= now)
+  ≈force (∞bind-now m) = bind-now (force m)
 
 mutual
   bind-assoc : ∀{i A B C}(m : Delay ∞ A)

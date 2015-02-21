@@ -38,6 +38,10 @@ _~E_ : ∀{Γ Δ} (σ : Sub Γ Δ) (ρ : Env Γ Δ) → Set
 ε       ~E ε       = ⊤
 (σ , t) ~E (ρ , v) = σ ~E ρ × _ V∋ t ~ v
 
+V∋subst : ∀{Γ}{a : Ty}{t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → t ≡ t' →
+          a V∋ t' ~ v
+V∋subst p refl = p    
+
 looksound : ∀{Γ a} (x : Var Γ a) →
   ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
   a V∋ looks σ x ~ lookup x ρ
@@ -65,26 +69,29 @@ ren≡βη refl≡        σ = refl≡
 ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
 ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
 
-lem' : ∀{Γ a}{t : Tm Γ a}{u : Ne Γ a} → t ≡βη embNe u → ∀{Δ}(σ : Ren Δ Γ) →
-     ren σ t ≡βη embNe (rennen σ u ) 
-lem' p σ  = trans≡ (ren≡βη p σ) (≡to≡βη (renembNe _ σ))
-
-lem : ∀{Γ a}(t : Tm Γ a)(u :  NeVal Γ a) →
-      Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback u) → 
-      ∀{Δ}(σ : Ren Δ Γ) →
-      Delay₁ ∞ (λ n → ren σ t ≡βη embNe n) (nereadback (rennev σ u))
-lem t u p σ = transD
+rensound : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
+           ∀{Δ}(σ : Ren Δ Γ) → a V∋ ren σ t ~ renval σ v
+rensound ★       {t}{ne u} p σ = transD
   (λ n → ren σ t ≡βη embNe n)
   (rennereadback σ u)
   (transPD (λ n → t ≡βη embNe n)
            (λ n → ren σ t ≡βη embNe n)
            (rennen σ)
-           (λ p₁ → lem' p₁ σ) p)
-
-rensound : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
-           ∀{Δ}(σ : Ren Δ Γ) → a V∋ ren σ t ~ renval σ v
-rensound ★       {t}{ne u} p σ = lem t u p σ
-rensound (a ⇒ b)           p σ ρ s u s~u = {!p (renComp ρ σ) ? ? ? !}
+           (λ p → trans≡ (ren≡βη p σ) (≡to≡βη (renembNe _ σ)))
+           p)
+rensound (a ⇒ b){t}{v} p σ ρ s u s~u =
+  transD (λ v₁ → b V∋ app (ren ρ (ren σ t)) s ~ v₁)
+         (≈trans (≈sym $ bind-now (apply (renval (renComp ρ σ) v) u))
+                 (subst (λ x → apply x u ≈ apply (renval ρ (renval σ v)) u)
+                        (renvalcomp ρ σ v)
+                        (≈refl _)))
+         (transPD
+           (λ v₁ → b V∋ app (ren (renComp ρ σ) t) s ~ v₁)
+           (λ v₁ → b V∋ app (ren ρ (ren σ t)) s ~ v₁)
+           {(apply (renval (renComp ρ σ) v) u)}
+           id
+           (λ p → V∋subst p (cong (λ t → app t s) (rencomp ρ σ t)))
+           (p (renComp ρ σ) s u s~u)) 
 
 -- Fundamental theorem.
 
