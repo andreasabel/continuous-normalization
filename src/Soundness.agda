@@ -22,7 +22,7 @@ mutual
 
   _V∋_~_ : ∀{Γ}(a : Ty) (t : Tm Γ a) (v : Val Γ a) → Set
   -- ★ V∋ ne t ~ ne t' = nereadback t ~ nereadback t'
-  _V∋_~_         ★       t (ne u)  = Delay₁ (λ n → t ≡βη (embNe n)) (nereadback u)
+  _V∋_~_         ★       t (ne u)  = Delay₁ ∞ (λ n → t ≡βη (embNe n)) (nereadback u)
   _V∋_~_ {Γ = Γ} (a ⇒ b) t f       = ∀{Δ}(ρ : Ren Δ Γ)(s : Tm Δ a)(u : Val Δ a)
     (s~u : a V∋ s ~ u) → b C∋ (app (ren ρ t) s) ~ (apply (renval ρ f) u)
 
@@ -32,7 +32,7 @@ mutual
   -- Value computations v? and w? are related at type a.
 
   _C∋_~_ : ∀{Γ}(a : Ty) (t : Tm Γ a) (v? : Delay ∞ (Val Γ a)) → Set
-  a C∋ t ~ v? = Delay₁ (VLR a t) v?
+  a C∋ t ~ v? = Delay₁ ∞ (VLR a t) v?
 
 _~E_ : ∀{Γ Δ} (σ : Sub Γ Δ) (ρ : Env Γ Δ) → Set
 ε       ~E ε       = ⊤
@@ -65,19 +65,25 @@ ren≡βη refl≡        σ = refl≡
 ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
 ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
 
-lem' : ∀{Γ} a {t : Tm Γ a}{u : Ne Γ a} → t ≡βη embNe u → ∀{Δ}(σ : Ren Δ Γ) →
+lem' : ∀{Γ a}{t : Tm Γ a}{u : Ne Γ a} → t ≡βη embNe u → ∀{Δ}(σ : Ren Δ Γ) →
      ren σ t ≡βη embNe (rennen σ u ) 
-lem' a p σ  = trans≡ (ren≡βη p σ) (≡to≡βη (renembNe _ σ))
+lem' p σ  = trans≡ (ren≡βη p σ) (≡to≡βη (renembNe _ σ))
 
-lem : ∀{Γ} a {t : Tm Γ a}{u :  NeVal Γ a} →
-      Delay₁ (λ n → t ≡βη embNe n) (nereadback u) → 
+lem : ∀{Γ a}(t : Tm Γ a)(u :  NeVal Γ a) →
+      Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback u) → 
       ∀{Δ}(σ : Ren Δ Γ) →
-      Delay₁ (λ n → ren σ t ≡βη embNe n) (nereadback (rennev σ u))
-lem a p σ = {!!}
+      Delay₁ ∞ (λ n → ren σ t ≡βη embNe n) (nereadback (rennev σ u))
+lem t u p σ = transD
+  (λ n → ren σ t ≡βη embNe n)
+  (rennereadback σ u)
+  (transPD (λ n → t ≡βη embNe n)
+           (λ n → ren σ t ≡βη embNe n)
+           (rennen σ)
+           (λ p₁ → lem' p₁ σ) p)
 
 rensound : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
            ∀{Δ}(σ : Ren Δ Γ) → a V∋ ren σ t ~ renval σ v
-rensound ★       {t}{ne u} p σ = {!!}
+rensound ★       {t}{ne u} p σ = lem t u p σ
 rensound (a ⇒ b)           p σ ρ s u s~u = {!p (renComp ρ σ) ? ? ? !}
 
 -- Fundamental theorem.

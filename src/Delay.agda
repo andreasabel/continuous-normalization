@@ -67,15 +67,15 @@ f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
 -- Lifting a predicate to Delay (without convergence).
 
 mutual
-  data Delay₁ {A : Set} (P : A → Set) : Delay ∞ A → Set where
-    now₁   : ∀{a}  → (p : P a) → Delay₁ P (now a)
-    later₁ : ∀{a∞} → ∞Delay₁ P a∞ → Delay₁ P (later a∞)
+  data Delay₁ i {A : Set} (P : A → Set) : Delay ∞ A → Set where
+    now₁   : ∀{a}  → (p : P a) → Delay₁ i P (now a)
+    later₁ : ∀{a∞} → ∞Delay₁ i P a∞ → Delay₁ i P (later a∞)
 
-  record ∞Delay₁ {A : Set} (P : A → Set) (a∞ : ∞Delay ∞ A) : Set where
+  record ∞Delay₁ i {A : Set} (P : A → Set) (a∞ : ∞Delay ∞ A) : Set where
     coinductive
     constructor delay₁
-    field force₁ : Delay₁ P (force a∞)
-
+    field force₁ :  {j : Size< i} → Delay₁ j P (force a∞)
+open ∞Delay₁ public
 -- Strong bisimilarity
 
 mutual
@@ -305,3 +305,53 @@ mutual
   ∞cast : ∀ {A i} → ∞Delay A i → (j : Size< ↑ i) → ∞Delay A j
   ♭ (∞cast x j) {k} = cast {i = j} (♭ x) k
 -}
+
+-- predicate transformers for Delay₁
+mutual
+  transD : ∀{i}{A : Set} (P : A → Set){a? b? : Delay ∞ A} →
+           a? ≈⟨ i ⟩≈ b? → Delay₁ i P a? → Delay₁ i P b?
+  transD P (≈now a)    (now₁ p)   = now₁ p
+  transD P (≈later eq) (later₁ p) = later₁ $ ∞transD P eq p
+
+  ∞transD : ∀{i}{A : Set}(P : A → Set){a? b? : ∞Delay ∞ A} →
+           a? ∞≈⟨ i ⟩≈ b? → ∞Delay₁ i P a? → ∞Delay₁ i P b?
+  force₁ (∞transD P p q) = transD P (≈force p) (force₁ q)
+
+mutual
+  transP : ∀{i}{A : Set}(P Q : A → Set){a? : Delay ∞ A} → (∀ {a} → P a → Q a) →
+             Delay₁ i P a? → Delay₁ i Q a?
+  transP P Q p (now₁ q)   = now₁ (p q)
+  transP P Q p (later₁ q) = later₁ (∞transP P Q p q)
+
+  ∞transP : ∀{i}{A : Set}(P Q : A → Set){a? : ∞Delay ∞ A} → 
+            (∀ {a} → P a → Q a) →
+            ∞Delay₁ i P a? → ∞Delay₁ i Q a?
+  force₁ (∞transP P Q p q) = transP P Q p (force₁ q)
+
+mutual
+  transPD : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A}
+            (f : A → B) →
+            (∀ {a} → P a → Q (f a)) →
+             Delay₁ i P a? → Delay₁ i Q (f <$> a?)
+  transPD P Q f p (now₁ q)   = now₁ (p q) 
+  transPD P Q f p (later₁ q) = later₁ (∞transPD P Q f p q)
+
+  ∞transPD : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A}
+             (f : A → B) → 
+             (∀ {a} → P a → Q (f a)) →
+             ∞Delay₁ i P a? → ∞Delay₁ i Q (f ∞<$> a?)
+  force₁ (∞transPD P Q f p q) = transPD P Q f p (force₁ q)
+
+mutual
+  transPD' : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A}
+            (f : A → B) →
+            (∀ {a} → P a → Q (f a)) →
+             Delay₁ i P a? → Delay₁ i (Q ∘ f) a?
+  transPD' P Q f p (now₁ q)   = now₁ (p q) 
+  transPD' P Q f p (later₁ q) = later₁ (∞transPD' P Q f p q)
+
+  ∞transPD' : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A}
+             (f : A → B) → 
+             (∀ {a} → P a → Q (f a)) →
+             ∞Delay₁ i P a? → ∞Delay₁ i (Q ∘ f) a?
+  force₁ (∞transPD' P Q f p q) = transPD' P Q f p (force₁ q)
