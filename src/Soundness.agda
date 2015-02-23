@@ -43,11 +43,6 @@ V∋subst : ∀{Γ}{a : Ty}{t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → t
           a V∋ t' ~ v
 V∋subst p refl = p    
 
-V∋subst' : ∀{Γ}(a : Ty){t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → t ≡βη t' →
-          a V∋ t' ~ v
-V∋subst' p q = {!!}
-
-
 ≡to≡βη : ∀{Γ a}{t t' : Tm Γ a} → t ≡ t' → t ≡βη t'
 ≡to≡βη refl = refl≡
 
@@ -68,6 +63,25 @@ ren≡βη (eta≡ {t = t}) σ = trans≡ (abs≡ (app≡ (≡to≡βη (trans (
 ren≡βη refl≡        σ = refl≡
 ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
 ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
+
+V∋subst' : ∀{Γ}(a : Ty){t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → t ≡βη t' →
+          a V∋ t' ~ v
+V∋subst' ★ {t}{t'}{ne n} p q = transD
+  (λ n₁ → t' ≡βη embNe n₁)
+  (≈sym $ bind-now _)
+  (transPD
+    (λ n₁ → t ≡βη embNe n₁)
+    (λ n₁ → t' ≡βη embNe n₁)
+    id
+    (λ r → trans≡ (sym≡ q) r) p)
+V∋subst' (a ⇒ b) {t}{t'} p q ρ s u r = transD
+  (λ v → b V∋ app (ren ρ t') s ~ v)
+  (≈sym $ bind-now _)
+  (transPD
+    (λ v → b V∋ app (ren ρ t) s ~ v)
+    (λ v → b V∋ app (ren ρ t') s ~ v)
+    id
+    (λ {v} r → V∋subst' b r (app≡ (ren≡βη q ρ) refl≡)) (p ρ s u r)) 
 
 renV∋ : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
            ∀{Δ}(σ : Ren Δ Γ) → a V∋ ren σ t ~ renval σ v
@@ -152,7 +166,6 @@ mutual
         (∞beta t (ren~E p ρ') p'))
   soundness (app t u) p = {!soundness t p !}
 
-  -- i need something, but probably not this...
   ∞beta : ∀{Γ a b} (t : Tm (Γ , a) b) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
     {s : Tm Δ a}{v : Val Δ a} → a V∋ s ~ v →
