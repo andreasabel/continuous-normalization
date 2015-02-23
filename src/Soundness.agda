@@ -139,6 +139,38 @@ soundapp {Γ}{a}{b}{t}{f} p {u}{v} q = transD
             (p renId u v q)))
 
 mutual
+  C∋map : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : Val Γ (a ⇒ b)} → 
+          (a ⇒ b) V∋ t ~ f → 
+          {u : Tm Γ a}{v : Delay ∞ (Val Γ a)}  →
+          a C∋ u ~ v →
+          b C∋ app t u ~ (v >>= apply f)
+  C∋map f (now₁ p)   = soundapp f p
+  C∋map f (later₁ p) = later₁ (∞C∋map f p)
+
+  ∞C∋map : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : Val Γ (a ⇒ b)} → 
+           (a ⇒ b) V∋ t ~ f → 
+           {u : Tm Γ a}{v : ∞Delay ∞ (Val Γ a)}  →
+           ∞Delay₁ ∞ (VLR a u) v →
+           ∞Delay₁ ∞ (VLR b (app t u)) (v ∞>>= apply f)
+  force₁ (∞C∋map f v) = C∋map f (force₁ v)
+
+mutual
+  _C∋<*>_ : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : Delay ∞ (Val Γ (a ⇒ b))} → 
+            (a ⇒ b) C∋ t ~ f → 
+            {u : Tm Γ a}{v : Delay ∞ (Val Γ a)}  →
+            a C∋ u ~ v →
+            b C∋ app t u ~ (f >>= λ f → v >>= apply f)
+  now₁   f C∋<*> v = C∋map f v
+  later₁ f C∋<*> v = later₁ (f ∞C∋<*> v)
+
+  _∞C∋<*>_ : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : ∞Delay ∞ (Val Γ (a ⇒ b))} → 
+             ∞Delay₁ ∞ (VLR (a ⇒ b) t) f →
+             {u : Tm Γ a}{v : Delay ∞ (Val Γ a)}  →
+             a C∋ u ~ v →
+             ∞Delay₁ ∞ (VLR b (app t u)) (f ∞>>= λ f → v >>= apply f)
+  force₁ (f ∞C∋<*> v) = force₁ f C∋<*> v
+
+mutual
   soundness : ∀{Γ a} (t : Tm Γ a) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
     a C∋ sub σ t ~ eval t ρ
@@ -164,7 +196,7 @@ mutual
                  (subcomp (subId , s) (subComp (ren2sub (liftr ρ')) (lifts σ)) t))
           (cong (sub (subId , s)) (sym $ rensub (liftr ρ') (lifts σ) t) ))) (sym≡ beta≡)))
         (∞beta t (ren~E p ρ') p'))
-  soundness (app t u) p = {!soundness t p !}
+  soundness (app t u) p = soundness t p C∋<*> soundness u p 
 
   ∞beta : ∀{Γ a b} (t : Tm (Γ , a) b) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
