@@ -43,6 +43,11 @@ V∋subst : ∀{Γ}{a : Ty}{t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → t
           a V∋ t' ~ v
 V∋subst p refl = p    
 
+V∋subst' : ∀{Γ}(a : Ty){t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → t ≡βη t' →
+          a V∋ t' ~ v
+V∋subst' p q = {!!}
+
+
 ≡to≡βη : ∀{Γ a}{t t' : Tm Γ a} → t ≡ t' → t ≡βη t'
 ≡to≡βη refl = refl≡
 
@@ -114,7 +119,7 @@ soundapp {Γ}{a}{b}{t}{f} p {u}{v} q = transD
     (VLR b (app (ren renId t) u))
     (VLR b (app t u))
     id
-    (λ {v} → subst (λ x → VLR b (app x u) v) (renid t))
+    (λ p → V∋subst p (cong (λ t → app t u) (renid t)))
     (transD (VLR b (app (ren renId t) u))
             (subst (λ x → apply x v ≈ apply f v) (sym $ renvalid f)  (≈refl _))
             (p renId u v q)))
@@ -124,13 +129,33 @@ mutual
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
     a C∋ sub σ t ~ eval t ρ
   soundness (var x)   p = now₁ (soundvar x p)
-  soundness (abs t){Δ} {σ}{ρ}   p = now₁ λ {Δ'} ρ' s u p' →
-    later₁ {!soundness t {Δ'}{subComp (ren2sub ρ') σ , s}{renenv ρ' ρ , u} (ren~E p ρ' , p')!}
+  soundness {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p = now₁ λ {Δ'} ρ' s u p' → later₁ $
+    ∞transD
+      (VLR b (app (ren ρ' (sub σ (abs t))) s))
+      (∞≈sym $ ∞bind-now _)
+      (∞transPD
+        (VLR b (sub (subComp (ren2sub ρ') σ , s) t))
+        (VLR b (app (ren ρ' (sub σ (abs t))) s))
+        id
+        (λ {v} p → V∋subst' b p (trans≡ (≡to≡βη (trans
+          (trans (cong (λ xs → sub xs t)
+                       (cong (λ xs → xs Sub., s)
+                             (trans (trans (sym $ sidl (subComp (ren2sub ρ') σ))
+                                           (sym $ lemss subId s (subComp (ren2sub ρ') σ)))
+                                    (cong (subComp (subId Sub., s))
+                                          (trans (sym $ wkrscomp ρ' σ)
+                                                 (sym $ lemss (ren2sub (wkr ρ'))
+                                                              (var zero)
+                                                              σ))))))
+                 (subcomp (subId , s) (subComp (ren2sub (liftr ρ')) (lifts σ)) t))
+          (cong (sub (subId , s)) (sym $ rensub (liftr ρ') (lifts σ) t) ))) (sym≡ beta≡)))
+        (∞beta t (ren~E p ρ') p'))
   soundness (app t u) p = {!soundness t p !}
 
   -- i need something, but probably not this...
-  ∞soundness : ∀{Γ a} (t : Tm Γ a) →
+  ∞beta : ∀{Γ a b} (t : Tm (Γ , a) b) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
-    ∞Delay₁ ∞ (VLR a (sub σ t)) (delay (eval t ρ))
-  force₁ (∞soundness t p) = soundness t p
+    {s : Tm Δ a}{v : Val Δ a} → a V∋ s ~ v →
+    ∞Delay₁ ∞ (VLR b (sub (σ , s) t)) (beta t ρ v)
+  force₁ (∞beta t p p') = soundness t (p , p')
 
