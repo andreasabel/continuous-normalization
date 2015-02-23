@@ -1,3 +1,4 @@
+{-# OPTIONS --copatterns #-}
 
 module Soundness where
 
@@ -42,12 +43,6 @@ V∋subst : ∀{Γ}{a : Ty}{t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → t
           a V∋ t' ~ v
 V∋subst p refl = p    
 
-looksound : ∀{Γ a} (x : Var Γ a) →
-  ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
-  a V∋ looks σ x ~ lookup x ρ
-looksound zero    {σ = σ , t} {ρ , v} (_ , p) = p
-looksound (suc x) {σ = σ , t} {ρ , v} (p , _) = looksound x p
-
 ≡to≡βη : ∀{Γ a}{t t' : Tm Γ a} → t ≡ t' → t ≡βη t'
 ≡to≡βη refl = refl≡
 
@@ -69,9 +64,9 @@ ren≡βη refl≡        σ = refl≡
 ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
 ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
 
-rensound : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
+renV∋ : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
            ∀{Δ}(σ : Ren Δ Γ) → a V∋ ren σ t ~ renval σ v
-rensound ★       {t}{ne u} p σ = transD
+renV∋ ★       {t}{ne u} p σ = transD
   (λ n → ren σ t ≡βη embNe n)
   (rennereadback σ u)
   (transPD (λ n → t ≡βη embNe n)
@@ -79,7 +74,7 @@ rensound ★       {t}{ne u} p σ = transD
            (rennen σ)
            (λ p → trans≡ (ren≡βη p σ) (≡to≡βη (renembNe _ σ)))
            p)
-rensound (a ⇒ b){t}{v} p σ ρ s u s~u =
+renV∋ (a ⇒ b){t}{v} p σ ρ s u s~u =
   transD (λ v₁ → b V∋ app (ren ρ (ren σ t)) s ~ v₁)
          (≈trans (≈sym $ bind-now (apply (renval (renComp ρ σ) v) u))
                  (subst (λ x → apply x u ≈ apply (renval ρ (renval σ v)) u)
@@ -93,11 +88,49 @@ rensound (a ⇒ b){t}{v} p σ ρ s u s~u =
            (λ p → V∋subst p (cong (λ t → app t s) (rencomp ρ σ t)))
            (p (renComp ρ σ) s u s~u)) 
 
+ren~E : ∀{Γ Δ}{σ : Sub Δ Γ}{ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
+        ∀{Δ'}(σ' : Ren Δ' Δ) → subComp (ren2sub σ') σ ~E renenv σ' ρ
+ren~E {σ = ε}    {ε}     p σ' = _
+ren~E {σ = σ , s}{ρ , v} (p , p') σ' =
+  ren~E p σ' , V∋subst (renV∋ _ p' σ') (ren2subren σ' s)        
+
 -- Fundamental theorem.
 
-soundness : ∀{Γ a} (t : Tm Γ a) →
+soundvar : ∀{Γ a} (x : Var Γ a) →
   ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
-  a C∋ sub σ t ~ eval t ρ
-soundness (var x)   p = now₁ (looksound x p)
-soundness (abs t)   p = {!soundness t ?!}
-soundness (app t u) p = {!soundness t p !}
+  a V∋ looks σ x ~ lookup x ρ
+soundvar zero    {σ = σ , t} {ρ , v} (_ , p) = p
+soundvar (suc x) {σ = σ , t} {ρ , v} (p , _) = soundvar x p
+
+soundapp : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : Val Γ (a ⇒ b)} → 
+         (a ⇒ b) V∋ t ~ f → 
+         {u : Tm Γ a}{v : Val Γ a}  →
+         a V∋ u ~ v →
+         b C∋ app t u ~ apply f v
+soundapp {Γ}{a}{b}{t}{f} p {u}{v} q = transD
+  (VLR b (app t u))
+  (≈sym $ bind-now (apply f v))
+  (transPD
+    (VLR b (app (ren renId t) u))
+    (VLR b (app t u))
+    id
+    (λ {v} → subst (λ x → VLR b (app x u) v) (renid t))
+    (transD (VLR b (app (ren renId t) u))
+            (subst (λ x → apply x v ≈ apply f v) (sym $ renvalid f)  (≈refl _))
+            (p renId u v q)))
+
+mutual
+  soundness : ∀{Γ a} (t : Tm Γ a) →
+    ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
+    a C∋ sub σ t ~ eval t ρ
+  soundness (var x)   p = now₁ (soundvar x p)
+  soundness (abs t){Δ} {σ}{ρ}   p = now₁ λ {Δ'} ρ' s u p' →
+    later₁ {!soundness t {Δ'}{subComp (ren2sub ρ') σ , s}{renenv ρ' ρ , u} (ren~E p ρ' , p')!}
+  soundness (app t u) p = {!soundness t p !}
+
+  -- i need something, but probably not this...
+  ∞soundness : ∀{Γ a} (t : Tm Γ a) →
+    ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
+    ∞Delay₁ ∞ (VLR a (sub σ t)) (delay (eval t ρ))
+  force₁ (∞soundness t p) = soundness t p
+

@@ -4,7 +4,7 @@
 module Delay where
 
 open import Library
-
+open import Category.Applicative.Indexed
 -- Coinductive delay monad.
 
 mutual
@@ -76,6 +76,16 @@ mutual
     constructor delay₁
     field force₁ :  {j : Size< i} → Delay₁ j P (force a∞)
 open ∞Delay₁ public
+
+{-
+_<*>₁_ : ∀{A B : Set}{Q : A → Set}{R : B → Set}
+        {f : Delay ∞ (A → B)}
+        {v : Delay ∞ A} → 
+        Delay₁ ∞ (λ f → ∀ v → Q v → R (f v)) f →
+        Delay₁ ∞ Q v →
+        Delay₁ ∞ R (f <*> v)
+p <*>₁ q = ?
+-}
 -- Strong bisimilarity
 
 mutual
