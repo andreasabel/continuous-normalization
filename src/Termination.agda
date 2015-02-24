@@ -71,13 +71,11 @@ sound-β t ρ u (delay⇓ v v⇓ ⟦v⟧) = delay⇓ v (later⇓ v⇓) ⟦v⟧
                                  v⇓))
   in  delay⇓ v v⇓′ ⟦v⟧
 
-
 term : ∀ {Δ Γ a} (t : Tm Γ a) (ρ : Env Δ Γ) (θ : E⟦ Γ ⟧ ρ) → C⟦ a ⟧ (eval t ρ)
 term (var x)   ρ θ = ⟦var⟧ x ρ θ
 term (abs t)   ρ θ = ⟦abs⟧ t ρ θ (λ η u p →
   term t (renenv η ρ , u) (renE⟦⟧ η ρ θ , p))
 term (app t u) ρ θ = ⟦app⟧ (term t ρ θ) (term u ρ θ)
-
 
 mutual
   reify : ∀{Γ} a (v : Val Γ a) → V⟦ a ⟧ v → readback v ⇓

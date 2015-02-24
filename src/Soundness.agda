@@ -115,18 +115,18 @@ ren~E {σ = σ , s}{ρ , v} (p , p') σ' =
 
 -- Fundamental theorem.
 
-soundvar : ∀{Γ a} (x : Var Γ a) →
+fundvar : ∀{Γ a} (x : Var Γ a) →
   ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
   a V∋ looks σ x ~ lookup x ρ
-soundvar zero    {σ = σ , t} {ρ , v} (_ , p) = p
-soundvar (suc x) {σ = σ , t} {ρ , v} (p , _) = soundvar x p
+fundvar zero    {σ = σ , t} {ρ , v} (_ , p) = p
+fundvar (suc x) {σ = σ , t} {ρ , v} (p , _) = fundvar x p
 
-soundapp : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : Val Γ (a ⇒ b)} → 
+fundapp : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : Val Γ (a ⇒ b)} → 
          (a ⇒ b) V∋ t ~ f → 
          {u : Tm Γ a}{v : Val Γ a}  →
          a V∋ u ~ v →
          b C∋ app t u ~ apply f v
-soundapp {Γ}{a}{b}{t}{f} p {u}{v} q = transD
+fundapp {Γ}{a}{b}{t}{f} p {u}{v} q = transD
   (VLR b (app t u))
   (≈sym $ bind-now (apply f v))
   (transPD
@@ -144,7 +144,7 @@ mutual
           {u : Tm Γ a}{v : Delay ∞ (Val Γ a)}  →
           a C∋ u ~ v →
           b C∋ app t u ~ (v >>= apply f)
-  C∋map f (now₁ p)   = soundapp f p
+  C∋map f (now₁ p)   = fundapp f p
   C∋map f (later₁ p) = later₁ (∞C∋map f p)
 
   ∞C∋map : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : Val Γ (a ⇒ b)} → 
@@ -171,11 +171,11 @@ mutual
   force₁ (f ∞C∋<*> v) = force₁ f C∋<*> v
 
 mutual
-  soundness : ∀{Γ a} (t : Tm Γ a) →
+  fundness : ∀{Γ a} (t : Tm Γ a) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
     a C∋ sub σ t ~ eval t ρ
-  soundness (var x)   p = now₁ (soundvar x p)
-  soundness {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p = now₁ λ {Δ'} ρ' s u p' → later₁ $
+  fundness (var x)   p = now₁ (fundvar x p)
+  fundness {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p = now₁ λ {Δ'} ρ' s u p' → later₁ $
     ∞transD
       (VLR b (app (ren ρ' (sub σ (abs t))) s))
       (∞≈sym $ ∞bind-now _)
@@ -196,11 +196,50 @@ mutual
                  (subcomp (subId , s) (subComp (ren2sub (liftr ρ')) (lifts σ)) t))
           (cong (sub (subId , s)) (sym $ rensub (liftr ρ') (lifts σ) t) ))) (sym≡ beta≡)))
         (∞beta t (ren~E p ρ') p'))
-  soundness (app t u) p = soundness t p C∋<*> soundness u p 
+  fundness (app t u) p = fundness t p C∋<*> fundness u p 
 
   ∞beta : ∀{Γ a b} (t : Tm (Γ , a) b) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
     {s : Tm Δ a}{v : Val Δ a} → a V∋ s ~ v →
     ∞Delay₁ ∞ (VLR b (sub (σ , s) t)) (beta t ρ v)
-  force₁ (∞beta t p p') = soundness t (p , p')
+  force₁ (∞beta t p p') = fundness t (p , p')
 
+-- reifyreflect
+
+  -- another annoying <*> thing
+  lemma : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{s : Tm Γ a}{f : NeVal Γ (a ⇒ b)}{u : Val Γ a} → 
+          Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback f) →
+          Delay₁ ∞ (λ n → s ≡βη embNf n) (readback u) →
+          Delay₁ ∞ (λ n → app t s ≡βη embNe n) (nereadback (app f u))
+  lemma p q = {!!}
+
+mutual
+  reify : ∀{Γ} a {t : Tm Γ a}{v : Val Γ a} →  a V∋ t ~ v → Delay₁ ∞ (λ n → t ≡βη embNf n) (readback v)
+  reify ★       {t}{ne u} p = transPD (λ n → t ≡βη embNe n) (λ n → t ≡βη embNf n) ne id p
+  reify (a ⇒ b)           p = later₁ {!p (wkr renId) (var zero) (ne (var zero)) (reflect a {t = var zero}{var zero} (now₁ ?))!}
+  -- p (wkr renId) (var zero) (ne (var zero)) (reflect a {t = var zero}{var zero} (now₁ ?))
+
+  -- this should probably be about eta...
+  ∞reify : ∀{Γ} a {t : Tm Γ a}{v : ∞Delay ∞ (Val Γ a)} →
+           ∞Delay₁ ∞ (VLR a t) v → ∞Delay₁ ∞ (λ n → t ≡βη embNf n) (v ∞>>= readback)
+  force₁ (∞reify a p) = {!reify a (force₁ p)!} -- reify a (force₁ p)
+
+  -- from the point of view of reflect, reify must return a Delay₁ βη... but could take a C∋ instead of a V∋.
+  reflect : ∀{Γ} a {t : Tm Γ a}{u : NeVal Γ a} → Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback u) → a V∋ t ~ (ne u)
+  reflect ★       p         = p
+  reflect (a ⇒ b){t}{f} p ρ s u q = now₁ (reflect b {app (ren ρ t) s} (lemma
+    {t = ren ρ t}
+    {s}
+    {rennev ρ f}
+    (transD
+      (λ n → ren ρ t ≡βη embNe n)
+      (rennereadback ρ f)
+      (transPD
+        (λ n → t ≡βη embNe n)
+        (λ n → ren ρ t ≡βη embNe n)
+        (rennen ρ)
+        (λ {n} p → trans≡ (ren≡βη p ρ) (≡to≡βη (renembNe n ρ)))
+        p) )
+    (reify a {s}{u} q)))
+
+  -- reify a, reflect b  
