@@ -112,9 +112,6 @@ var↑ x = reflect _ (var x) (var x , now⇓)
 ⟦ide⟧ ε       = _
 ⟦ide⟧ (Γ , a) = renE⟦⟧ (wkr renId) (ide Γ) (⟦ide⟧ Γ) , var↑ zero
 
-nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
-nf t = eval t (ide _) >>= readback
-
 normalize : ∀ Γ a (t : Tm Γ a) → ∃ λ n → nf t ⇓ n
 normalize Γ a t = let delay⇓ v v⇓ ⟦v⟧ = term t (ide Γ) (⟦ide⟧ Γ)
                       n , ⇓n      = reify a v ⟦v⟧

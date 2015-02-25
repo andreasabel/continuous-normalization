@@ -171,11 +171,11 @@ mutual
   force₁ (f ∞C∋<*> v) = force₁ f C∋<*> v
 
 mutual
-  fundness : ∀{Γ a} (t : Tm Γ a) →
+  fund : ∀{Γ a} (t : Tm Γ a) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
     a C∋ sub σ t ~ eval t ρ
-  fundness (var x)   p = now₁ (fundvar x p)
-  fundness {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p = now₁ λ {Δ'} ρ' s u p' → later₁ $
+  fund (var x)   p = now₁ (fundvar x p)
+  fund {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p = now₁ λ {Δ'} ρ' s u p' → later₁ $
     ∞transD
       (VLR b (app (ren ρ' (sub σ (abs t))) s))
       (∞≈sym $ ∞bind-now _)
@@ -196,13 +196,13 @@ mutual
                  (subcomp (subId , s) (subComp (ren2sub (liftr ρ')) (lifts σ)) t))
           (cong (sub (subId , s)) (sym $ rensub (liftr ρ') (lifts σ) t) ))) (sym≡ beta≡)))
         (∞beta t (ren~E p ρ') p'))
-  fundness (app t u) p = fundness t p C∋<*> fundness u p 
+  fund (app t u) p = fund t p C∋<*> fund u p 
 
   ∞beta : ∀{Γ a b} (t : Tm (Γ , a) b) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env Δ Γ} (σ~ρ : σ ~E ρ) →
     {s : Tm Δ a}{v : Val Δ a} → a V∋ s ~ v →
     ∞Delay₁ ∞ (VLR b (sub (σ , s) t)) (beta t ρ v)
-  force₁ (∞beta t p p') = fundness t (p , p')
+  force₁ (∞beta t p p') = fund t (p , p')
 
   lemma : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{s : Tm Γ a}{f : NeVal Γ (a ⇒ b)}{u : Val Γ a} → 
           Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback f) →
@@ -246,3 +246,19 @@ mutual
         (λ {n} p → trans≡ (ren≡βη p ρ) (≡to≡βη (renembNe n ρ)))
         p) )
     (reify a {s}{u} q)))
+
+
+~var : ∀{Γ a}(x : Var Γ a) → a V∋ var x ~ ne (var x)
+~var x = reflect _ (now₁ refl≡)
+
+ide~E : ∀ Γ → subId {Γ} ~E ide Γ
+ide~E ε       = _
+ide~E (Γ , a) = subst (λ x → x ~E renenv (wkr renId) (ide Γ)) (trans (wkrscomp renId subId) (cong wks (trans (sidr (ren2sub renId)) (sym $ ren2subid )))) (ren~E (ide~E  Γ) (wkr renId)) , ~var zero
+
+soundness : ∀ Γ a (t : Tm Γ a) → Delay₁ ∞ (λ n → sub subId t ≡βη embNf n) (nf t)
+soundness Γ a t = bindD
+  (VLR a (sub subId t))
+  (λ n → sub subId t ≡βη embNf n )
+  readback
+  (λ v p → reify a p)
+  (fund t (ide~E Γ))

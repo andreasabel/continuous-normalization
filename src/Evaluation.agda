@@ -231,3 +231,7 @@ mutual
             (sym (renvalcomp (wkr renId) η f)) ⟩
     (readback =<< apply (weakVal (renval η f)) (ne (var zero))) ∎
           where open ≈-Reasoning
+
+nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
+nf t = eval t (ide _) >>= readback
+
