@@ -15,7 +15,6 @@ mutual
   -- Values v and v' are related at type a.
 
   _V∋_~_ : ∀{Γ}(a : Ty) (v v' : Val Γ a) → Set
-  -- ★ V∋ ne t ~ ne t' = nereadback t ~ nereadback t'
   _V∋_~_         ★       (ne n) (ne n') = nereadback n ~ nereadback n'
   _V∋_~_ {Γ = Γ} (a ⇒ b) f     f'       = ∀{Δ}(ρ : Ren Δ Γ)(u u' : Val Δ a)
     (u~u' : a V∋ u ~ u') → b C∋ (apply (renval ρ f) u) ~ (apply (renval ρ f') u')
@@ -37,7 +36,8 @@ _~E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
 -- Closure under renaming
 
 renV~ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val Δ a} (v~v' : VLR a v v') → VLR a (renval η v) (renval η v')
-renV~ = {!!}
+renV~ ★ η {ne n}{ne n'} p = {!!}
+renV~ (a ⇒ a₁) η p ρ u u' u~u' = {!!}
 
 renE~ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ~ρ' : ρ ~E ρ') → (renenv η ρ) ~E (renenv η ρ')
 renE~ η {ε} {ε} ρ~ρ' = _
@@ -117,8 +117,9 @@ completeness : ∀{Γ a}{t t' : Tm Γ a} →
   (t≡t' : t ≡βη t') → t ~T t'
 completeness (var≡ {x = x} refl) ρ~ρ' =  ⟦var⟧ x ρ~ρ'
 completeness (abs≡ t≡t') ρ~ρ' = ⟦abs⟧' (completeness t≡t') ρ~ρ'
-completeness (app≡ eq eq₁) ρ~ρ' = {!!}
+completeness (app≡ eq eq₁) ρ~ρ' = {!completeness eq ρ~ρ'!}
 completeness beta≡ ρ~ρ' = {!!}
 completeness eta≡ ρ~ρ' = {!!}
 completeness (sym≡ eq) ρ~ρ' = {!!}
 completeness (trans≡ eq eq₁) ρ~ρ' = {!!}
+completeness refl≡ p = {!!}

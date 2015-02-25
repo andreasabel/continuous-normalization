@@ -25,8 +25,22 @@ mutual
     field
       ~force : {j : Size< i} → Delay R ∋ force a∞ ~⟨ j ⟩~ force b∞
 
+open ∞Delay_∋_~⟨_⟩~_ public
 ∞Delay_∋_~_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_~⟨_⟩~_ {A} R a∞ i b∞
 
+mutual
+  map~ : ∀ {A B R S}{a a' : Delay ∞ A}
+         (f : A → B)
+         (g : ∀ a a' → R a a' → S (f a) (f a')) → 
+         Delay R ∋ a ~ a' → Delay S ∋ f <$> a ~ (f <$> a')
+  map~ f g (~now a⇓ a'⇓ aRa') = ~now (map⇓ f a⇓) (map⇓ f a'⇓) (g _ _ aRa')
+  map~ f g (~later ∞p)      = ~later (∞map~ f g ∞p)       
+
+  ∞map~ : ∀ {A B R S}{a a' : ∞Delay ∞ A}
+         (f : A → B)
+         (g : ∀ a a' → R a a' → S (f a) (f a')) → 
+         ∞Delay R ∋ a ~ a' → ∞Delay S ∋ f ∞<$> a ~ (f ∞<$> a')
+  ~force (∞map~ f g p) = map~ f g (~force p)
 
 -- Delaying left only
 
