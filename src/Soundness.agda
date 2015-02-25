@@ -4,7 +4,7 @@ module Soundness where
 
 open import Library
 open import Delay
-open import WeakBisim
+--open import WeakBisim
 open import Syntax
 open import RenamingAndSubstitution
 open import Evaluation
@@ -69,7 +69,7 @@ V∋subst' : ∀{Γ}(a : Ty){t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → 
 V∋subst' ★ {t}{t'}{ne n} p q = transD
   (λ n₁ → t' ≡βη embNe n₁)
   (≈sym $ bind-now _)
-  (transPD
+  (mapD
     (λ n₁ → t ≡βη embNe n₁)
     (λ n₁ → t' ≡βη embNe n₁)
     id
@@ -77,7 +77,7 @@ V∋subst' ★ {t}{t'}{ne n} p q = transD
 V∋subst' (a ⇒ b) {t}{t'} p q ρ s u r = transD
   (λ v → b V∋ app (ren ρ t') s ~ v)
   (≈sym $ bind-now _)
-  (transPD
+  (mapD
     (λ v → b V∋ app (ren ρ t) s ~ v)
     (λ v → b V∋ app (ren ρ t') s ~ v)
     id
@@ -88,7 +88,7 @@ renV∋ : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
 renV∋ ★       {t}{ne u} p σ = transD
   (λ n → ren σ t ≡βη embNe n)
   (rennereadback σ u)
-  (transPD (λ n → t ≡βη embNe n)
+  (mapD    (λ n → t ≡βη embNe n)
            (λ n → ren σ t ≡βη embNe n)
            (rennen σ)
            (λ p → trans≡ (ren≡βη p σ) (≡to≡βη (renembNe _ σ)))
@@ -99,7 +99,7 @@ renV∋ (a ⇒ b){t}{v} p σ ρ s u s~u =
                  (subst (λ x → apply x u ≈ apply (renval ρ (renval σ v)) u)
                         (renvalcomp ρ σ v)
                         (≈refl _)))
-         (transPD
+         (mapD
            (λ v₁ → b V∋ app (ren (renComp ρ σ) t) s ~ v₁)
            (λ v₁ → b V∋ app (ren ρ (ren σ t)) s ~ v₁)
            {(apply (renval (renComp ρ σ) v) u)}
@@ -129,7 +129,7 @@ fundapp : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{f : Val Γ (a ⇒ b)} →
 fundapp {Γ}{a}{b}{t}{f} p {u}{v} q = transD
   (VLR b (app t u))
   (≈sym $ bind-now (apply f v))
-  (transPD
+  (mapD
     (VLR b (app (ren renId t) u))
     (VLR b (app t u))
     id
@@ -179,7 +179,7 @@ mutual
     ∞transD
       (VLR b (app (ren ρ' (sub σ (abs t))) s))
       (∞≈sym $ ∞bind-now _)
-      (∞transPD
+      (∞mapD
         (VLR b (sub (subComp (ren2sub ρ') σ , s) t))
         (VLR b (app (ren ρ' (sub σ (abs t))) s))
         id
@@ -204,27 +204,32 @@ mutual
     ∞Delay₁ ∞ (VLR b (sub (σ , s) t)) (beta t ρ v)
   force₁ (∞beta t p p') = fundness t (p , p')
 
--- reifyreflect
-
-  -- another annoying <*> thing
   lemma : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{s : Tm Γ a}{f : NeVal Γ (a ⇒ b)}{u : Val Γ a} → 
           Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback f) →
           Delay₁ ∞ (λ n → s ≡βη embNf n) (readback u) →
           Delay₁ ∞ (λ n → app t s ≡βη embNe n) (nereadback (app f u))
-  lemma p q = {!!}
+  lemma {t = t}{s}{f}{u} p q = bindD (λ n → t ≡βη embNe n) (λ n → app t s ≡βη embNe n) (λ f → readback u >>= (λ u → now (app f u))) (λ f p → bindD  (λ n → s ≡βη embNf n)  (λ n → app t s ≡βη embNe n) (λ a → now (app f a)) (λ a q → now₁ (app≡ p q)) q ) p
+
+open import Data.List
+open import Data.List.Properties
 
 mutual
   reify : ∀{Γ} a {t : Tm Γ a}{v : Val Γ a} →  a V∋ t ~ v → Delay₁ ∞ (λ n → t ≡βη embNf n) (readback v)
-  reify ★       {t}{ne u} p = transPD (λ n → t ≡βη embNe n) (λ n → t ≡βη embNf n) ne id p
-  reify (a ⇒ b)           p = later₁ {!p (wkr renId) (var zero) (ne (var zero)) (reflect a {t = var zero}{var zero} (now₁ ?))!}
-  -- p (wkr renId) (var zero) (ne (var zero)) (reflect a {t = var zero}{var zero} (now₁ ?))
+  reify ★       {t}{ne u} p = mapD (λ n → t ≡βη embNe n) (λ n → t ≡βη embNf n) ne id p
+  reify (a ⇒ b){t}           p = later₁ $ reify-eta $
+    bindD
+      (VLR b (app (ren (wkr renId) t) (var zero)))
+      (λ n → app (ren (wkr renId) t) (var zero) ≡βη embNf n)
+      readback
+      (λ v → reify b {v = v})
+      (p (wkr renId) (var zero) (ne (var zero))
+      (reflect a {t = var zero}{var zero} (now₁ refl≡))) 
 
-  -- this should probably be about eta...
-  ∞reify : ∀{Γ} a {t : Tm Γ a}{v : ∞Delay ∞ (Val Γ a)} →
-           ∞Delay₁ ∞ (VLR a t) v → ∞Delay₁ ∞ (λ n → t ≡βη embNf n) (v ∞>>= readback)
-  force₁ (∞reify a p) = {!reify a (force₁ p)!} -- reify a (force₁ p)
-
-  -- from the point of view of reflect, reify must return a Delay₁ βη... but could take a C∋ instead of a V∋.
+  reify-eta : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{v : Val Γ (a ⇒ b)} →
+             Delay₁ ∞ (λ n → app (ren (wkr renId) t) (var zero) ≡βη embNf n) (apply (renval (wkr renId) v) (ne (var zero)) >>= (λ z → readback z)) →
+             ∞Delay₁ ∞ (λ n → t ≡βη embNf n) (eta v ∞>>= (λ x' → now (abs x')))
+  force₁ (reify-eta {a = a}{b}{t}{v} p) = mapD (λ n → app (ren (wkr renId) t) (var zero) ≡βη embNf n)  (λ n → t ≡βη embNf n) Nf.abs (λ p → trans≡ (sym≡ eta≡) (abs≡ p)) p
+  
   reflect : ∀{Γ} a {t : Tm Γ a}{u : NeVal Γ a} → Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback u) → a V∋ t ~ (ne u)
   reflect ★       p         = p
   reflect (a ⇒ b){t}{f} p ρ s u q = now₁ (reflect b {app (ren ρ t) s} (lemma
@@ -234,12 +239,10 @@ mutual
     (transD
       (λ n → ren ρ t ≡βη embNe n)
       (rennereadback ρ f)
-      (transPD
+      (mapD
         (λ n → t ≡βη embNe n)
         (λ n → ren ρ t ≡βη embNe n)
         (rennen ρ)
         (λ {n} p → trans≡ (ren≡βη p ρ) (≡to≡βη (renembNe n ρ)))
         p) )
     (reify a {s}{u} q)))
-
-  -- reify a, reflect b  

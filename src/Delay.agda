@@ -327,7 +327,8 @@ mutual
   ♭ (∞cast x j) {k} = cast {i = j} (♭ x) k
 -}
 
--- predicate transformers for Delay₁
+
+-- transD and transP could just be defined using mapD
 mutual
   transD : ∀{i}{A : Set} (P : A → Set){a? b? : Delay ∞ A} →
            a? ≈⟨ i ⟩≈ b? → Delay₁ i P a? → Delay₁ i P b?
@@ -350,29 +351,31 @@ mutual
   force₁ (∞transP P Q p q) = transP P Q p (force₁ q)
 
 mutual
-  transPD : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A}
+  -- map
+  mapD : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A}
             (f : A → B) →
             (∀ {a} → P a → Q (f a)) →
              Delay₁ i P a? → Delay₁ i Q (f <$> a?)
-  transPD P Q f p (now₁ q)   = now₁ (p q) 
-  transPD P Q f p (later₁ q) = later₁ (∞transPD P Q f p q)
+  mapD P Q f p (now₁ q)   = now₁ (p q) 
+  mapD P Q f p (later₁ q) = later₁ (∞mapD P Q f p q)
 
-  ∞transPD : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A}
+  ∞mapD : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A}
              (f : A → B) → 
              (∀ {a} → P a → Q (f a)) →
              ∞Delay₁ i P a? → ∞Delay₁ i Q (f ∞<$> a?)
-  force₁ (∞transPD P Q f p q) = transPD P Q f p (force₁ q)
+  force₁ (∞mapD P Q f p q) = mapD P Q f p (force₁ q)
 
 mutual
-  transPD' : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A}
-            (f : A → B) →
-            (∀ {a} → P a → Q (f a)) →
-             Delay₁ i P a? → Delay₁ i (Q ∘ f) a?
-  transPD' P Q f p (now₁ q)   = now₁ (p q) 
-  transPD' P Q f p (later₁ q) = later₁ (∞transPD' P Q f p q)
+  -- bind
+  bindD : ∀{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A} →
+            (f : A → Delay ∞ B) → 
+            (g : ∀ a → P a → Delay₁ ∞ Q (f a)) →
+            Delay₁ ∞ P a? → Delay₁ ∞ Q (a? >>= f)
+  bindD P Q f g (now₁ p)   = g _ p
+  bindD P Q f g (later₁ p) = later₁ (∞bindD P Q f g p)
 
-  ∞transPD' : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A}
-             (f : A → B) → 
-             (∀ {a} → P a → Q (f a)) →
-             ∞Delay₁ i P a? → ∞Delay₁ i (Q ∘ f) a?
-  force₁ (∞transPD' P Q f p q) = transPD' P Q f p (force₁ q)
+  ∞bindD : ∀{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A} →
+            (f : A → Delay ∞ B) → 
+            (g : ∀ a → P a → Delay₁ ∞ Q (f a)) →
+            ∞Delay₁ ∞ P a? → ∞Delay₁ ∞ Q (a? ∞>>= f)
+  force₁ (∞bindD P Q f g p) = bindD P Q f g (force₁ p)
