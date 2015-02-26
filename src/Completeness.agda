@@ -61,8 +61,12 @@ renV~ ★       η {ne n}{ne n'} p =
   ~trans trans (~sym sym $ ≈→~ (rennereadback η n))
          (~trans trans (map~ (rennen η) (λ _ _ → cong (rennen η)) p)
                  (≈→~ (rennereadback η n')))
-renV~ (a ⇒ b) η p ρ u u' q =
-  ~trans (V∋~trans b) {!≈→~!} (~trans (V∋~trans b) (p (renComp ρ η) u u' q) {!!})
+renV~ (a ⇒ b) η {f}{f'} p ρ u u' q =
+  subst (λ X → b C∋ apply (renval ρ (renval η f)) u ~ apply X u')
+        (sym $ renvalcomp ρ η f')
+        (subst (λ X → b C∋ apply X u ~ apply (renval (renComp ρ η) f') u')
+               (sym $ renvalcomp ρ η f)
+               (p (renComp ρ η) u u' q)) 
 
 renE~ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ~ρ' : ρ ~E ρ') → (renenv η ρ) ~E (renenv η ρ')
 renE~ η {ε} {ε} ρ~ρ' = _
