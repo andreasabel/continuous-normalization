@@ -87,12 +87,13 @@ open ∞Delay_∋_~⟨_⟩~_ public
 -- Strong bisimilarity implies weak bisimilarity.
 
 mutual
-  ≈→~ : ∀{i A}{a? b? : Delay ∞ A} → a? ≈⟨ i ⟩≈ b? → a? ~⟨ i ⟩~ b?
-  ≈→~ (≈now a)    = ~now now⇓ now⇓ refl
-  ≈→~ (≈later eq) = ~later (∞≈→~ eq)
+  ≈→~ : ∀{i A R}{a? b? : Delay ∞ A} → (∀ {a} → R a a) → a? ≈⟨ i ⟩≈ b? → Delay R ∋ a? ~⟨ i ⟩~ b?
+  ≈→~ X (≈now a)    = ~now now⇓ now⇓ X
+  ≈→~ X (≈later eq) = ~later (∞≈→~ X eq)
 
-  ∞≈→~ : ∀{i A}{a∞ b∞ : ∞Delay ∞ A} → a∞ ∞≈⟨ i ⟩≈ b∞ → a∞ ∞~⟨ i ⟩~ b∞
-  ~force (∞≈→~ eq) = ≈→~ (≈force eq)
+  ∞≈→~ : ∀{i A R}{a∞ b∞ : ∞Delay ∞ A} → (∀ {a} → R a a) → a∞ ∞≈⟨ i ⟩≈ b∞ →
+         ∞Delay R ∋ a∞ ~⟨ i ⟩~ b∞
+  ~force (∞≈→~ X eq) = ≈→~ X (≈force eq)
 
 -- two computations are weakly bisimilar, and one converges,
 -- so does the other, and to the same value
@@ -123,10 +124,10 @@ det~⇓ (later⇓ p) (~later ∞p) (later⇓ r) = det~⇓ p (~force ∞p) r
 -- Reflexivity
 
 ~refl  : ∀ {i A} (a? : Delay ∞ A) → a? ~⟨ i ⟩~ a?
-~refl a = ≈→~ (≈refl a)
+~refl a = ≈→~ refl (≈refl a)
 
 ∞~refl : ∀ {i A} (a∞ : ∞Delay ∞ A) → _∞~_ {i} a∞ a∞
-∞~refl a∞ = ∞≈→~ (∞≈refl a∞)
+∞~refl a∞ = ∞≈→~ refl (∞≈refl a∞)
 
 -- Symmetry
 

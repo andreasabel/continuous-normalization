@@ -70,9 +70,9 @@ _~E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
 renV~ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val Δ a} (v~v' : VLR a v v') →
         VLR a (renval η v) (renval η v')
 renV~ ★       η {ne n}{ne n'} p =
-  ~trans trans (~sym sym $ ≈→~ (rennereadback η n))
+  ~trans trans (~sym sym $ ≈→~ refl (rennereadback η n))
          (~trans trans (map~ (rennen η) (λ _ _ → cong (rennen η)) p)
-                 (≈→~ (rennereadback η n')))
+                 (≈→~ refl (rennereadback η n')))
 renV~ (a ⇒ b) η {f}{f'} p ρ u u' q =
   subst (λ X → b C∋ apply (renval ρ (renval η f)) u ~ apply X u')
         (sym $ renvalcomp ρ η f')
@@ -151,14 +151,41 @@ sound-β t t' ρ~ρ' u~u' eq = ~later (~delay eq)
 ⟦abs⟧' : ∀ {Γ a b} {t t' : Tm (Γ , a) b} → t ~T t' → abs t ~T abs t'
 ⟦abs⟧' {t = t}{t'} t~t' ρ~ρ' = ⟦abs⟧ t t' ρ~ρ' (λ η u~u' → t~t' (renE~ η ρ~ρ' , u~u'))
 
+⟦app⟧'' : ∀{Γ a b}{f f' : Val Γ (a ⇒ b)}{v v' : Val Γ a} →
+       (a ⇒ b) V∋ f ~ f' → a V∋ v ~ v' → b C∋ apply f v ~ apply f' v'
+⟦app⟧'' {Γ}{a}{b}{f}{f'}{v}{v'} p q =
+  subst (λ X → b C∋ apply f v ~ apply X v')
+        (renvalid f')
+        (subst (λ X → b C∋ apply X v ~ apply (renval renId f') v')
+               (renvalid f)
+               (p renId _ _ q)) 
+
+mutual
+  ⟦app⟧' : ∀{Γ a b}{f f' : Val Γ (a ⇒ b)}{v v' : Delay ∞ (Val Γ a)} →
+          (a ⇒ b) V∋ f ~ f' → a C∋ v ~ v' →
+          b C∋ v >>= apply f ~ (v' >>= apply f')
+  ⟦app⟧' f (~now a⇓ b⇓ aRb) = {!f renId _ _ aRb!}
+  ⟦app⟧' f (~later ∞p) = ~later (∞⟦app⟧' f ∞p)
+
+  ∞⟦app⟧' : ∀{Γ a b}{f f' : Val Γ (a ⇒ b)}{v v' : ∞Delay ∞ (Val Γ a)} →
+       (a ⇒ b) V∋ f ~ f' → ∞Delay VLR a ∋ v ~ v' →
+       ∞Delay VLR b ∋ v ∞>>= apply f ~ (v' ∞>>= apply f')
+  ~force (∞⟦app⟧' f p) = ⟦app⟧' f (~force p)
+
+-- did Andreas say not to do it this way?
+idext : ∀{Γ a}(t : Tm Γ a) → t ~T t
+idext (var x)   p = ⟦var⟧ x p
+idext (abs t)   p = ⟦abs⟧ _ _ p (λ η q → idext t (renE~ η p , q))
+idext (app t u) p = {!idext t p!}
+
 -- Equal terms evaluate to equal values.
 fund : ∀{Γ a}{t t' : Tm Γ a} →
   (t≡t' : t ≡βη t') → t ~T t'
 fund (var≡ {x = x} refl) ρ~ρ' =  ⟦var⟧ x ρ~ρ'
 fund (abs≡ t≡t') ρ~ρ' = ⟦abs⟧' (fund t≡t') ρ~ρ'
 fund (app≡ eq eq₁) ρ~ρ' = {!fund eq ρ~ρ'!}
-fund beta≡ ρ~ρ' = {!!}
+fund (beta≡ {t = t}{u = u}) ρ~ρ' = {!sound-β t t ρ~ρ' (idext t (ρ~ρ' , idext u ρ~ρ'))!}
 fund eta≡ ρ~ρ' = {!!}
 fund (sym≡ eq) ρ~ρ' = ~sym (V∋~sym _) (fund eq (~Esym ρ~ρ'))
 fund (trans≡ eq eq₁) ρ~ρ' = ~trans (V∋~trans _) (fund eq (~Erefl ρ~ρ')) (fund eq₁ ρ~ρ')
-fund (refl≡ {t = t}) {ρ = ρ}{ρ'} p = {!!}
+fund (refl≡ {t = t}) {ρ = ρ}{ρ'} p = idext t p 
