@@ -53,6 +53,18 @@ _~E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
 ε       ~E ε         = ⊤
 (ρ , v) ~E (ρ' , v') = (ρ ~E ρ') × (VLR _ v v')
 
+~Esym : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ~E ρ' → ρ' ~E ρ
+~Esym {ρ = ε}    {ε}       _        = _
+~Esym {ρ = ρ , v}{ρ' , v'} (p , p') = ~Esym p  , V∋~sym _ p'
+           
+~Etrans : ∀{Γ Δ}{ρ ρ' ρ'' : Env Δ Γ} → ρ ~E ρ' → ρ' ~E ρ'' → ρ ~E ρ''
+~Etrans {ρ = ε}    {ε}       {ε}         _         _        = _
+~Etrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ~Etrans p p' , V∋~trans _ q q'
+
+~Erefl : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ~E ρ' → ρ ~E ρ
+~Erefl p = ~Etrans p (~Esym p)
+
+
 -- Closure under renaming
 
 renV~ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val Δ a} (v~v' : VLR a v v') →
@@ -68,12 +80,14 @@ renV~ (a ⇒ b) η {f}{f'} p ρ u u' q =
                (sym $ renvalcomp ρ η f)
                (p (renComp ρ η) u u' q)) 
 
+
 renE~ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ~ρ' : ρ ~E ρ') → (renenv η ρ) ~E (renenv η ρ')
 renE~ η {ε} {ε} ρ~ρ' = _
 renE~ η {ρ , v} {ρ' , v'} (ρ~ρ' , v~v') = (renE~ η ρ~ρ') , (renV~ _ η v~v')
 
 -- Substitution lemma.
 
+{-
 DEnv : ∀ Γ Δ → Set
 DEnv Γ Δ = ∀{a} → Var Δ a → Delay ∞ (Val Γ a)
 
@@ -104,6 +118,7 @@ substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′
 substitution (var x) σ ρ = {!!}
 substitution (abs t) σ ρ = {!!}
 substitution (app t t₁) σ ρ = {!!}
+-}
 
 -- Extensional equality of typed terms (evaluate to bisimilar values).
 
@@ -114,8 +129,6 @@ _~T_ {Γ} {a} t t' =
 
 -- Variables are related.
 
--- ⟦var⟧ : ∀{Δ Γ a} (x : Var Γ a) {ρ ρ' : Env Δ Γ} (ρ~ρ' : ρ ~E ρ') →
---             a C∋ (now (lookup x ρ)) ~ (now (lookup x ρ'))
 ⟦var⟧ : ∀{Γ a} (x : Var Γ a) → var x ~T var x
 ⟦var⟧ zero    {Δ} {ρ , v} {ρ' , v'} (ρ~ρ' , v~v') = ~now now⇓ now⇓ v~v'
 ⟦var⟧ (suc x) {Δ} {ρ , v} {ρ' , v'} (ρ~ρ' , v~v') = ⟦var⟧ x ρ~ρ'
@@ -139,16 +152,13 @@ sound-β t t' ρ~ρ' u~u' eq = ~later (~delay eq)
 ⟦abs⟧' {t = t}{t'} t~t' ρ~ρ' = ⟦abs⟧ t t' ρ~ρ' (λ η u~u' → t~t' (renE~ η ρ~ρ' , u~u'))
 
 -- Equal terms evaluate to equal values.
-
--- completeness : ∀{Γ Δ a}{t t' : Tm Γ a} →
---   (eq : t ≡βη t') {ρ ρ' : Env Δ Γ} (θ : ρ ~E ρ') → a C∋ eval t ρ ~ eval t' ρ'
-completeness : ∀{Γ a}{t t' : Tm Γ a} →
+fund : ∀{Γ a}{t t' : Tm Γ a} →
   (t≡t' : t ≡βη t') → t ~T t'
-completeness (var≡ {x = x} refl) ρ~ρ' =  ⟦var⟧ x ρ~ρ'
-completeness (abs≡ t≡t') ρ~ρ' = ⟦abs⟧' (completeness t≡t') ρ~ρ'
-completeness (app≡ eq eq₁) ρ~ρ' = {!completeness eq ρ~ρ'!}
-completeness beta≡ ρ~ρ' = {!!}
-completeness eta≡ ρ~ρ' = {!!}
-completeness (sym≡ eq) ρ~ρ' = {!!}
-completeness (trans≡ eq eq₁) ρ~ρ' = {!!}
-completeness refl≡ p = {!!}
+fund (var≡ {x = x} refl) ρ~ρ' =  ⟦var⟧ x ρ~ρ'
+fund (abs≡ t≡t') ρ~ρ' = ⟦abs⟧' (fund t≡t') ρ~ρ'
+fund (app≡ eq eq₁) ρ~ρ' = {!fund eq ρ~ρ'!}
+fund beta≡ ρ~ρ' = {!!}
+fund eta≡ ρ~ρ' = {!!}
+fund (sym≡ eq) ρ~ρ' = ~sym (V∋~sym _) (fund eq (~Esym ρ~ρ'))
+fund (trans≡ eq eq₁) ρ~ρ' = ~trans (V∋~trans _) (fund eq (~Erefl ρ~ρ')) (fund eq₁ ρ~ρ')
+fund (refl≡ {t = t}) {ρ = ρ}{ρ'} p = {!!}
