@@ -77,40 +77,39 @@ mutual
     field force₁ :  {j : Size< i} → Delay₁ j P (force a∞)
 open ∞Delay₁ public
 
-{-
-_<*>₁_ : ∀{A B : Set}{Q : A → Set}{R : B → Set}
-        {f : Delay ∞ (A → B)}
-        {v : Delay ∞ A} → 
-        Delay₁ ∞ (λ f → ∀ v → Q v → R (f v)) f →
-        Delay₁ ∞ Q v →
-        Delay₁ ∞ R (f <*> v)
-p <*>₁ q = ?
--}
 -- Strong bisimilarity
 
 mutual
-  data _≈_ {i : Size} {A : Set} : (a? b? : Delay ∞ A) → Set where
-    ≈now   : ∀ a → now a ≈ now a
-    ≈later : ∀ {a∞ b∞} (eq : a∞ ∞≈⟨ i ⟩≈ b∞) → later a∞ ≈ later b∞
+  data Delay_∋_≈_ {i}{A}(R : A → A → Set) : (a? b? : Delay ∞ A) → Set where
+    ≈now   : ∀ a a' → R a a' → Delay R ∋ now a ≈ now a'
+    ≈later : ∀ {a∞ b∞}(eq : ∞Delay R ∋ a∞ ≈⟨ i ⟩≈ b∞) →
+             Delay R ∋ later a∞ ≈ later b∞
 
-  _≈⟨_⟩≈_ = λ {A} a? i b? → _≈_ {i}{A} a? b?
+  Delay_∋_≈⟨_⟩≈_ = λ {A} R a? i b? → Delay_∋_≈_ {i}{A} R a? b?
 
-  record _∞≈⟨_⟩≈_ {A} (a∞ : ∞Delay ∞ A) i (b∞ : ∞Delay ∞ A) : Set where
+  record ∞Delay_∋_≈⟨_⟩≈_ {A} R (a∞ : ∞Delay ∞ A) i (b∞ : ∞Delay ∞ A) : Set where
     coinductive
     field
-      ≈force : {j : Size< i} → force a∞ ≈⟨ j ⟩≈ force b∞
+      ≈force : {j : Size< i} → Delay R ∋ force a∞ ≈⟨ j ⟩≈ force b∞
 
+
+∞Delay_R_≈_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_≈⟨_⟩≈_ {A} R a∞ i b∞
+open ∞Delay_∋_≈⟨_⟩≈_ public
+
+_≈⟨_⟩≈_ = λ {A} a i b → Delay_∋_≈⟨_⟩≈_ {A} _≡_ a i b
+_≈_ = λ {i} {A} a b → _≈⟨_⟩≈_ {A} a i b
+
+_∞≈⟨_⟩≈_ = λ {A} a∞ i b∞ → ∞Delay_∋_≈⟨_⟩≈_ {A} _≡_ a∞ i b∞
 _∞≈_ = λ {i} {A} a∞ b∞ → _∞≈⟨_⟩≈_ {A} a∞ i b∞
-open _∞≈⟨_⟩≈_ public
 
 ≡to≈ : ∀{A}{a a' : A} → a ≡ a' → now a ≈ now a'
-≡to≈ refl = ≈now _
+≡to≈ refl = ≈now _ _ refl
 
 -- Reflexivity
 
 mutual
   ≈refl  : ∀ {i A} (a? : Delay ∞ A) → a? ≈⟨ i ⟩≈ a?
-  ≈refl (now a)    = ≈now a
+  ≈refl (now a)    = ≈now a a refl 
   ≈refl (later a∞) = ≈later (∞≈refl a∞)
 
   ∞≈refl : ∀ {i A} (a∞ : ∞Delay ∞ A) → _∞≈_ {i} a∞ a∞
@@ -120,7 +119,7 @@ mutual
 
 mutual
   ≈sym : ∀ {i A} {a? b? : Delay ∞ A} → a? ≈⟨ i ⟩≈ b? → b? ≈⟨ i ⟩≈ a?
-  ≈sym (≈now a)    = ≈now a
+  ≈sym (≈now a a' p)    = ≈now a' a (sym p)
   ≈sym (≈later eq) = ≈later (∞≈sym eq)
 
   ∞≈sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → a? ∞≈⟨ i ⟩≈ b? → b? ∞≈⟨ i ⟩≈ a?
@@ -131,7 +130,7 @@ mutual
 mutual
   ≈trans : ∀ {i A} {a? b? c? : Delay ∞ A}
     (eq : a? ≈⟨ i ⟩≈ b?) (eq' : b? ≈⟨ i ⟩≈ c?) → a? ≈⟨ i ⟩≈ c?
-  ≈trans (≈now a)    (≈now .a)    = ≈now a
+  ≈trans (≈now a a' p)    (≈now .a' a'' q)    = ≈now a a'' (trans p q) 
   ≈trans (≈later eq) (≈later eq') = ≈later (∞≈trans eq eq')
 
   ∞≈trans : ∀ {i A} {a∞ b∞ c∞ : ∞Delay ∞ A}
@@ -178,7 +177,7 @@ module ∞≈-Reasoning {i : Size} {A : Set} where
 mutual
   bind-cong-l : ∀ {i A B} {a? b? : Delay ∞ A} (eq : a? ≈⟨ i ⟩≈ b?)
     (k : A → Delay ∞ B) → (a? >>= k) ≈⟨ i ⟩≈ (b? >>= k)
-  bind-cong-l (≈now a)    k = ≈refl _
+  bind-cong-l (≈now a .a refl) k = ≈refl (k a)
   bind-cong-l (≈later eq) k = ≈later (∞bind-cong-l eq k)
 
   ∞bind-cong-l : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞≈⟨ i ⟩≈ b∞) →
@@ -204,7 +203,7 @@ mutual
   bind-cong : ∀ {i A B}  {a? b? : Delay ∞ A} (eq : a? ≈⟨ i ⟩≈ b?)
               {k l : A → Delay ∞ B} (h : ∀ a → (k a) ≈⟨ i ⟩≈ (l a)) →
               (a? >>= k) ≈⟨ i ⟩≈ (b? >>= l)
-  bind-cong (≈now a)    h = h a
+  bind-cong (≈now a .a refl) h = h a
   bind-cong (≈later eq) h = ≈later (∞bind-cong eq h)
 
   ∞bind-cong : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞≈⟨ i ⟩≈ b∞)
@@ -218,7 +217,7 @@ _≈>>=_ = bind-cong
 
 mutual -- why don't I need size i here?
   bind-now : ∀{A}(m : Delay ∞ A) → m ≈ (m >>= now)
-  bind-now (now a)   = ≈now a
+  bind-now (now a)   = ≈now a a refl
   bind-now (later m) = ≈later (∞bind-now m)
 
   ∞bind-now : ∀{A}(m : ∞Delay ∞ A) → m ∞≈ (m ∞>>= now)
@@ -271,7 +270,7 @@ map⇓ f (later⇓ a⇓) = later⇓ (map⇓ f a⇓)
 
 -- some lemmas about convergence
 subst≈⇓ : ∀{A}{t t' : Delay ∞ A}{n : A} → t ⇓ n → t ≈ t' → t' ⇓ n
-subst≈⇓ now⇓ (≈now a) = now⇓
+subst≈⇓ now⇓ (≈now a .a refl) = now⇓
 subst≈⇓ (later⇓ p) (≈later eq) = later⇓ (subst≈⇓ p (≈force eq))
 
 uniq⇓ : ∀{A}{a? : Delay ∞ A}{a a' : A} → a? ⇓ a → a? ⇓ a' → a ≡ a'
@@ -332,7 +331,7 @@ mutual
 mutual
   transD : ∀{i}{A : Set} (P : A → Set){a? b? : Delay ∞ A} →
            a? ≈⟨ i ⟩≈ b? → Delay₁ i P a? → Delay₁ i P b?
-  transD P (≈now a)    (now₁ p)   = now₁ p
+  transD P (≈now a .a refl)    (now₁ p)   = now₁ p
   transD P (≈later eq) (later₁ p) = later₁ $ ∞transD P eq p
 
   ∞transD : ∀{i}{A : Set}(P : A → Set){a? b? : ∞Delay ∞ A} →
@@ -379,3 +378,4 @@ mutual
             (g : ∀ a → P a → Delay₁ ∞ Q (f a)) →
             ∞Delay₁ ∞ P a? → ∞Delay₁ ∞ Q (a? ∞>>= f)
   force₁ (∞bindD P Q f g p) = bindD P Q f g (force₁ p)
+

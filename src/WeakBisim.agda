@@ -88,7 +88,7 @@ open ∞Delay_∋_~⟨_⟩~_ public
 
 mutual
   ≈→~ : ∀{i A R}{a? b? : Delay ∞ A} → (∀ {a} → R a a) → a? ≈⟨ i ⟩≈ b? → Delay R ∋ a? ~⟨ i ⟩~ b?
-  ≈→~ X (≈now a)    = ~now now⇓ now⇓ X
+  ≈→~ X (≈now a .a refl)    = ~now now⇓ now⇓ X
   ≈→~ X (≈later eq) = ~later (∞≈→~ X eq)
 
   ∞≈→~ : ∀{i A R}{a∞ b∞ : ∞Delay ∞ A} → (∀ {a} → R a a) → a∞ ∞≈⟨ i ⟩≈ b∞ →

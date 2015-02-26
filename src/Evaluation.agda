@@ -47,8 +47,8 @@ mutual
 mutual
   reneval    : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Ren Δ′ Δ) →
              (renval η <$> (eval t ρ)) ≈⟨ i ⟩≈ (eval t (renenv η ρ))
-  reneval (var x)   ρ η rewrite lookup≤ x ρ η = ≈now _
-  reneval (abs t)   ρ η = ≈now _
+  reneval (var x)   ρ η rewrite lookup≤ x ρ η = ≈now _ _ refl
+  reneval (abs t)   ρ η = ≈now _ _ refl
   reneval (app t u) ρ η =
     proof
     ((eval t ρ >>=
@@ -116,7 +116,7 @@ mutual
 mutual
   rennereadback : ∀{i Γ Δ a}(η : Ren Δ Γ)(t : NeVal Γ a) →
                 (rennen η <$> nereadback t) ≈⟨ i ⟩≈ (nereadback (rennev η t))
-  rennereadback η (var x) = ≈now _
+  rennereadback η (var x) = ≈now _ _ refl
   rennereadback η (app t u) =
     proof
     ((nereadback t >>=
