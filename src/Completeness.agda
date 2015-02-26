@@ -27,6 +27,26 @@ mutual
   _C∋_~_ : ∀{Γ}(a : Ty) (v? w? : Delay ∞ (Val Γ a)) → Set
   a C∋ v? ~ w? = Delay (VLR a) ∋ v? ~ w?
 
+
+V∋~sym : ∀{Γ}(a : Ty){v v' : Val Γ a} →
+           a V∋ v ~ v' → a V∋ v' ~ v
+V∋~sym ★       {ne _}{ne _} p  = ~sym sym p
+V∋~sym (a ⇒ b)              p ρ u u' q =
+  ~sym (V∋~sym b) (p ρ u' u (V∋~sym a q)) 
+
+V∋~trans : ∀{Γ}(a : Ty){v v' v'' : Val Γ a} →
+           a V∋ v ~ v' → a V∋ v' ~ v'' → a V∋ v ~ v''
+V∋~trans ★ {ne n}{ne n'}{ne n''} p q = ~trans trans p q
+V∋~trans (a ⇒ b) p q ρ u u' r =
+  ~trans {R = VLR b} (V∋~trans b)
+                     (p ρ u u (V∋~trans a r (V∋~sym a r)))
+                     (q ρ u u' r)             
+
+V∋~refl : ∀{Γ}(a : Ty){v v' : Val Γ a} →
+           a V∋ v ~ v' → a V∋ v ~ v
+V∋~refl a p = V∋~trans a p (V∋~sym a p)
+
+
 -- Environments ρ and ρ' are related.
 
 _~E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
@@ -35,9 +55,14 @@ _~E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
 
 -- Closure under renaming
 
-renV~ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val Δ a} (v~v' : VLR a v v') → VLR a (renval η v) (renval η v')
-renV~ ★ η {ne n}{ne n'} p = {!!}
-renV~ (a ⇒ a₁) η p ρ u u' u~u' = {!!}
+renV~ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val Δ a} (v~v' : VLR a v v') →
+        VLR a (renval η v) (renval η v')
+renV~ ★       η {ne n}{ne n'} p =
+  ~trans trans (~sym sym $ ≈→~ (rennereadback η n))
+         (~trans trans (map~ (rennen η) (λ _ _ → cong (rennen η)) p)
+                 (≈→~ (rennereadback η n')))
+renV~ (a ⇒ b) η p ρ u u' q =
+  ~trans (V∋~trans b) {!≈→~!} (~trans (V∋~trans b) (p (renComp ρ η) u u' q) {!!})
 
 renE~ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ~ρ' : ρ ~E ρ') → (renenv η ρ) ~E (renenv η ρ')
 renE~ η {ε} {ε} ρ~ρ' = _

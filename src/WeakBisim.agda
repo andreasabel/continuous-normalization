@@ -97,10 +97,28 @@ mutual
 -- two computations are weakly bisimilar, and one converges,
 -- so does the other, and to the same value
 
-subst~⇓ : ∀{A}{t t' : Delay ∞ A}{n : A} → t ⇓ n → t ~⟨ ∞ ⟩~ t' → t' ⇓ n
-subst~⇓ now⇓       (~now now⇓ q refl)       = q
-subst~⇓ (later⇓ p) (~now (later⇓ p') q' r') = subst~⇓ p (~now p' q' r')
-subst~⇓ (later⇓ p) (~later q)               = later⇓ (subst~⇓ p (~force q))
+subst~⇓ : ∀{A R}{t t' : Delay ∞ A}{n : A} → t ⇓ n → Delay R ∋ t ~ t' → t' ⇓
+subst~⇓        now⇓       (~now a⇓ b⇓ aRb)          = _ , b⇓
+subst~⇓ {R = R}(later⇓ p) (~now (later⇓ a⇓) b⇓ aRb) =
+  subst~⇓ {R = R} p (~now a⇓ b⇓ aRb)
+subst~⇓        (later⇓ p) (~later ∞p)               =
+  let n' , p = subst~⇓ p (~force ∞p) in n' , later⇓ p
+
+-- don't want to assume symmetry of R in ~trans, so... 
+subst~⇓' : ∀{A R}{t t' : Delay ∞ A}{n : A} → t' ⇓ n → Delay R ∋ t ~ t' → t ⇓
+subst~⇓'         now⇓       (~now a⇓ b⇓ aRb)          = _  , a⇓
+subst~⇓' {R = R} (later⇓ p) (~now a⇓ (later⇓ b⇓) aRb) =
+  subst~⇓' {R = R} p (~now a⇓ b⇓ aRb)
+subst~⇓'         (later⇓ p) (~later ∞p)               =
+  let n' , p = subst~⇓' p (~force ∞p) in n' , later⇓ p 
+
+
+det~⇓ : ∀{A R}{t t' : Delay ∞ A}{n n' : A} →
+        t ⇓ n → Delay R ∋ t ~ t' → t' ⇓ n' → R n n'
+det~⇓ p (~now a⇓ b⇓ aRb) r with uniq⇓ p a⇓ | uniq⇓ b⇓ r
+... | refl | refl = aRb
+det~⇓ (later⇓ p) (~later ∞p) (later⇓ r) = det~⇓ p (~force ∞p) r
+
 
 -- Reflexivity
 
@@ -113,24 +131,37 @@ subst~⇓ (later⇓ p) (~later q)               = later⇓ (subst~⇓ p (~force 
 -- Symmetry
 
 mutual
-  ~sym : ∀ {i A} {a? b? : Delay ∞ A} → a? ~⟨ i ⟩~ b? → b? ~⟨ i ⟩~ a?
-  ~sym (~now p q r) = ~now q p (sym r)
-  ~sym (~later p)   = ~later (∞~sym p)
+  ~sym : ∀ {i A R} {a? b? : Delay ∞ A} →
+        (∀ {a b} → R a b → R b a) → 
+         Delay R ∋ a? ~⟨ i ⟩~ b? → Delay R ∋ b? ~⟨ i ⟩~ a?
+  ~sym X (~now p q r) = ~now q p (X r)
+  ~sym X (~later p)   = ~later (∞~sym X p)
 
-  ∞~sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → a? ∞~⟨ i ⟩~ b? → b? ∞~⟨ i ⟩~ a?
-  ~force (∞~sym p) = ~sym (~force p)
+  ∞~sym : ∀ {i A R} {a? b? : ∞Delay ∞ A} →
+          (∀ {a b} → R a b → R b a) →
+          ∞Delay R ∋ a? ~⟨ i ⟩~ b? → ∞Delay R ∋ b? ~⟨ i ⟩~ a?
+  ~force (∞~sym X p) = ~sym X (~force p)
 
 -- Transitivity
 
 mutual
-  ~trans : ∀ {i A} {a? b? c? : Delay ∞ A}
-    (eq : a? ~⟨ ∞ ⟩~ b?) (eq' : b? ~⟨ ∞ ⟩~ c?) → a? ~⟨ i ⟩~ c?
-  ~trans (~now p q refl) (~now p' q' refl) = ~now p q' (uniq⇓ q p')
-  ~trans (~now p q r)    p'                = ~now p (subst~⇓ q  p') r
-  ~trans p               (~now p' q' r')   = ~now (subst~⇓ p' (~sym p)) q' r'
-  ~trans (~later p)      (~later p')       = ~later (∞~trans p p')
+  ~trans : ∀ {i A R} {a? b? c? : Delay ∞ A} → 
+   (∀ {a b c} → R a b → R b c → R a c) → 
+   (eq : Delay R ∋ a? ~⟨ ∞ ⟩~ b?) (eq' : Delay R ∋ b? ~⟨ ∞ ⟩~ c?) →
+    Delay R ∋ a? ~⟨ i ⟩~ c?
+  ~trans {R = R} X (~now p q r) (~now p' q' r') =
+    ~now p q' (X r (subst (λ x → R x _) (sym (uniq⇓ q p')) r' ))
+  ~trans X (~now p q r)    p'                = let x , y = subst~⇓ q p' in
+    ~now p y (X r (det~⇓ q p' y))
+    
+  ~trans X p               (~now p' q' r')   = let x , y = subst~⇓' p' p in
+    ~now y q' (X (det~⇓ y p p') r')
 
-  ∞~trans : ∀ {i A} {a∞ b∞ c∞ : ∞Delay ∞ A}
-    (eq : a∞ ∞~⟨ ∞ ⟩~ b∞) (eq' : b∞ ∞~⟨ ∞ ⟩~ c∞) → a∞ ∞~⟨ i ⟩~ c∞
-  ~force (∞~trans p p') = ~trans (~force p) (~force p')
+  ~trans X (~later p)      (~later p')       = ~later (∞~trans X p p')
+
+  ∞~trans : ∀ {i A R} {a∞ b∞ c∞ : ∞Delay ∞ A} → 
+    (∀ {a b c} → R a b → R b c → R a c) → 
+    (eq : ∞Delay R ∋ a∞ ~⟨ ∞ ⟩~ b∞) (eq' : ∞Delay R ∋ b∞ ~⟨ ∞ ⟩~ c∞) →
+    ∞Delay R ∋ a∞ ~⟨ i ⟩~ c∞
+  ~force (∞~trans X p p') = ~trans X (~force p) (~force p')
 
