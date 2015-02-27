@@ -91,38 +91,47 @@ renE~ η {ρ , v} {ρ' , v'} (ρ~ρ' , v~v') = (renE~ η ρ~ρ') , (renV~ _ η v
 
 -- Substitution lemma.
 
-{-
-DEnv : ∀ Γ Δ → Set
-DEnv Γ Δ = ∀{a} → Var Δ a → Delay ∞ (Val Γ a)
+data DEnv (Δ : Cxt) : (Γ : Cxt) → Set where
+  ε   : DEnv Δ ε
+  _,_ : ∀ {Γ a} (ρ : DEnv Δ Γ) (v : Delay ∞ (Val Δ a)) → DEnv Δ (Γ , a)
 
-sequence : ∀{Γ} Δ → DEnv Γ Δ → Delay ∞ (Env Γ Δ)
-sequence ε f = now ε
-sequence (Δ , a) f = _,_ <$> sequence Δ (f ∘ suc) <*> f zero
+sequence : ∀{Γ Δ} → DEnv Γ Δ → Delay ∞ (Env Γ Δ)
+sequence ε = now ε
+sequence (ρ , v?) = _,_ <$> sequence ρ <*> v?
 
 evalS₀ : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → DEnv Γ Δ′
-evalS₀ σ ρ = λ x → eval (looks σ x) ρ
+evalS₀ ε       ρ = ε
+evalS₀ (σ , t) ρ = evalS₀ σ ρ , eval t ρ
+
 
 evalS : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → Delay ∞ (Env Γ Δ′)
-evalS {Δ′ = Δ′} σ ρ = sequence Δ′ (evalS₀ σ ρ)
+evalS σ ρ = sequence (evalS₀ σ ρ)
 
+{-
 evalS-ε : ∀{Γ Δ} (σ : Sub Δ ε) (ρ : Env Γ Δ) → evalS σ ρ ≡ now ε
 evalS-ε σ ρ = refl
+-}
 
 substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′ Δ) →
   a C∋ (lookup x <$> evalS σ ρ) ~ eval (looks σ x) ρ
+substitution-var zero    (σ , v) ρ = ~trans (V∋~trans _) {!!} {!bind-now!}
+substitution-var (suc x) (σ , v) ρ = ~trans (V∋~trans _) {!!} (substitution-var x σ ρ)
+
+{-
 -- substitution-var {Δ′ = ε} x σ ρ = {!!}
 -- substitution-var {Δ′ = Δ′ , a} x σ ρ = {!!}
 substitution-var {ε} () σ ρ
 substitution-var {Γ , a} zero σ ρ = {!!}
   --  a C∋ lookup zero <$> evalS σ ρ ~ eval (σ zero) ρ
 substitution-var {Γ , a} (suc x) σ ρ = {!!}
+-}
 
 substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′ Δ) →
   a C∋ (eval t =<< evalS σ ρ) ~ eval (sub σ t) ρ
-substitution (var x) σ ρ = {!!}
+substitution (var x) σ ρ = {!eval t!}
 substitution (abs t) σ ρ = {!!}
-substitution (app t t₁) σ ρ = {!!}
--}
+substitution (app t t₁) σ ρ = {!substitution t σ ρ !}
+
 
 -- Extensional equality of typed terms (evaluate to bisimilar values).
 
@@ -202,8 +211,9 @@ fund : ∀{Γ a}{t t' : Tm Γ a} →
 fund (var≡ {x = x} refl) ρ~ρ' =  ⟦var⟧ x ρ~ρ'
 fund (abs≡ t≡t') ρ~ρ' = ⟦abs⟧' (fund t≡t') ρ~ρ'
 fund (app≡ eq eq₁) ρ~ρ' = ⟦app⟧ (fund eq ρ~ρ') (fund eq₁ ρ~ρ')
-fund (beta≡ {t = t}{u = u}) ρ~ρ' = {!!}
-fund eta≡ ρ~ρ' = {!!}
+fund (beta≡ {t = t}{u = u}){Δ}{ρ}{ρ'} ρ~ρ' =
+  {!idext t !}
+fund (eta≡ {t = t}) ρ~ρ' = {!(idext t ρ~ρ') !}
 fund (sym≡ eq) ρ~ρ' = ~sym (V∋~sym _) (fund eq (~Esym ρ~ρ'))
 fund (trans≡ eq eq₁) ρ~ρ' = ~trans (V∋~trans _) (fund eq (~Erefl ρ~ρ')) (fund eq₁ ρ~ρ')
 fund (refl≡ {t = t}) {ρ = ρ}{ρ'} p = idext t p
