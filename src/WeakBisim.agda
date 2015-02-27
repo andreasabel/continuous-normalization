@@ -189,21 +189,23 @@ mutual
     ∞Delay R ∋ a∞ ~⟨ i ⟩~ c∞
   ~force (∞~trans X p p') = ~trans X (~force p) (~force p')
 
-bindlem : ∀{A B R i}(X : ∀{b} → R b b)
-          {f : A → Delay ∞ B}{v : A}{v? : Delay ∞ A} →
+bindlem : ∀{A B R i}{v : A} {f : A → Delay ∞ B} → Delay R ∋ f v ~ f v  → 
+         {v? : Delay ∞ A} →
           v? ⇓ v → Delay R ∋ v? >>= f ~⟨ i ⟩~ f v
-bindlem X now⇓       = ~refl X _
+bindlem X now⇓       = X
 bindlem X (later⇓ p) = ~laterl (bindlem X p)
 
+{-
 mutual
   ~reflPER  : ∀ {i A}{R : A → A → Set}(X : ∀ {a a'} → R a a' → R a a)
               (a? : Delay ∞ A){b? : Delay ∞ A} → Delay R ∋ a? ~⟨ i ⟩~ b? →
               Delay R ∋ a? ~⟨ i ⟩~ a?
   ~reflPER X (now x) (~now now⇓ b⇓ aRb) = ~now now⇓ now⇓ (X aRb)
-  ~reflPER X (later x){b?} (~now (later⇓ a⇓) b⇓ aRb) = ?
+  ~reflPER X (later x){b?} (~now (later⇓ a⇓) b⇓ aRb) = {!!}
   ~reflPER X (later a∞) (~later ∞p) = ~later (∞~reflPER X a∞ ∞p)
 
   ∞~reflPER  : ∀ {i A}{R : A → A → Set}(X : ∀ {a a'} → R a a' → R a a)
               (a? : ∞Delay ∞ A){b? : ∞Delay ∞ A} → ∞Delay R ∋ a? ~⟨ i ⟩~ b? →
               ∞Delay R ∋ a? ~⟨ i ⟩~ a?
   ~force (∞~reflPER X a? p) = ~reflPER X (force a?) (~force p)
+-}

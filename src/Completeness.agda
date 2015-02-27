@@ -46,6 +46,10 @@ V∋~refl : ∀{Γ}(a : Ty){v v' : Val Γ a} →
            a V∋ v ~ v' → a V∋ v ~ v
 V∋~refl a p = V∋~trans a p (V∋~sym a p)
 
+C∋~refl : ∀{Γ}(a : Ty){v v' : Delay ∞ (Val Γ a)} →
+           a C∋ v ~ v' → a C∋ v ~ v
+C∋~refl a p = ~trans (V∋~trans a) p (~sym (V∋~sym a) p)
+
 
 -- Environments ρ and ρ' are related.
 
@@ -166,7 +170,7 @@ mutual
           b C∋ v >>= apply f ~ (v' >>= apply f')
   ⟦app⟧' p (~now a⇓ b⇓ aRb) =
     ~trans (V∋~trans _)
-           (bindlem {!≈reflPER (V∋~refl _) _ (⟦app⟧'' p aRb)!} a⇓) (~trans (V∋~trans _) (⟦app⟧'' p aRb) (~sym (V∋~sym _) (bindlem {!!} b⇓)))
+           (bindlem (C∋~refl _ (⟦app⟧'' p aRb)) a⇓) (~trans (V∋~trans _) (⟦app⟧'' p aRb) (~sym (V∋~sym _) (bindlem (C∋~refl _ (~sym (V∋~sym _) (⟦app⟧'' p aRb))) b⇓)))
   ⟦app⟧' p (~later ∞p) = ~later (∞⟦app⟧' p ∞p)
 
   ∞⟦app⟧' : ∀{Γ a b}{f f' : Val Γ (a ⇒ b)}{v v' : ∞Delay ∞ (Val Γ a)} →
@@ -178,14 +182,13 @@ mutual
   ⟦app⟧ : ∀{Γ a b}{f f' : Delay ∞ (Val Γ (a ⇒ b))}{v v' : Delay ∞ (Val Γ a)} →
           (a ⇒ b) C∋ f ~ f' → a C∋ v ~ v' →
           b C∋ (f >>= λ f → v >>= apply f) ~ (f' >>= λ f' → v' >>= apply f')
-  ⟦app⟧ (~now a⇓ b⇓ aRb) q = ~trans (V∋~trans _) (bindlem {!!} a⇓) (~trans (V∋~trans _) (⟦app⟧' aRb q) (~sym (V∋~sym _) (bindlem {!!} b⇓) ))
+  ⟦app⟧ (~now a⇓ b⇓ aRb) q = ~trans (V∋~trans _) (bindlem (C∋~refl _ (⟦app⟧' aRb q)) a⇓) (~trans (V∋~trans _) (⟦app⟧' aRb q) (~sym (V∋~sym _) (bindlem (C∋~refl _ (~sym (V∋~sym _) (⟦app⟧' aRb q))) b⇓) ))
   ⟦app⟧ (~later ∞p) q = ~later (∞⟦app⟧ ∞p q)
 
   ∞⟦app⟧ : ∀{Γ a b}{f f' : ∞Delay ∞ (Val Γ (a ⇒ b))}{v v' : Delay ∞ (Val Γ a)} →
           ∞Delay VLR (a ⇒ b) ∋ f ~ f' → Delay VLR a ∋ v ~ v' →
           ∞Delay VLR b ∋ (f ∞>>= λ f → v >>= apply f) ~ (f' ∞>>= λ f' → v' >>= apply f')
   ~force (∞⟦app⟧ p q) = ⟦app⟧ (~force p) q
-
 
 -- did Andreas say not to do it this way?
 idext : ∀{Γ a}(t : Tm Γ a) → t ~T t
