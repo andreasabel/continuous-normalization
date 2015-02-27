@@ -86,7 +86,7 @@ renV∋ (a ⇒ b){t}{v} p σ ρ s u s~u =
          (≈trans (≈sym $ bind-now (apply (renval (renComp ρ σ) v) u))
                  (subst (λ x → apply x u ≈ apply (renval ρ (renval σ v)) u)
                         (renvalcomp ρ σ v)
-                        (≈refl _)))
+                        (≈refl refl _)))
          (mapD
            (λ v₁ → b V∋ app (ren (renComp ρ σ) t) s ~ v₁)
            (λ v₁ → b V∋ app (ren ρ (ren σ t)) s ~ v₁)
@@ -123,7 +123,7 @@ fundapp {Γ}{a}{b}{t}{f} p {u}{v} q = transD
     id
     (λ p → V∋subst p (cong (λ t → app t u) (renid t)))
     (transD (VLR b (app (ren renId t) u))
-            (subst (λ x → apply x v ≈ apply f v) (sym $ renvalid f)  (≈refl _))
+            (subst (λ x → apply x v ≈ apply f v) (sym $ renvalid f)  (≈refl refl _))
             (p renId u v q)))
 
 -- do we need this?

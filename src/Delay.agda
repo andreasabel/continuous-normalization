@@ -108,14 +108,17 @@ _∞≈_ = λ {i} {A} a∞ b∞ → _∞≈⟨_⟩≈_ {A} a∞ i b∞
 -- Reflexivity
 
 mutual
-  ≈refl  : ∀ {i A} (a? : Delay ∞ A) → a? ≈⟨ i ⟩≈ a?
-  ≈refl (now a)    = ≈now a a refl 
-  ≈refl (later a∞) = ≈later (∞≈refl a∞)
+  ≈refl  : ∀ {i A}{R : A → A → Set}(X : ∀ {a} → R a a)
+           (a? : Delay ∞ A) → Delay R ∋ a? ≈⟨ i ⟩≈ a?
+  ≈refl X (now a)    = ≈now a a X
+  ≈refl X (later a∞) = ≈later (∞≈refl X a∞)
 
-  ∞≈refl : ∀ {i A} (a∞ : ∞Delay ∞ A) → _∞≈_ {i} a∞ a∞
-  ≈force (∞≈refl a∞) = ≈refl (force a∞)
+  ∞≈refl : ∀ {i A}{R : A → A → Set}(X : ∀ {a} → R a a)
+           (a∞ : ∞Delay ∞ A) → ∞Delay R ∋ a∞ ≈⟨ i ⟩≈ a∞
+  ≈force (∞≈refl X a∞) = ≈refl X (force a∞)
 
 -- Symmetry
+
 
 mutual
   ≈sym : ∀ {i A} {a? b? : Delay ∞ A} → a? ≈⟨ i ⟩≈ b? → b? ≈⟨ i ⟩≈ a?
@@ -144,7 +147,7 @@ mutual
   { Carrier       = Delay ∞ A
   ; _≈_           = _≈_ {i}
   ; isEquivalence = record
-    { refl  = λ {a?} → ≈refl a?
+    { refl  = λ {a?} → ≈refl refl a?
     ; sym   = ≈sym
     ; trans = ≈trans
     }
@@ -160,7 +163,7 @@ module ≈-Reasoning {i : Size} {A : Set} where
   { Carrier       = ∞Delay ∞ A
   ; _≈_           = _∞≈_ {i}
   ; isEquivalence = record
-    { refl  = λ {a?} → ∞≈refl a?
+    { refl  = λ {a?} → ∞≈refl  refl a?
     ; sym   = ∞≈sym
     ; trans = ∞≈trans
     }
@@ -177,7 +180,7 @@ module ∞≈-Reasoning {i : Size} {A : Set} where
 mutual
   bind-cong-l : ∀ {i A B} {a? b? : Delay ∞ A} (eq : a? ≈⟨ i ⟩≈ b?)
     (k : A → Delay ∞ B) → (a? >>= k) ≈⟨ i ⟩≈ (b? >>= k)
-  bind-cong-l (≈now a .a refl) k = ≈refl (k a)
+  bind-cong-l (≈now a .a refl) k = ≈refl refl (k a)
   bind-cong-l (≈later eq) k = ≈later (∞bind-cong-l eq k)
 
   ∞bind-cong-l : ∀ {i A B} {a∞ b∞ : ∞Delay ∞ A} (eq : a∞ ∞≈⟨ i ⟩≈ b∞) →
@@ -227,7 +230,7 @@ mutual
   bind-assoc : ∀{i A B C}(m : Delay ∞ A)
                {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
                ((m >>= k) >>= l) ≈⟨ i ⟩≈ (m >>= λ a → k a >>= l)
-  bind-assoc (now a)    = ≈refl _
+  bind-assoc (now a)    = ≈refl refl _
   bind-assoc (later a∞) = ≈later (∞bind-assoc a∞)
 
   ∞bind-assoc : ∀{i A B C}(a∞ : ∞Delay ∞ A)
@@ -268,6 +271,12 @@ map⇓ : ∀ {A B} {a : A} {a? : Delay ∞ A}
 map⇓ f now⇓        = now⇓
 map⇓ f (later⇓ a⇓) = later⇓ (map⇓ f a⇓)
 
+{-
+bind⇓' : ∀ {A B} {a : A} {a? : Delay ∞ A}
+  (f : A → Delay ∞ B) (a⇓ : a? ⇓ a) → (a? >>= f) ⇓ f a
+bind⇓' f now⇓        = {!!}
+bind⇓' f (later⇓ a⇓) = {!!} -- later⇓ (map⇓ f a⇓)
+-}
 -- some lemmas about convergence
 subst≈⇓ : ∀{A}{t t' : Delay ∞ A}{n : A} → t ⇓ n → t ≈ t' → t' ⇓ n
 subst≈⇓ now⇓ (≈now a .a refl) = now⇓
@@ -299,13 +308,6 @@ bind⇓ f (later⇓ p) q = later⇓ (bind⇓ f p q)
 -- handy when you can't pattern match like in a let definition
 unlater : ∀{A}{∞a : ∞Delay ∞ A}{a : A} → later ∞a ⇓ a → force ∞a ⇓ a
 unlater (later⇓ p) = p
-
-
-
-
-
-
-
 
 {-
 mutual
@@ -379,3 +381,15 @@ mutual
             ∞Delay₁ ∞ P a? → ∞Delay₁ ∞ Q (a? ∞>>= f)
   force₁ (∞bindD P Q f g p) = bindD P Q f g (force₁ p)
 
+
+mutual
+  ≈reflPER  : ∀ {i A}{R : A → A → Set}(X : ∀ {a a'} → R a a' → R a a)
+              (a? : Delay ∞ A){b? : Delay ∞ A} → Delay R ∋ a? ≈⟨ i ⟩≈ b? →
+              Delay R ∋ a? ≈⟨ i ⟩≈ a?
+  ≈reflPER X (now a) (≈now .a a' p) = ≈now a a (X p)
+  ≈reflPER X (later a∞) (≈later eq) = ≈later (∞≈reflPER X a∞ eq)         
+
+  ∞≈reflPER  : ∀ {i A}{R : A → A → Set}(X : ∀ {a a'} → R a a' → R a a)
+              (a? : ∞Delay ∞ A){b? : ∞Delay ∞ A} → ∞Delay R ∋ a? ≈⟨ i ⟩≈ b? →
+              ∞Delay R ∋ a? ≈⟨ i ⟩≈ a?
+  ≈force (∞≈reflPER X a? p) = ≈reflPER X (force a?) (≈force p)

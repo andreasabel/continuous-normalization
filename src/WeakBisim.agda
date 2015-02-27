@@ -42,6 +42,7 @@ mutual
          ∞Delay R ∋ a ~ a' → ∞Delay S ∋ f ∞<$> a ~ (f ∞<$> a')
   ~force (∞map~ f g p) = map~ f g (~force p)
 
+
 -- Delaying left only
 
 mutual
@@ -87,13 +88,26 @@ open ∞Delay_∋_~⟨_⟩~_ public
 -- Strong bisimilarity implies weak bisimilarity.
 
 mutual
-  ≈→~ : ∀{i A R}{a? b? : Delay ∞ A} → (∀ {a} → R a a) → a? ≈⟨ i ⟩≈ b? → Delay R ∋ a? ~⟨ i ⟩~ b?
-  ≈→~ X (≈now a .a refl)    = ~now now⇓ now⇓ X
-  ≈→~ X (≈later eq) = ~later (∞≈→~ X eq)
+  ≈→~ : ∀{i A R}{a? b? : Delay ∞ A} → 
+        Delay R ∋ a? ≈⟨ i ⟩≈ b? → Delay R ∋ a? ~⟨ i ⟩~ b?
+  ≈→~ (≈now a a' p)    = ~now now⇓ now⇓ p
+  ≈→~ (≈later eq) = ~later (∞≈→~ eq)
 
-  ∞≈→~ : ∀{i A R}{a∞ b∞ : ∞Delay ∞ A} → (∀ {a} → R a a) → a∞ ∞≈⟨ i ⟩≈ b∞ →
+  ∞≈→~ : ∀{i A R}{a∞ b∞ : ∞Delay ∞ A} → 
+         ∞Delay R ∋ a∞ ≈⟨ i ⟩≈ b∞ →
          ∞Delay R ∋ a∞ ~⟨ i ⟩~ b∞
-  ~force (∞≈→~ X eq) = ≈→~ X (≈force eq)
+  ~force (∞≈→~ eq) = ≈→~ (≈force eq)
+
+{-
+bindlem : ∀{A B R i}{f f' : A → Delay ∞ B}{v v' : A}{v? v?' : Delay ∞ A} →
+          Delay R ∋ v? >>= f ~⟨ i ⟩~ (v?' >>= f') → v? ⇓ v → v?' ⇓ v' →
+      Delay R ∋ f v ~⟨ i ⟩~ f' v'
+bindlem p now⇓       now⇓       = p
+bindlem p now⇓       (later⇓ r) = {!p!} 
+bindlem p (later⇓ q) now⇓       = {!~laterl!}
+bindlem (~now (later⇓ a⇓) (later⇓ b⇓) aRb) (later⇓ q) (later⇓ r) = bindlem (~now a⇓ b⇓ aRb) q r
+bindlem (~later ∞p) (later⇓ q) (later⇓ r) = {!!}
+-}
 
 -- two computations are weakly bisimilar, and one converges,
 -- so does the other, and to the same value
@@ -121,13 +135,22 @@ det~⇓ p (~now a⇓ b⇓ aRb) r with uniq⇓ p a⇓ | uniq⇓ b⇓ r
 det~⇓ (later⇓ p) (~later ∞p) (later⇓ r) = det~⇓ p (~force ∞p) r
 
 
+
+
 -- Reflexivity
 
-~refl  : ∀ {i A} (a? : Delay ∞ A) → a? ~⟨ i ⟩~ a?
-~refl a = ≈→~ refl (≈refl a)
+~refl  : ∀ {i A R}(X : ∀{a} → R a a)(a? : Delay ∞ A) → Delay R ∋ a? ~⟨ i ⟩~ a?
+~refl X a = ≈→~ (≈refl X a)
 
-∞~refl : ∀ {i A} (a∞ : ∞Delay ∞ A) → _∞~_ {i} a∞ a∞
-∞~refl a∞ = ∞≈→~ refl (∞≈refl a∞)
+∞~refl : ∀ {i A R}(X : ∀{a} → R a a)(a∞ : ∞Delay ∞ A) → ∞Delay R ∋ a∞ ~⟨ i ⟩~ a∞
+∞~refl X a∞ = ∞≈→~ (∞≈refl X a∞)
+
+-- ~laterl seems essential here, and a reflexive R
+~bind : ∀{A B R} → (∀ {a} → R a a) → (f : A → Delay ∞ B)
+        {?a : Delay ∞ A}{a : A} → ?a ⇓ a → Delay R ∋ (?a >>= f) ~ f a
+~bind X f {now x} now⇓ = ~refl X (f x)
+~bind X f {later x} (later⇓ p) = ~laterl (~bind X f {force x} p)
+
 
 -- Symmetry
 
@@ -166,3 +189,21 @@ mutual
     ∞Delay R ∋ a∞ ~⟨ i ⟩~ c∞
   ~force (∞~trans X p p') = ~trans X (~force p) (~force p')
 
+bindlem : ∀{A B R i}(X : ∀{b} → R b b)
+          {f : A → Delay ∞ B}{v : A}{v? : Delay ∞ A} →
+          v? ⇓ v → Delay R ∋ v? >>= f ~⟨ i ⟩~ f v
+bindlem X now⇓       = ~refl X _
+bindlem X (later⇓ p) = ~laterl (bindlem X p)
+
+mutual
+  ~reflPER  : ∀ {i A}{R : A → A → Set}(X : ∀ {a a'} → R a a' → R a a)
+              (a? : Delay ∞ A){b? : Delay ∞ A} → Delay R ∋ a? ~⟨ i ⟩~ b? →
+              Delay R ∋ a? ~⟨ i ⟩~ a?
+  ~reflPER X (now x) (~now now⇓ b⇓ aRb) = ~now now⇓ now⇓ (X aRb)
+  ~reflPER X (later x){b?} (~now (later⇓ a⇓) b⇓ aRb) = ?
+  ~reflPER X (later a∞) (~later ∞p) = ~later (∞~reflPER X a∞ ∞p)
+
+  ∞~reflPER  : ∀ {i A}{R : A → A → Set}(X : ∀ {a a'} → R a a' → R a a)
+              (a? : ∞Delay ∞ A){b? : ∞Delay ∞ A} → ∞Delay R ∋ a? ~⟨ i ⟩~ b? →
+              ∞Delay R ∋ a? ~⟨ i ⟩~ a?
+  ~force (∞~reflPER X a? p) = ~reflPER X (force a?) (~force p)

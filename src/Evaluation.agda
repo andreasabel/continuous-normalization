@@ -92,7 +92,7 @@ mutual
 
   renapply  : ∀{i Γ Δ a b} (f : Val Γ (a ⇒ b))(v : Val Γ a)(η : Ren Δ Γ) →
             (renval η <$> apply f v) ≈⟨ i ⟩≈ (apply (renval η f) (renval η v))
-  renapply (ne x)    v η = ≈refl _
+  renapply (ne x)    v η = ≈refl refl _
   renapply (lam t ρ) v η = ≈later (renbeta t ρ v η)
 
   renbeta : ∀ {i Γ Δ E a b} (t : Tm (Γ , a) b)(ρ : Env Δ Γ) (v : Val Δ a) →
