@@ -8,6 +8,8 @@ open import Syntax
 open import RenamingAndSubstitution
 open import Evaluation
 
+infix 8 C⟦_⟧_ E⟦_⟧_
+
 mutual
   V⟦_⟧ : ∀{Γ}(a : Ty) → Val Γ a → Set
   V⟦ ★ ⟧ (ne t) = nereadback t ⇓

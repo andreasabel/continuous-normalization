@@ -32,7 +32,7 @@ V∋~sym : ∀{Γ}(a : Ty){v v' : Val Γ a} →
            a V∋ v ~ v' → a V∋ v' ~ v
 V∋~sym ★       {ne _}{ne _} p  = ~sym sym p
 V∋~sym (a ⇒ b)              p ρ u u' q =
-  ~sym (V∋~sym b) (p ρ u' u (V∋~sym a q)) 
+  ~sym (V∋~sym b) (p ρ u' u (V∋~sym a q))
 
 V∋~trans : ∀{Γ}(a : Ty){v v' v'' : Val Γ a} →
            a V∋ v ~ v' → a V∋ v' ~ v'' → a V∋ v ~ v''
@@ -40,7 +40,7 @@ V∋~trans ★ {ne n}{ne n'}{ne n''} p q = ~trans trans p q
 V∋~trans (a ⇒ b) p q ρ u u' r =
   ~trans {R = VLR b} (V∋~trans b)
                      (p ρ u u (V∋~trans a r (V∋~sym a r)))
-                     (q ρ u u' r)             
+                     (q ρ u u' r)
 
 V∋~refl : ∀{Γ}(a : Ty){v v' : Val Γ a} →
            a V∋ v ~ v' → a V∋ v ~ v
@@ -60,7 +60,7 @@ _~E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
 ~Esym : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ~E ρ' → ρ' ~E ρ
 ~Esym {ρ = ε}    {ε}       _        = _
 ~Esym {ρ = ρ , v}{ρ' , v'} (p , p') = ~Esym p  , V∋~sym _ p'
-           
+
 ~Etrans : ∀{Γ Δ}{ρ ρ' ρ'' : Env Δ Γ} → ρ ~E ρ' → ρ' ~E ρ'' → ρ ~E ρ''
 ~Etrans {ρ = ε}    {ε}       {ε}         _         _        = _
 ~Etrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ~Etrans p p' , V∋~trans _ q q'
@@ -82,7 +82,7 @@ renV~ (a ⇒ b) η {f}{f'} p ρ u u' q =
         (sym $ renvalcomp ρ η f')
         (subst (λ X → b C∋ apply X u ~ apply (renval (renComp ρ η) f') u')
                (sym $ renvalcomp ρ η f)
-               (p (renComp ρ η) u u' q)) 
+               (p (renComp ρ η) u u' q))
 
 
 renE~ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ~ρ' : ρ ~E ρ') → (renenv η ρ) ~E (renenv η ρ')
@@ -162,7 +162,7 @@ sound-β t t' ρ~ρ' u~u' eq = ~later (~delay eq)
         (renvalid f')
         (subst (λ X → b C∋ apply X v ~ apply (renval renId f') v')
                (renvalid f)
-               (p renId _ _ q)) 
+               (p renId _ _ q))
 
 mutual
   ⟦app⟧' : ∀{Γ a b}{f f' : Val Γ (a ⇒ b)}{v v' : Delay ∞ (Val Γ a)} →
@@ -206,4 +206,4 @@ fund (beta≡ {t = t}{u = u}) ρ~ρ' = {!!}
 fund eta≡ ρ~ρ' = {!!}
 fund (sym≡ eq) ρ~ρ' = ~sym (V∋~sym _) (fund eq (~Esym ρ~ρ'))
 fund (trans≡ eq eq₁) ρ~ρ' = ~trans (V∋~trans _) (fund eq (~Erefl ρ~ρ')) (fund eq₁ ρ~ρ')
-fund (refl≡ {t = t}) {ρ = ρ}{ρ'} p = idext t p 
+fund (refl≡ {t = t}) {ρ = ρ}{ρ'} p = idext t p

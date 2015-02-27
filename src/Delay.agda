@@ -34,6 +34,9 @@ force never = later never
 -- Monad instance.
 
 module Bind where
+
+  infixl 10 _>>=_  _∞>>=_
+
   mutual
     _>>=_ : ∀ {i A B} → Delay i A → (A → Delay i B) → Delay i B
     now   x >>= f = f x
@@ -133,7 +136,7 @@ mutual
 mutual
   ≈trans : ∀ {i A} {a? b? c? : Delay ∞ A}
     (eq : a? ≈⟨ i ⟩≈ b?) (eq' : b? ≈⟨ i ⟩≈ c?) → a? ≈⟨ i ⟩≈ c?
-  ≈trans (≈now a a' p)    (≈now .a' a'' q)    = ≈now a a'' (trans p q) 
+  ≈trans (≈now a a' p)    (≈now .a' a'' q)    = ≈now a a'' (trans p q)
   ≈trans (≈later eq) (≈later eq') = ≈later (∞≈trans eq eq')
 
   ∞≈trans : ∀ {i A} {a∞ b∞ c∞ : ∞Delay ∞ A}
@@ -346,7 +349,7 @@ mutual
   transP P Q p (now₁ q)   = now₁ (p q)
   transP P Q p (later₁ q) = later₁ (∞transP P Q p q)
 
-  ∞transP : ∀{i}{A : Set}(P Q : A → Set){a? : ∞Delay ∞ A} → 
+  ∞transP : ∀{i}{A : Set}(P Q : A → Set){a? : ∞Delay ∞ A} →
             (∀ {a} → P a → Q a) →
             ∞Delay₁ i P a? → ∞Delay₁ i Q a?
   force₁ (∞transP P Q p q) = transP P Q p (force₁ q)
@@ -357,11 +360,11 @@ mutual
             (f : A → B) →
             (∀ {a} → P a → Q (f a)) →
              Delay₁ i P a? → Delay₁ i Q (f <$> a?)
-  mapD P Q f p (now₁ q)   = now₁ (p q) 
+  mapD P Q f p (now₁ q)   = now₁ (p q)
   mapD P Q f p (later₁ q) = later₁ (∞mapD P Q f p q)
 
   ∞mapD : ∀{i}{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A}
-             (f : A → B) → 
+             (f : A → B) →
              (∀ {a} → P a → Q (f a)) →
              ∞Delay₁ i P a? → ∞Delay₁ i Q (f ∞<$> a?)
   force₁ (∞mapD P Q f p q) = mapD P Q f p (force₁ q)
@@ -369,14 +372,14 @@ mutual
 mutual
   -- bind
   bindD : ∀{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A} →
-            (f : A → Delay ∞ B) → 
+            (f : A → Delay ∞ B) →
             (g : ∀ a → P a → Delay₁ ∞ Q (f a)) →
             Delay₁ ∞ P a? → Delay₁ ∞ Q (a? >>= f)
   bindD P Q f g (now₁ p)   = g _ p
   bindD P Q f g (later₁ p) = later₁ (∞bindD P Q f g p)
 
   ∞bindD : ∀{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A} →
-            (f : A → Delay ∞ B) → 
+            (f : A → Delay ∞ B) →
             (g : ∀ a → P a → Delay₁ ∞ Q (f a)) →
             ∞Delay₁ ∞ P a? → ∞Delay₁ ∞ Q (a? ∞>>= f)
   force₁ (∞bindD P Q f g p) = bindD P Q f g (force₁ p)
@@ -387,7 +390,7 @@ mutual
               (a? : Delay ∞ A){b? : Delay ∞ A} → Delay R ∋ a? ≈⟨ i ⟩≈ b? →
               Delay R ∋ a? ≈⟨ i ⟩≈ a?
   ≈reflPER X (now a) (≈now .a a' p) = ≈now a a (X p)
-  ≈reflPER X (later a∞) (≈later eq) = ≈later (∞≈reflPER X a∞ eq)         
+  ≈reflPER X (later a∞) (≈later eq) = ≈later (∞≈reflPER X a∞ eq)
 
   ∞≈reflPER  : ∀ {i A}{R : A → A → Set}(X : ∀ {a a'} → R a a' → R a a)
               (a? : ∞Delay ∞ A){b? : ∞Delay ∞ A} → ∞Delay R ∋ a? ≈⟨ i ⟩≈ b? →
