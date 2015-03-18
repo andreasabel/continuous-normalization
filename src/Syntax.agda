@@ -1,11 +1,14 @@
 -- Syntax: Types, terms and contexts.
 
+{-# OPTIONS -v tc.polarity:10 #-}
+
 module Syntax where
 
 open import Library
+open import Delay
 
 infixr 6 _⇒_
-infixl 1 _,_
+infixr 4 _,_
 
 -- Types and contexts.
 
@@ -58,12 +61,13 @@ mutual
 
 mutual
 
-  data Env (Δ : Cxt) : (Γ : Cxt) → Set where
-    ε   : Env Δ ε
-    _,_ : ∀ {Γ a} (ρ : Env Δ Γ) (v : Val Δ a) → Env Δ (Γ , a)
+  data Env (i : Size) (Δ : Cxt) : (Γ : Cxt) → Set where
+    ε   : Env i Δ ε
+    _,_ : ∀ {Γ a} (ρ : Env i Δ Γ) (v : Delay i (Val i Δ a)) → Env i Δ (Γ , a)
 
-  NeVal = GNe Val
+  NeVal : (i : Size) (Δ : Cxt) (a : Ty) → Set
+  NeVal i = GNe (λ Δ a → Delay i (Val i Δ a))
 
-  data Val (Δ : Cxt) : (a : Ty) → Set where
-    ne  : ∀{a}      (n : NeVal Δ a)                   → Val Δ a
-    lam : ∀{Γ a b}  (t : Tm (Γ , a) b) (ρ : Env Δ Γ)  → Val Δ (a ⇒ b)
+  data Val (i : Size) (Δ : Cxt) : (a : Ty) → Set where
+    ne  : ∀{a}      (n : NeVal i Δ a)                   → Val i Δ a
+    lam : ∀{Γ a b}  (t : Tm (Γ , a) b) (ρ : Env i Δ Γ) → Val i Δ (a ⇒ b)
