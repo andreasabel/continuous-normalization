@@ -7,6 +7,8 @@ open import Library
 open import Category.Applicative.Indexed
 -- Coinductive delay monad.
 
+infix 10 _⇓_
+
 mutual
 
   data Delay (i : Size) (A : Set) : Set where
