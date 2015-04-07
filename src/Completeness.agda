@@ -335,13 +335,36 @@ idext (var x)   p = ⟦var⟧ x p
 idext (abs t)   p = ⟦abs⟧ _ _ p (λ η q → idext t (renE≃ η p , q))
 idext (app t u) p = ⟦app⟧ (idext t p) (idext u p)
 
+
+-- NEED: evalS₀ (wks σ) (ρ , .uσρ) ≃D evalS₀ σ' ρ'
+
 lemma : ∀{Γ a}
+  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
+  → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
+  → ∀ {u : Tm Γ a} {uσρ : Val Δ a}
+  → (u⇓ : eval (sub σ u) ρ ⇓ uσρ)
+  → evalS₀ (lifts σ) (ρ , uσρ) ≃D evalS₀ (σ' , sub σ' u) ρ'
+fst (lemma σ σ' ρ ρ' σρ≃σ'ρ' u⇓) = {!σρ≃σ'ρ'!}
+snd (lemma σ σ' ρ ρ' σρ≃σ'ρ' u⇓) = {!!}
+
+{-
+lemma : ∀{Γ a}
+  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
+  → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
+  → ∀ {u : Tm Γ a} {uσρ : Val Δ a}
+  → (u⇓ : eval (sub σ u) ρ ⇓ uσρ)
+  → evalS₀ (lifts σ) (ρ , uσρ) ≃D evalS₀ (σ' , sub σ' u) ρ'
+fst (lemma σ σ' ρ ρ' σρ≃σ'ρ' u⇓) = {!σρ≃σ'ρ'!}
+snd (lemma σ σ' ρ ρ' σρ≃σ'ρ' u⇓) = {!!}
+-}
+
+lemma' : ∀{Γ a}
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
   → (σρ≃σ'ρ' : Delay _≃E_ ∋ evalS σ ρ ≃ evalS σ' ρ')
   → ∀ {u : Tm Γ a} {uσρ : Val Δ a}
   → (u⇓ : eval (sub σ u) ρ ⇓ uσρ)
   → Delay _≃E_ ∋ evalS (lifts σ) (ρ , uσρ) ≃ evalS (σ' , sub σ' u) ρ'
-lemma σ σ' ρ ρ' σρ≃σ'ρ' u⇓ = {!!}
+lemma' σ σ' ρ ρ' σρ≃σ'ρ' u⇓ = {!!}
 
 fundt : ∀{Γ a} (t : Tm Γ a)
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
