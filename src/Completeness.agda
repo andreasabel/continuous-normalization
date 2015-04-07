@@ -189,13 +189,17 @@ _≃T_ {Γ} {a} t t' =
   ∀ {Δ} {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃E ρ')
   → a C∋ (eval t ρ) ≃ (eval t' ρ')
 
-{-
+
 -- Variables are related.
 
+
 ⟦var⟧ : ∀{Γ a} (x : Var Γ a) → var x ≃T var x
-⟦var⟧ zero    {Δ} {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = ≃now now⇓ now⇓ v≃v'
+⟦var⟧ zero    {Δ} {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') =
+  delay≃ v now⇓ v' now⇓ v≃v'
 ⟦var⟧ (suc x) {Δ} {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = ⟦var⟧ x ρ≃ρ'
 
+
+{-
 -- Trivial lemma, if you think about it. (UNUSED)
 sound-β : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b)
   {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃E ρ')
@@ -203,14 +207,26 @@ sound-β : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b)
   → b C∋ (eval t    (ρ , u)) ≃ (eval t'    (ρ' , u'))
   → b C∋ (apply (lam t ρ) u) ≃ (apply (lam t' ρ') u')
 sound-β t t' ρ≃ρ' u≃u' eq = ≃later (≃delay eq)
+-}
+
+-- something more generic might be useful...
+abs' : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b) -- (t≡t' : t ≡βη t')
+       {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃E ρ') →
+       ∀{Δ′}(η : Ren Δ′ Δ){u u' : Val Δ′ a}(u≃u' : VLR a u u') → 
+       (Delay (λ v v' → b V∋ v ≃ v') ∋ eval t (renenv η ρ , u) ≃ eval t' (renenv η ρ' , u')) →
+       (Delay (λ v v' → b V∋ v ≃ v') ∋ later (beta t (renenv η ρ) u) ≃ later (beta t' (renenv η ρ') u'))
+abs' t t' ρ≃ρ' η u≃u' (delay≃ a₁ a⇓ b₁ b⇓ rab) = delay≃ a₁ (later⇓ a⇓) b₁ (later⇓ b⇓) rab
+
 
 ⟦abs⟧ : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b) -- (t≡t' : t ≡βη t')
   {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃E ρ') →
   (∀{Δ′}(η : Ren Δ′ Δ){u u' : Val Δ′ a}(u≃u' : VLR a u u')
    → b C∋ (eval t (renenv η ρ , u)) ≃ (eval t' (renenv η ρ' , u'))) →
   (a ⇒ b) C∋ (now (lam t ρ)) ≃ (now (lam t' ρ'))
-⟦abs⟧ t t' {ρ}{ρ'} ρ≃ρ' ih = ≃now now⇓ now⇓ (λ η u u' u≃u' → ≃later (≃delay (ih η u≃u')))
+⟦abs⟧ t t' {ρ}{ρ'} ρ≃ρ' ih =
+  delay≃ (lam t ρ) now⇓ (lam t' ρ') now⇓ (λ η u u' u≃u' -> abs' t t' ρ≃ρ' η u≃u' (ih η u≃u'))
 
+{-
 ⟦abs⟧' : ∀ {Γ a b} {t t' : Tm (Γ , a) b} → t ≃T t' → abs t ≃T abs t'
 ⟦abs⟧' {t = t}{t'} t≃t' ρ≃ρ' = ⟦abs⟧ t t' ρ≃ρ' (λ η u≃u' → t≃t' (renE≃ η ρ≃ρ' , u≃u'))
 
@@ -250,11 +266,25 @@ mutual
   ≃force (∞⟦app⟧ p q) = ⟦app⟧ (≃force p) q
 
 -- did Andreas say not to do it this way?
+-}
+
+⟦app⟧ : ∀{Γ a b}{f f' : Delay ∞ (Val Γ (a ⇒ b))}{v v' : Delay ∞ (Val Γ a)} →
+        (a ⇒ b) C∋ f ≃ f' → a C∋ v ≃ v' →
+        b C∋ (f >>= λ f → v >>= apply f) ≃ (f' >>= λ f' → v' >>= apply f')
+⟦app⟧ {v = u}{v' = u'} (delay≃ f f⇓ f' f'⇓ rff') (delay≃ v v⇓ v' v'⇓ rvv') =
+  let delay≃ x x⇓ x' x'⇓ rxx' = rff' renId v v' rvv'
+  in  delay≃ x
+             (bind⇓ (λ f -> u >>= apply f) f⇓ (bind⇓ (apply f) v⇓ (subst (λ X -> apply X v ⇓ x) (renvalid f) x⇓)))
+             x'
+             (bind⇓ (λ f' -> u' >>= apply f') f'⇓ (bind⇓ (apply f') v'⇓ (subst (λ X -> apply X v' ⇓ x') (renvalid f') x'⇓)))
+             rxx'
+
 idext : ∀{Γ a}(t : Tm Γ a) → t ≃T t
 idext (var x)   p = ⟦var⟧ x p
 idext (abs t)   p = ⟦abs⟧ _ _ p (λ η q → idext t (renE≃ η p , q))
 idext (app t u) p = ⟦app⟧ (idext t p) (idext u p)
 
+{-
 -- Equal terms evaluate to equal values.
 fund : ∀{Γ a}{t t' : Tm Γ a} →
   (t≡t' : t ≡βη t') → t ≃T t'
