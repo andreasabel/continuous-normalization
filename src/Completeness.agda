@@ -264,6 +264,12 @@ sound-β : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b)
 sound-β t t' ρ≃ρ' u≃u' eq = ≃later (≃delay eq)
 -}
 
+beta-later-l :  ∀ {Δ Γ a b} (t : Tm (Γ , a) b)
+       {ρ : Env Δ Γ} {u : Val Δ a} {v? : Delay ∞ (Val Δ b)} →
+       (r : Delay (b V∋_≃_) ∋ later (beta t ρ u) ≃ v?) →
+       Delay (b V∋_≃_) ∋ eval t (ρ , u) ≃ v?
+beta-later-l t (delay≃ w (later⇓ tρu⇓) v v⇓ rab) = delay≃ w tρu⇓ v v⇓ rab
+
 later-beta-l :  ∀ {Δ Γ a b} (t : Tm (Γ , a) b)
        {ρ : Env Δ Γ} {u : Val Δ a} {v? : Delay ∞ (Val Δ b)} →
        (r : Delay (b V∋_≃_) ∋ eval t (ρ , u) ≃ v?) →
@@ -348,6 +354,16 @@ evalR : ∀{Γ Δ Δ'} (η : Ren Δ Γ) (ρ : Env Δ' Δ) → Env Δ' Γ
 evalR ε       ρ = ε
 evalR (η , x) ρ = evalR η ρ , lookup x ρ
 
+ren-evalR : ∀{Γ Δ Δ' Δ''} (η : Ren Δ Γ) (ρ : Env Δ' Δ) (η' : Ren Δ'' Δ') →
+  renenv η' (evalR η ρ) ≡ evalR η (renenv η' ρ)
+ren-evalR ε ρ η' = refl
+ren-evalR (η , x) ρ η' rewrite ren-evalR η ρ η' | lookup≤ x ρ η' = refl
+
+evalR-wkr : ∀{Γ Δ Δ' a} (η : Ren Δ Γ) (ρ : Env Δ' Δ) (v : Val Δ' a) →
+  evalR (wkr η) (ρ , v) ≡ evalR η ρ
+evalR-wkr ε _ _ = refl
+evalR-wkr (η , x) ρ v rewrite evalR-wkr η ρ v = refl
+
 lookup-ren :  ∀{Γ Δ Δ' a} (x : Var Γ a) (η : Ren Δ Γ) (ρ : Env Δ' Δ)
   → lookup (lookr η x) ρ ≡ lookup x (evalR η ρ)
 lookup-ren zero (η , x) ρ = refl
@@ -358,7 +374,7 @@ eval-ren : ∀{Γ Δ Δ' a} (t : Tm Γ a) {η : Ren Δ Γ} {ρ : Env Δ' Δ} {v?
   → (r : a C∋ eval t (evalR η ρ) ≃ v?)
   → a C∋ eval (ren η t) ρ ≃ v?
 eval-ren (var x) {η} {ρ} r rewrite lookup-ren x η ρ = r
-eval-ren (abs t) r = {!!}
+eval-ren (abs t) (delay≃ ._ now⇓ v v⇓ r) = delay≃ {!!} now⇓ v v⇓ (λ η' u u' u≃u' → later-beta-l {!!} (eval-ren t {η = liftr _} {!beta-later-l ? (r η' u u' u≃u')!}))
 eval-ren (app t u) r = {!!}
 
 -- Not general enough to be provable (case abs)
