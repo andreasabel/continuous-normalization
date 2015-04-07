@@ -2,9 +2,6 @@ module RenamingAndSubstitution where
 
 open import Library
 open import Syntax
-open import Delay
-
-infixr 4 _,_
 
 -- ren
 
@@ -30,7 +27,7 @@ ren xs (app t u) = app (ren xs t) (ren xs u)
 
 renId : ∀{Γ} → Ren Γ Γ
 renId {ε}     = ε
-renId {Γ , _} = liftr (renId {Γ})
+renId {Γ , _} = liftr (renId {Γ}) 
 
 renComp : ∀{B Γ Δ} → Ren Δ Γ → Ren Γ B → Ren Δ B
 renComp xs ε        = ε
@@ -101,51 +98,46 @@ mutual
 -- Renaming of values.
 
 mutual
-  {-# TERMINATING #-}  -- TODO: make Ren sized
-
-  renval : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → Val i Γ σ → Val i Δ σ
+  renval : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → Val Γ σ → Val Δ σ
   renval f (ne x)    = ne (rennev f x)
   renval f (lam t ρ) = lam t (renenv f ρ)
 
-  renenv : ∀{i Γ Δ} → Ren Δ Γ → ∀ {B} → Env i Γ B → Env i Δ B
+  renenv : ∀{Γ Δ} → Ren Δ Γ → ∀ {B} → Env Γ B → Env Δ B
   renenv f ε       = ε
-  renenv f (e , v) = renenv f e , (renval f <$> v)
+  renenv f (e , v) = renenv f e , renval f v
 
-  rennev : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → NeVal i Γ σ → NeVal i Δ σ
+  rennev : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → NeVal Γ σ → NeVal Δ σ
   rennev f (var x)   = var (lookr f x)
-  rennev f (app t u) = app (rennev f t) (renval f <$> u)
+  rennev f (app t u) = app (rennev f t) (renval f u)
 
-
-{-
 
 -- Functoriality of the renaming action on values.
 
 mutual
-  renvalid : ∀{i Γ} {σ : Ty} (v : Val i Γ σ) → renval renId v ≡ v
+  renvalid : {Γ : Cxt} {σ : Ty} (v : Val Γ σ) → renval renId v ≡ v
   renvalid (ne x)    = cong ne (rennevid x)
   renvalid (lam t ρ) = cong (lam t) (renenvid ρ)
 
-  -- TODO: Need strong bisim here!
-  renenvid : ∀{i Γ Δ} (e : Env i Γ Δ) → renenv renId e ≡ e
+  renenvid : {Γ Δ : Cxt}(e : Env Γ Δ) → renenv renId e ≡ e
   renenvid ε       = refl
-  renenvid (e , v) = cong₂ _,_ (renenvid e) (renvalid <$> v)
+  renenvid (e , v) = cong₂ _,_ (renenvid e) (renvalid v)
 
-  rennevid : ∀{i Γ} {σ : Ty} (n : NeVal i Γ σ) → rennev renId n ≡ n
+  rennevid : {Γ : Cxt} {σ : Ty} (n : NeVal Γ σ) → rennev renId n ≡ n
   rennevid (var x)   = cong var (lookrid x)
   rennevid (app n v) = cong₂ app (rennevid n) (renvalid v)
 
 mutual
-  renenvcomp : ∀ {i Γ Δ₁ Δ₂ Δ₃} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (ρ : Env i Δ₃ Γ) →
+  renenvcomp : ∀ {Γ Δ₁ Δ₂ Δ₃} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (ρ : Env Δ₃ Γ) →
            renenv η (renenv η' ρ) ≡ renenv (renComp η η') ρ
   renenvcomp η η' ε       = refl
   renenvcomp η η' (ρ , v) = cong₂ _,_ (renenvcomp η η' ρ) (renvalcomp η η' v)
 
-  renvalcomp : ∀ {i Δ₁ Δ₂ Δ₃ a} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (v : Val i Δ₃ a) →
+  renvalcomp : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (v : Val Δ₃ a) →
            renval η (renval η' v) ≡ renval (renComp η η') v
   renvalcomp η η' (ne t) = cong ne (rennevcomp η η' t)
   renvalcomp η η' (lam t ρ) = cong (lam t) (renenvcomp η η' ρ)
 
-  rennevcomp : ∀ {i Δ₁ Δ₂ Δ₃ a} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (t : NeVal i Δ₃ a) →
+  rennevcomp : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (t : NeVal Δ₃ a) →
            rennev η (rennev η' t) ≡ rennev (renComp η η') t
   rennevcomp η η' (var x)   = cong var (sym $ lookrcomp η η' x)
   rennevcomp η η' (app t u) = cong₂ app (rennevcomp η η' t) (renvalcomp η η' u)
@@ -197,7 +189,7 @@ lemsr xs x (ys , y) = cong (λ zs → zs , looks xs y) (lemsr xs x ys)
 lookslookr : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Ren Γ B){σ}(x : Var B σ) →
             looks (subComp f (ren2sub g)) x ≡ looks f (lookr g x)
 lookslookr f (g , _) zero    = refl
-lookslookr f (g , _) (suc x) = lookslookr f g x
+lookslookr f (g , _) (suc x) = lookslookr f g x            
 
 wksrcomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Ren Γ Δ) →
   subComp (wks {σ = σ} xs) (ren2sub ys) ≡ wks {σ = σ} (subComp xs (ren2sub ys))
@@ -245,7 +237,7 @@ lemss xs x (ys , y) = cong₂
           (cong (λ xs → sub xs y)
                  (trans (lemsr xs x renId)
                         (sidr2 xs))))
-
+                        
 ren2sublook : ∀{Γ Δ σ}(f : Ren Δ Γ)(i : Var Γ σ) →
               Tm.var (lookr f i) ≡ looks (ren2sub f) i
 ren2sublook (f , _) zero    = refl
@@ -285,7 +277,7 @@ wkrscomp xs (ys , y) = cong₂
 renlooks : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Sub Γ B){σ}(x : Var B σ) →
          (ren f ∘ looks g) x ≡ looks (subComp (ren2sub f) g) x
 renlooks f (_ , v) zero    = ren2subren f v
-renlooks f (g , _) (suc x) = renlooks f g x
+renlooks f (g , _) (suc x) = renlooks f g x         
 
 rensub : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Sub Γ B){σ}(t : Tm B σ) →
          (ren f ∘ sub g) t ≡ sub (subComp (ren2sub f) g) t
@@ -342,12 +334,9 @@ mutual
   renembNe : ∀{Γ Δ a}(u : Ne Γ a)(σ : Ren Δ Γ) →
              ren σ (embNe u) ≡ embNe (rennen σ u)
   renembNe (var x)   σ = refl
-  renembNe (app u n) σ = cong₂ app (renembNe u σ) (renembNf n σ)
+  renembNe (app u n) σ = cong₂ app (renembNe u σ) (renembNf n σ)    
 
   renembNf : ∀{Γ Δ a}(n : Nf Γ a)(σ : Ren Δ Γ) →
              ren σ (embNf n) ≡ embNf (rennf σ n)
   renembNf (abs n) σ = cong abs (renembNf n (liftr σ))
   renembNf (ne n)  σ = renembNe n σ
-
-
--- -}
