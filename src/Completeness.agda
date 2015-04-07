@@ -11,8 +11,6 @@ open import Evaluation
 open import EquationalTheory
 open import Termination using (rennereadback⇓)
 
--- infixr 4 _,_
-
 record Delay_∋_≃_ {A} (R : A → A → Set) (a? b? : Delay ∞ A) : Set where
   constructor delay≃
   field
@@ -35,6 +33,12 @@ D≃trans : ∀ {A R} {a? b? c? : Delay ∞ A}
 D≃trans trans (delay≃ a a⇓ b b⇓ rab) (delay≃ b′ b⇓′ c c⇓ rbc) with uniq⇓ b⇓ b⇓′
 D≃trans trans (delay≃ a a⇓ b b⇓ rab) (delay≃ .b b⇓′ c c⇓ rbc) | refl = delay≃ a a⇓ c c⇓ (trans rab rbc)
 
+D≃bind⇓ : ∀{A B}{R : B → B → Set} {a : A} {a? : Delay ∞ A}  {b? : Delay ∞ B}
+  → (f : A → Delay ∞ B)
+  → (a⇓ : a? ⇓ a)
+  → (r  : Delay R ∋ f a ≃ b?)
+  → Delay R ∋ (a? >>= f) ≃ b?
+D≃bind⇓ f a⇓ (delay≃ fa fa⇓ b b⇓ rab) =  delay≃ fa (bind⇓ f a⇓ fa⇓) b b⇓ rab
 
 -- _≃_ : ∀{Γ} (v v' : Val Γ ★) → Set
 -- ne v ≃ ne v' = ∃ λ n → nereadback v ⇓ n × nereadback v' ⇓ n
@@ -136,9 +140,11 @@ renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ≃ρ' : 
 renE≃ η {ε} {ε} ρ≃ρ' = _
 renE≃ η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renE≃ η ρ≃ρ') , (renV≃ _ η v≃v')
 
-{-
+
 
 -- Substitution lemma.
+
+infixr 4 _,_
 
 data DEnv (Δ : Cxt) : (Γ : Cxt) → Set where
   ε   : DEnv Δ ε
@@ -160,6 +166,46 @@ evalS σ ρ = sequence (evalS₀ σ ρ)
 evalS-ε : ∀{Γ Δ} (σ : Sub Δ ε) (ρ : Env Γ Δ) → evalS σ ρ ≡ now ε
 evalS-ε σ ρ = refl
 -}
+
+-- Environments ρ and ρ' are related.
+
+_≃D_ : ∀{Γ Δ} (ρ ρ' : DEnv Δ Γ) → Set
+ε       ≃D ε           = ⊤
+(ρ , v?) ≃D (ρ' , v?') = (ρ ≃D ρ') × (_ C∋ v? ≃ v?')
+
+≃Dsym : ∀{Γ Δ}{ρ ρ' : DEnv Δ Γ} → ρ ≃D ρ' → ρ' ≃D ρ
+≃Dsym {ρ = ε}    {ε}       _        = _
+≃Dsym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Dsym p  , D≃sym _ {!(V∋≃sym _) p'!}
+
+≃Dtrans : ∀{Γ Δ}{ρ ρ' ρ'' : DEnv Δ Γ} → ρ ≃D ρ' → ρ' ≃D ρ'' → ρ ≃D ρ''
+≃Dtrans {ρ = ε}    {ε}       {ε}         _         _        = _
+≃Dtrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ≃Dtrans p p' , {! D≃trans V∋≃trans _ q q' !}
+
+≃Drefl : ∀{Γ Δ}{ρ ρ' : DEnv Δ Γ} → ρ ≃D ρ' → ρ ≃D ρ
+≃Drefl p = ≃Dtrans p (≃Dsym p)
+
+
+
+{-
+-- Closure under renaming
+
+renV≃ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val Δ a} (v≃v' : VLR a v v') →
+        VLR a (renval η v) (renval η v')
+renV≃ ★       η {ne n}{ne n'} p    = ren≃ η p
+renV≃ (a ⇒ b) η {f}{f'} p ρ u u' q =
+  subst (λ X → b C∋ apply (renval ρ (renval η f)) u ≃ apply X u')
+        (sym $ renvalcomp ρ η f')
+        (subst (λ X → b C∋ apply X u ≃ apply (renval (renComp ρ η) f') u')
+               (sym $ renvalcomp ρ η f)
+               (p (renComp ρ η) u u' q))
+
+renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃D ρ') → (renenv η ρ) ≃D (renenv η ρ')
+renE≃ η {ε} {ε} ρ≃ρ' = _
+renE≃ η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renE≃ η ρ≃ρ') , (renV≃ _ η v≃v')
+-}
+
+
+{-
 
 substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′ Δ) →
   a C∋ (lookup x <$> evalS σ ρ) ≃ eval (looks σ x) ρ
@@ -209,13 +255,18 @@ sound-β : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b)
 sound-β t t' ρ≃ρ' u≃u' eq = ≃later (≃delay eq)
 -}
 
+later-beta-l :  ∀ {Δ Γ a b} (t : Tm (Γ , a) b)
+       {ρ : Env Δ Γ} {u : Val Δ a} {v? : Delay ∞ (Val Δ b)} →
+       (r : Delay (b V∋_≃_) ∋ eval t (ρ , u) ≃ v?) →
+       Delay (b V∋_≃_) ∋ later (beta t ρ u) ≃ v?
+later-beta-l t (delay≃ a a⇓ b b⇓ rab) = delay≃ a (later⇓ a⇓) b b⇓ rab
+
 -- something more generic might be useful...
-abs' : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b) -- (t≡t' : t ≡βη t')
-       {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃E ρ') →
-       ∀{Δ′}(η : Ren Δ′ Δ){u u' : Val Δ′ a}(u≃u' : VLR a u u') → 
-       (Delay (λ v v' → b V∋ v ≃ v') ∋ eval t (renenv η ρ , u) ≃ eval t' (renenv η ρ' , u')) →
-       (Delay (λ v v' → b V∋ v ≃ v') ∋ later (beta t (renenv η ρ) u) ≃ later (beta t' (renenv η ρ') u'))
-abs' t t' ρ≃ρ' η u≃u' (delay≃ a₁ a⇓ b₁ b⇓ rab) = delay≃ a₁ (later⇓ a⇓) b₁ (later⇓ b⇓) rab
+later-beta : ∀ {Δ Γ a b} {t t' : Tm (Γ , a) b}
+       {ρ ρ' : Env Δ Γ} {u u' : Val Δ a} →
+       (Delay (b V∋_≃_) ∋ eval t (ρ , u) ≃ eval t' (ρ' , u')) →
+       (Delay (b V∋_≃_) ∋ later (beta t ρ u) ≃ later (beta t' ρ' u'))
+later-beta (delay≃ a a⇓ b b⇓ rab) = delay≃ a (later⇓ a⇓) b (later⇓ b⇓) rab
 
 
 ⟦abs⟧ : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b) -- (t≡t' : t ≡βη t')
@@ -224,7 +275,7 @@ abs' t t' ρ≃ρ' η u≃u' (delay≃ a₁ a⇓ b₁ b⇓ rab) = delay≃ a₁ 
    → b C∋ (eval t (renenv η ρ , u)) ≃ (eval t' (renenv η ρ' , u'))) →
   (a ⇒ b) C∋ (now (lam t ρ)) ≃ (now (lam t' ρ'))
 ⟦abs⟧ t t' {ρ}{ρ'} ρ≃ρ' ih =
-  delay≃ (lam t ρ) now⇓ (lam t' ρ') now⇓ (λ η u u' u≃u' -> abs' t t' ρ≃ρ' η u≃u' (ih η u≃u'))
+  delay≃ (lam t ρ) now⇓ (lam t' ρ') now⇓ (λ η u u' u≃u' → later-beta (ih η u≃u'))
 
 {-
 ⟦abs⟧' : ∀ {Γ a b} {t t' : Tm (Γ , a) b} → t ≃T t' → abs t ≃T abs t'
@@ -283,6 +334,39 @@ idext : ∀{Γ a}(t : Tm Γ a) → t ≃T t
 idext (var x)   p = ⟦var⟧ x p
 idext (abs t)   p = ⟦abs⟧ _ _ p (λ η q → idext t (renE≃ η p , q))
 idext (app t u) p = ⟦app⟧ (idext t p) (idext u p)
+
+lemma : ∀{Γ a}
+  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
+  → (σρ≃σ'ρ' : Delay _≃E_ ∋ evalS σ ρ ≃ evalS σ' ρ')
+  → ∀ {u : Tm Γ a} {uσρ : Val Δ a}
+  → (u⇓ : eval (sub σ u) ρ ⇓ uσρ)
+  → Delay _≃E_ ∋ evalS (lifts σ) (ρ , uσρ) ≃ evalS (σ' , sub σ' u) ρ'
+lemma σ σ' ρ ρ' σρ≃σ'ρ' u⇓ = {!!}
+
+fundt : ∀{Γ a} (t : Tm Γ a)
+  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
+  → (σρ≃σ'ρ' : Delay _≃E_ ∋ evalS σ ρ ≃ evalS σ' ρ')
+  → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t) ρ'
+fundt = {!!}
+
+fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
+  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
+  → (σρ≃σ'ρ' : Delay _≃E_ ∋ evalS σ ρ ≃ evalS σ' ρ')
+  → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t') ρ'
+fund' (var≡ x₁) σ₁ σ' ρ ρ' σρ≃σ'ρ' = {!!}
+fund' (abs≡ t≡t') σ₁ σ' ρ ρ' σρ≃σ'ρ' = {!!}
+fund' (app≡ t≡t' t≡t'') σ₁ σ' ρ ρ' σρ≃σ'ρ' = {!!}
+fund' (beta≡ {t = t}{u = u}) σ σ' ρ ρ' σρ≃σ'ρ'
+  rewrite sym (subcomp σ' (subId , u) t) | sidr σ'
+  with fundt u σ σ' ρ ρ' σρ≃σ'ρ'
+fund' (beta≡ {t = t}{u = u}) σ σ' ρ ρ' σρ≃σ'ρ' | delay≃ uσρ uσρ⇓ b b⇓ rab =
+  D≃bind⇓ (λ v → later (beta (sub (wks σ , var zero) t) ρ v)) uσρ⇓ (later-beta-l _ (fundt t (lifts σ) (σ' , sub σ' u) (ρ , uσρ) ρ' {!!}))
+fund' eta≡ σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
+fund' refl≡ σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
+fund' (sym≡ t≡t') σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
+fund' (trans≡ t≡t' t≡t'') σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
+
+--  → evalS σ ρ ≃E evalS σ' ρ'
 
 {-
 -- Equal terms evaluate to equal values.
