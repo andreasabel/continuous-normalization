@@ -9,7 +9,7 @@ infixr 4 _,_
 
 data Ren (Δ : Cxt) : (Γ : Cxt) → Set where
   ε   : Ren Δ ε
-  _,_ : ∀ {Γ a} (ρ : Ren Δ Γ) (v : Var Δ a) → Ren Δ (Γ , a)
+  _,_ : ∀ {Γ a} (ρ : Ren Δ Γ) (x : Var Δ a) → Ren Δ (Γ , a)
 
 lookr : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → Var Γ σ → Var Δ σ
 lookr (xs , x) zero    = x

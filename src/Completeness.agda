@@ -344,6 +344,23 @@ idext (var x)   p = ⟦var⟧ x p
 idext (abs t)   p = ⟦abs⟧ _ _ p (λ η q → idext t (renE≃ η p , q))
 idext (app t u) p = ⟦app⟧ (idext t p) (idext u p)
 
+evalR : ∀{Γ Δ Δ'} (η : Ren Δ Γ) (ρ : Env Δ' Δ) → Env Δ' Γ
+evalR ε       ρ = ε
+evalR (η , x) ρ = evalR η ρ , lookup x ρ
+
+lookup-ren :  ∀{Γ Δ Δ' a} (x : Var Γ a) (η : Ren Δ Γ) (ρ : Env Δ' Δ)
+  → lookup (lookr η x) ρ ≡ lookup x (evalR η ρ)
+lookup-ren zero (η , x) ρ = refl
+lookup-ren (suc x) (η , ()) ε
+lookup-ren (suc x) (η , _) ρ = lookup-ren x η ρ
+
+eval-ren : ∀{Γ Δ Δ' a} (t : Tm Γ a) {η : Ren Δ Γ} {ρ : Env Δ' Δ} {v? : Delay ∞ (Val Δ' a)}
+  → (r : a C∋ eval t (evalR η ρ) ≃ v?)
+  → a C∋ eval (ren η t) ρ ≃ v?
+eval-ren (var x) {η} {ρ} r rewrite lookup-ren x η ρ = r
+eval-ren (abs t) r = {!!}
+eval-ren (app t u) r = {!!}
+
 -- Not general enough to be provable (case abs)
 eval-wkr : ∀{Γ Δ a b} (t : Tm Γ a) {ρ : Env Δ Γ} {v : Val Δ b} {v? : Delay ∞ (Val Δ a)}
   → (r : a C∋ eval t ρ ≃ v?)
