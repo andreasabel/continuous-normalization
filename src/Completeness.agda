@@ -10,6 +10,8 @@ open import RenamingAndSubstitution
 open import Evaluation
 open import EquationalTheory
 
+infixr 4 _,_
+
 mutual
 
   -- Values v and v' are related at type a.

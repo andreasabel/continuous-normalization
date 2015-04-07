@@ -3,6 +3,8 @@ module RenamingAndSubstitution where
 open import Library
 open import Syntax
 
+infixr 4 _,_
+
 -- ren
 
 data Ren (Δ : Cxt) : (Γ : Cxt) → Set where
@@ -27,7 +29,7 @@ ren xs (app t u) = app (ren xs t) (ren xs u)
 
 renId : ∀{Γ} → Ren Γ Γ
 renId {ε}     = ε
-renId {Γ , _} = liftr (renId {Γ}) 
+renId {Γ , _} = liftr (renId {Γ})
 
 renComp : ∀{B Γ Δ} → Ren Δ Γ → Ren Γ B → Ren Δ B
 renComp xs ε        = ε
@@ -189,7 +191,7 @@ lemsr xs x (ys , y) = cong (λ zs → zs , looks xs y) (lemsr xs x ys)
 lookslookr : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Ren Γ B){σ}(x : Var B σ) →
             looks (subComp f (ren2sub g)) x ≡ looks f (lookr g x)
 lookslookr f (g , _) zero    = refl
-lookslookr f (g , _) (suc x) = lookslookr f g x            
+lookslookr f (g , _) (suc x) = lookslookr f g x
 
 wksrcomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Ren Γ Δ) →
   subComp (wks {σ = σ} xs) (ren2sub ys) ≡ wks {σ = σ} (subComp xs (ren2sub ys))
@@ -237,7 +239,7 @@ lemss xs x (ys , y) = cong₂
           (cong (λ xs → sub xs y)
                  (trans (lemsr xs x renId)
                         (sidr2 xs))))
-                        
+
 ren2sublook : ∀{Γ Δ σ}(f : Ren Δ Γ)(i : Var Γ σ) →
               Tm.var (lookr f i) ≡ looks (ren2sub f) i
 ren2sublook (f , _) zero    = refl
@@ -277,7 +279,7 @@ wkrscomp xs (ys , y) = cong₂
 renlooks : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Sub Γ B){σ}(x : Var B σ) →
          (ren f ∘ looks g) x ≡ looks (subComp (ren2sub f) g) x
 renlooks f (_ , v) zero    = ren2subren f v
-renlooks f (g , _) (suc x) = renlooks f g x         
+renlooks f (g , _) (suc x) = renlooks f g x
 
 rensub : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Sub Γ B){σ}(t : Tm B σ) →
          (ren f ∘ sub g) t ≡ sub (subComp (ren2sub f) g) t
@@ -334,7 +336,7 @@ mutual
   renembNe : ∀{Γ Δ a}(u : Ne Γ a)(σ : Ren Δ Γ) →
              ren σ (embNe u) ≡ embNe (rennen σ u)
   renembNe (var x)   σ = refl
-  renembNe (app u n) σ = cong₂ app (renembNe u σ) (renembNf n σ)    
+  renembNe (app u n) σ = cong₂ app (renembNe u σ) (renembNf n σ)
 
   renembNf : ∀{Γ Δ a}(n : Nf Γ a)(σ : Ren Δ Γ) →
              ren σ (embNf n) ≡ embNf (rennf σ n)

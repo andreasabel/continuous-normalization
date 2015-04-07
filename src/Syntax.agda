@@ -5,7 +5,7 @@ module Syntax where
 open import Library
 
 infixr 6 _⇒_
-infixl 1 _,_
+infixr 4 _,_
 
 -- Types and contexts.
 

@@ -192,7 +192,7 @@ mutual
 
   reneta  : ∀{i Γ Δ a b} (η : Ren Δ Γ)(v : Val Γ (a ⇒ b)) →
           (rennf (liftr η) ∞<$> eta v) ∞≈⟨ i ⟩≈ (eta (renval η v))
-  ≈force (reneta η f) = 
+  ≈force (reneta η f) =
     proof
     ((apply (weakVal f) (ne (var zero)) >>= readback)
       >>= (λ a → now (rennf (liftr η) a)))
@@ -234,4 +234,3 @@ mutual
 
 nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
 nf t = eval t (ide _) >>= readback
-
