@@ -161,7 +161,6 @@ renE≃ η {ε} {ε} ρ≃ρ' = _
 renE≃ η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renE≃ η ρ≃ρ') , (renV≃ _ η v≃v')
 
 
-
 -- Substitution lemma.
 
 infixr 4 _,_
@@ -181,6 +180,7 @@ evalS₀ (σ , t) ρ = evalS₀ σ ρ , eval t ρ
 
 evalS : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → Delay ∞ (Env Γ Δ′)
 evalS σ ρ = sequence (evalS₀ σ ρ)
+
 
 {-
 evalS-ε : ∀{Γ Δ} (σ : Sub Δ ε) (ρ : Env Γ Δ) → evalS σ ρ ≡ now ε
@@ -203,6 +203,13 @@ _≃D_ : ∀{Γ Δ} (ρ ρ' : DEnv Δ Γ) → Set
 
 ≃Drefl : ∀{Γ Δ}{ρ ρ' : DEnv Δ Γ} → ρ ≃D ρ' → ρ ≃D ρ
 ≃Drefl p = ≃Dtrans p (≃Dsym p)
+
+rendenv : ∀{Γ Δ} → Ren Δ Γ → ∀ {B} → DEnv Γ B → DEnv Δ B
+rendenv η ε = ε
+rendenv η (ρ , v) = (rendenv η ρ) , (renval η <$> v)
+
+renD≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : DEnv Δ Γ} (ρ≃ρ' : ρ ≃D ρ') → (rendenv η ρ) ≃D (rendenv η ρ')
+renD≃ = {!!}
 
 
 
@@ -365,11 +372,6 @@ ren-evalR ε ρ η' = refl
 ren-evalR (η , x) ρ η' rewrite ren-evalR η ρ η' | lookup≤ x ρ η' = refl
 -- {-# REWRITE ren-evalR #-} -- does not fire
 
-
-rendenv : ∀{Γ Δ} → Ren Δ Γ → ∀ {B} → DEnv Γ B → DEnv Δ B
-rendenv η ε = ε
-rendenv η (ρ , v) = (rendenv η ρ) , (renval η <$> v)
-
 ren-evalS : ∀{Γ Δ Δ' Δ''} (η : Sub Δ Γ) (ρ : Env Δ' Δ) (η' : Ren Δ'' Δ') →
   rendenv η' (evalS₀ η ρ) ≃D evalS₀ η (renenv η' ρ)
 ren-evalS ε ρ η' = _
@@ -467,14 +469,14 @@ fundt : ∀{Γ a} (t : Tm Γ a)
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t) ρ'
 fundt (var x) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = fundvar x σ σ' σρ≃σ'ρ'
-fundt (abs t) σ σ' ρ≃ρ ρ'≃ρ' p =
+fundt {a = a ⇒ b} (abs t) σ σ' ρ≃ρ ρ'≃ρ' p =
   delay≃ _ now⇓ _ now⇓
     λ η u u' u≃u' → ≃later $
       fundt t (lifts σ)
               (lifts σ')
-              (renE≃ η ρ≃ρ , V∋≃refl _ u≃u' )
-              ((renE≃ η ρ'≃ρ' , V∋≃refl _ (V∋≃sym _ u≃u') ))
-              ((≃Dtrans (evalS-wks (renE≃ η ρ≃ρ) (V∋≃refl _ u≃u') {!!}) (≃Dsym (evalS-wks (renE≃ η ρ'≃ρ') (V∋≃refl _ (V∋≃sym _ u≃u')) {!!}))) , (delay≃ _ now⇓ _ now⇓ u≃u'))
+              (renE≃ η ρ≃ρ , V∋≃refl u≃u' )
+              ((renE≃ η ρ'≃ρ' , V∋≃refl (V∋≃sym u≃u') ))
+              ((≃Dtrans (evalS-wks (renE≃ η ρ≃ρ) (V∋≃refl u≃u') (≃Dtrans (≃Dtrans (≃Dsym (ren-evalS σ _ η)) (renD≃ η p)) (ren-evalS σ' _ η))) (≃Dsym (evalS-wks (renE≃ η ρ'≃ρ') (V∋≃refl (V∋≃sym u≃u')) ((≃Dtrans (≃Dtrans (≃Dsym (ren-evalS σ' _ η)) (renD≃ η (≃Drefl (≃Dsym p)))) (ren-evalS σ' _ η)))))) , (delay≃ _ now⇓ _ now⇓ u≃u'))
 fundt (app t u) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
   ⟦app⟧ (fundt t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
         (fundt u σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
