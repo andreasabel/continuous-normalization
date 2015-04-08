@@ -493,7 +493,7 @@ fundt {a = a ⇒ b} (abs t) σ σ' ρ≃ρ ρ'≃ρ' p =
         fundt t (lifts σ)
               (lifts σ')
               (renE≃ η ρ≃ρ , V∋≃refl u≃u' )
-              ((renE≃ η ρ'≃ρ' , V∋≃refl (V∋≃sym u≃u') ))
+              (renE≃ η ρ'≃ρ' , V∋≃refl (V∋≃sym u≃u') )
               (evalS-wks (renE≃ η ρ≃ρ) (V∋≃refl u≃u') (≃Dsym (evalS-wks (renE≃ η ρ'≃ρ') (V∋≃refl (V∋≃sym u≃u')) (ren-evalS' σ' _ η (≃Dsym (ren-evalS' σ _ η (renD≃ η p)))))) , delay≃ _ now⇓ _ now⇓ u≃u')
 
 fundt (app t u) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
@@ -507,7 +507,8 @@ fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t') ρ'
 fund' (var≡ x) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = fundvar x σ σ' σρ≃σ'ρ'
-fund' (abs≡ t≡t') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (abs≡ t≡t') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = -- the same as abs case of fundt, should make a lemma!
+  delay≃ _ now⇓ _ now⇓ (λ η u u' u≃u' → ≃later $ fund' t≡t' (lifts σ) (lifts σ') (renE≃ η ρ≃ρ , V∋≃refl u≃u' ) (renE≃ η ρ'≃ρ' , V∋≃refl (V∋≃sym u≃u') ) ((evalS-wks (renE≃ η ρ≃ρ) (V∋≃refl u≃u') (≃Dsym (evalS-wks (renE≃ η ρ'≃ρ') (V∋≃refl (V∋≃sym u≃u')) (ren-evalS' σ' _ η (≃Dsym (ren-evalS' σ _ η (renD≃ η σρ≃σ'ρ')))))) , delay≃ _ now⇓ _ now⇓ u≃u')))
 fund' (app≡ t≡t' u≡u') σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
   ⟦app⟧ (fund' t≡t' σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
         (fund' u≡u' σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
