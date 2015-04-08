@@ -365,6 +365,18 @@ ren-evalR ε ρ η' = refl
 ren-evalR (η , x) ρ η' rewrite ren-evalR η ρ η' | lookup≤ x ρ η' = refl
 -- {-# REWRITE ren-evalR #-} -- does not fire
 
+
+rendenv : ∀{Γ Δ} → Ren Δ Γ → ∀ {B} → DEnv Γ B → DEnv Δ B
+rendenv η ε = ε
+rendenv η (ρ , v) = (rendenv η ρ) , (renval η <$> v)
+
+ren-evalS : ∀{Γ Δ Δ' Δ''} (η : Sub Δ Γ) (ρ : Env Δ' Δ) (η' : Ren Δ'' Δ') →
+  rendenv η' (evalS₀ η ρ) ≃D evalS₀ η (renenv η' ρ)
+ren-evalS ε ρ η' = _
+ren-evalS (η , v) ρ η' = (ren-evalS η ρ η') ,
+  {!!}
+
+
 evalR-wkr : ∀{Γ Δ Δ' a} (η : Ren Δ Γ) (ρ : Env Δ' Δ) (v : Val Δ' a) →
   evalR (wkr η) (ρ , v) ≡ evalR η ρ
 evalR-wkr ε _ _ = refl
@@ -418,7 +430,6 @@ evalS-wks {σ = σ , t} {ρ} ρ≃ρ {v} v≃v {ρ' = ρ' , v'} (σρ≃σ'ρ' ,
   (subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-id ρ))
   v≃v'))
 
-
 lemma : ∀{Γ a Δ₁ Δ₂ Δ} {σ : Sub Δ₁ Γ} {σ' : Sub Δ₂ Γ}
   → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ) {ρ' : Env Δ Δ₂}
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
@@ -456,11 +467,17 @@ fundt : ∀{Γ a} (t : Tm Γ a)
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t) ρ'
 fundt (var x) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = fundvar x σ σ' σρ≃σ'ρ'
-fundt (abs t) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fundt (abs t) σ σ' ρ≃ρ ρ'≃ρ' p =
+  delay≃ _ now⇓ _ now⇓
+    λ η u u' u≃u' → ≃later $
+      fundt t (lifts σ)
+              (lifts σ')
+              (renE≃ η ρ≃ρ , V∋≃refl _ u≃u' )
+              ((renE≃ η ρ'≃ρ' , V∋≃refl _ (V∋≃sym _ u≃u') ))
+              ((≃Dtrans (evalS-wks (renE≃ η ρ≃ρ) (V∋≃refl _ u≃u') {!!}) (≃Dsym (evalS-wks (renE≃ η ρ'≃ρ') (V∋≃refl _ (V∋≃sym _ u≃u')) {!!}))) , (delay≃ _ now⇓ _ now⇓ u≃u'))
 fundt (app t u) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
   ⟦app⟧ (fundt t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
         (fundt u σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
-
 
 fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
@@ -473,9 +490,9 @@ fund' (abs≡ t≡t') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
 fund' (app≡ t≡t' u≡u') σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
   ⟦app⟧ (fund' t≡t' σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
         (fund' u≡u' σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
-fund' (beta≡ {t = t}{u = u}) σ σ'  ρ≃ρ ρ'≃ρ' σρ≃σ'ρ'
+fund' (beta≡ {t = t}{u = u}) σ σ' {ρ} ρ≃ρ ρ'≃ρ' σρ≃σ'ρ'
   rewrite sym (subcomp σ' (subId , u) t) | sidr σ' =
-  let u≃u = fundt u σ σ'  ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' in
+  let u≃u = fundt u σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' in
   let uσρ⇓ = Delay_∋_≃_.a⇓ u≃u in
   D≃bind⇓ (λ v → later (beta (sub (wks σ , var zero) t) ρ v)) uσρ⇓
   (later-beta-l _
