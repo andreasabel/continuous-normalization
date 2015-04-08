@@ -92,34 +92,38 @@ mutual
   _C∋_≃_ : ∀{Γ}(a : Ty) (v? w? : Delay ∞ (Val Γ a)) → Set
   a C∋ v? ≃ w? = Delay (VLR a) ∋ v? ≃ w?
 
+mutual
 
+  V∋≃sym : ∀{Γ a} {v v' : Val Γ a} →
+             a V∋ v ≃ v' → a V∋ v' ≃ v
+  V∋≃sym {a = ★}       {ne _}{ne _} p          = ≃sym p
+  V∋≃sym {a = a ⇒ b}              p ρ u u' q =
+    C∋≃sym (p ρ u' u (V∋≃sym q))
 
-V∋≃sym : ∀{Γ}(a : Ty){v v' : Val Γ a} →
-           a V∋ v ≃ v' → a V∋ v' ≃ v
-V∋≃sym ★       {ne _}{ne _} p          = ≃sym p
-V∋≃sym (a ⇒ b)              p ρ u u' q =
-  D≃sym (V∋≃sym b) (p ρ u' u (V∋≃sym a q))
+  C∋≃sym : ∀{Γ a} {v v' : Delay ∞ (Val Γ a)} →
+             a C∋ v ≃ v' → a C∋ v' ≃ v
+  C∋≃sym p = D≃sym V∋≃sym p
 
 mutual
 
-  V∋≃trans : ∀{Γ}(a : Ty){v v' v'' : Val Γ a} →
+  V∋≃trans : ∀{Γ a} {v v' v'' : Val Γ a} →
              a V∋ v ≃ v' → a V∋ v' ≃ v'' → a V∋ v ≃ v''
-  V∋≃trans ★ {ne n}{ne n'}{ne n''} p q = ≃trans p q
-  V∋≃trans (a ⇒ b) p q ρ u u' r        = C∋≃trans b
-    (p ρ u u (V∋≃trans a r (V∋≃sym a r)))
+  V∋≃trans {a = ★}{ne n}{ne n'}{ne n''} p q = ≃trans p q
+  V∋≃trans {a = a ⇒ b} p q ρ u u' r         = C∋≃trans
+    (p ρ u u (V∋≃trans r (V∋≃sym r)))
     (q ρ u u' r)
 
-  C∋≃trans : ∀{Γ}(a : Ty){v v' v'' : Delay ∞ (Val Γ a)} →
+  C∋≃trans : ∀{Γ a} {v v' v'' : Delay ∞ (Val Γ a)} →
              a C∋ v ≃ v' → a C∋ v' ≃ v'' → a C∋ v ≃ v''
-  C∋≃trans a p q = D≃trans (V∋≃trans a) p q
+  C∋≃trans p q = D≃trans V∋≃trans p q
 
-V∋≃refl : ∀{Γ}(a : Ty){v v' : Val Γ a} →
+V∋≃refl : ∀{Γ a} {v v' : Val Γ a} →
            a V∋ v ≃ v' → a V∋ v ≃ v
-V∋≃refl a p = V∋≃trans a p (V∋≃sym a p)
+V∋≃refl p = V∋≃trans p (V∋≃sym p)
 
-C∋≃refl : ∀{Γ}(a : Ty){v v' : Delay ∞ (Val Γ a)} →
+C∋≃refl : ∀{Γ a} {v v' : Delay ∞ (Val Γ a)} →
            a C∋ v ≃ v' → a C∋ v ≃ v
-C∋≃refl a (delay≃ v v⇓ v' v'⇓ r) = delay≃ v v⇓ v v⇓ (V∋≃refl a r)
+C∋≃refl (delay≃ v v⇓ v' v'⇓ r) = delay≃ v v⇓ v v⇓ (V∋≃refl r)
 
 -- Environments ρ and ρ' are related.
 
@@ -129,11 +133,11 @@ _≃E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
 
 ≃Esym : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ≃E ρ' → ρ' ≃E ρ
 ≃Esym {ρ = ε}    {ε}       _        = _
-≃Esym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Esym p  , V∋≃sym _ p'
+≃Esym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Esym p  , V∋≃sym p'
 
 ≃Etrans : ∀{Γ Δ}{ρ ρ' ρ'' : Env Δ Γ} → ρ ≃E ρ' → ρ' ≃E ρ'' → ρ ≃E ρ''
 ≃Etrans {ρ = ε}    {ε}       {ε}         _         _        = _
-≃Etrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ≃Etrans p p' , V∋≃trans _ q q'
+≃Etrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ≃Etrans p p' , V∋≃trans q q'
 
 ≃Erefl : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ≃E ρ' → ρ ≃E ρ
 ≃Erefl p = ≃Etrans p (≃Esym p)
@@ -191,11 +195,11 @@ _≃D_ : ∀{Γ Δ} (ρ ρ' : DEnv Δ Γ) → Set
 
 ≃Dsym : ∀{Γ Δ}{ρ ρ' : DEnv Δ Γ} → ρ ≃D ρ' → ρ' ≃D ρ
 ≃Dsym {ρ = ε}    {ε}       _        = _
-≃Dsym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Dsym p  , D≃sym (V∋≃sym _) p'
+≃Dsym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Dsym p  , C∋≃sym p'
 
 ≃Dtrans : ∀{Γ Δ}{ρ ρ' ρ'' : DEnv Δ Γ} → ρ ≃D ρ' → ρ' ≃D ρ'' → ρ ≃D ρ''
 ≃Dtrans {ρ = ε}    {ε}       {ε}         _         _        = _
-≃Dtrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ≃Dtrans p p' ,  D≃trans (V∋≃trans _) q q'
+≃Dtrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ≃Dtrans p p' ,  C∋≃trans q q'
 
 ≃Drefl : ∀{Γ Δ}{ρ ρ' : DEnv Δ Γ} → ρ ≃D ρ' → ρ ≃D ρ
 ≃Drefl p = ≃Dtrans p (≃Dsym p)
@@ -409,7 +413,7 @@ evalS-wks :
 evalS-wks {σ = ε}     ρ≃ρ         v≃v       σρ≃σ'ρ'          = σρ≃σ'ρ'
 evalS-wks {σ = σ , t} {ρ} ρ≃ρ {v} v≃v {ρ' = ρ' , v'} (σρ≃σ'ρ' , v≃v') =
   evalS-wks ρ≃ρ v≃v σρ≃σ'ρ' ,
-  C∋≃trans _ (fundr t (wkr renId) {ρ , v} {ρ , v} (ρ≃ρ , v≃v))
+  C∋≃trans (fundr t (wkr renId) {ρ , v} {ρ , v} (ρ≃ρ , v≃v))
   (subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-wkr renId ρ v))
   (subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-id ρ))
   v≃v'))
@@ -424,7 +428,7 @@ lemma : ∀{Γ a Δ₁ Δ₂ Δ} {σ : Sub Δ₁ Γ} {σ' : Sub Δ₂ Γ}
   → evalS₀ (lifts σ) (ρ , uσρ) ≃D evalS₀ (σ' , sub σ' u) ρ'
 lemma ρ≃ρ σρ≃σ'ρ' u u⇓ (delay≃ v uσρ⇓v v' uσ'ρ'⇓v' r) with uniq⇓ u⇓ uσρ⇓v
 lemma ρ≃ρ σρ≃σ'ρ' u u⇓ (delay≃ uσρ uσρ⇓v v' uσ'ρ'⇓v' r) | refl =
-  evalS-wks ρ≃ρ (V∋≃refl _ r) σρ≃σ'ρ' ,
+  evalS-wks ρ≃ρ (V∋≃refl r) σρ≃σ'ρ' ,
   D≃now u⇓ (delay≃ uσρ uσρ⇓v v' uσ'ρ'⇓v' r)
 
 
@@ -437,13 +441,26 @@ lemma' : ∀{Γ a}
   → Delay _≃E_ ∋ evalS (lifts σ) (ρ , uσρ) ≃ evalS (σ' , sub σ' u) ρ'
 lemma' σ σ' ρ ρ' σρ≃σ'ρ' u⇓ = {!!}
 
+fundvar : ∀{Γ a} (x : Var Γ a)
+  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
+  → ∀{ρ : Env Δ Δ₁}{ρ' : Env Δ Δ₂}
+  → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
+  → a C∋ eval (looks σ x) ρ ≃ eval (looks σ' x) ρ'
+fundvar zero    (σ , v) (σ' , v') (_    , v≃v') = v≃v'
+fundvar (suc x) (σ , v) (σ' , v') (σρ≃σ'ρ' , _) = fundvar x σ σ' σρ≃σ'ρ'
+
 fundt : ∀{Γ a} (t : Tm Γ a)
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
   → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ)
   → ∀{ρ' : Env Δ Δ₂}(ρ'≃ρ' : ρ' ≃E ρ')
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t) ρ'
-fundt = {!!}
+fundt (var x) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = fundvar x σ σ' σρ≃σ'ρ'
+fundt (abs t) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fundt (app t u) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
+  ⟦app⟧ (fundt t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
+        (fundt u σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
+
 
 fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
@@ -451,20 +468,25 @@ fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
   → ∀{ρ' : Env Δ Δ₂}(ρ'≃ρ' : ρ' ≃E ρ')
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t') ρ'
-fund' (var≡ x) σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (var≡ x) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = fundvar x σ σ' σρ≃σ'ρ'
 fund' (abs≡ t≡t') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
-fund' (app≡ t≡t' t≡t'') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
-fund' (beta≡ {t = t}{u = u}) σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ'
+fund' (app≡ t≡t' u≡u') σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
+  ⟦app⟧ (fund' t≡t' σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
+        (fund' u≡u' σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
+fund' (beta≡ {t = t}{u = u}) σ σ'  ρ≃ρ ρ'≃ρ' σρ≃σ'ρ'
   rewrite sym (subcomp σ' (subId , u) t) | sidr σ' =
-  let u≃u = fundt u σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' in
+  let u≃u = fundt u σ σ'  ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' in
   let uσρ⇓ = Delay_∋_≃_.a⇓ u≃u in
   D≃bind⇓ (λ v → later (beta (sub (wks σ , var zero) t) ρ v)) uσρ⇓
   (later-beta-l _
-   (fundt t (lifts σ) (σ' , sub σ' u) (ρ≃ρ , Delay_∋_≃_.rab (C∋≃refl _ u≃u)) ρ'≃ρ' (lemma ρ≃ρ σρ≃σ'ρ' u uσρ⇓ u≃u)))
+   (fundt t (lifts σ) (σ' , sub σ' u) (ρ≃ρ , Delay_∋_≃_.rab (C∋≃refl u≃u)) ρ'≃ρ' (lemma ρ≃ρ σρ≃σ'ρ' u uσρ⇓ u≃u)))
 fund' eta≡ σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
-fund' refl≡ σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
-fund' (sym≡ t≡t') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
-fund' (trans≡ t≡t' t≡t'') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (refl≡ t)   σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = fundt t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ'
+fund' (sym≡ t'≡t) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = C∋≃sym (fund' t'≡t σ' σ ρ'≃ρ' ρ≃ρ (≃Dsym σρ≃σ'ρ'))
+fund' (trans≡ t₁≡t₂ t₂≡t₃) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
+  C∋≃trans
+    (fund' t₁≡t₂ σ σ  ρ≃ρ ρ≃ρ  (≃Drefl σρ≃σ'ρ'))
+    (fund' t₂≡t₃ σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
 
 --  → evalS σ ρ ≃E evalS σ' ρ'
 
