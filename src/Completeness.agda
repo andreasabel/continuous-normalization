@@ -361,6 +361,18 @@ ren-evalR ε ρ η' = refl
 ren-evalR (η , x) ρ η' rewrite ren-evalR η ρ η' | lookup≤ x ρ η' = refl
 -- {-# REWRITE ren-evalR #-} -- does not fire
 
+
+rendenv : ∀{Γ Δ} → Ren Δ Γ → ∀ {B} → DEnv Γ B → DEnv Δ B
+rendenv η ε = ε
+rendenv η (ρ , v) = (rendenv η ρ) , (renval η <$> v)
+
+ren-evalS : ∀{Γ Δ Δ' Δ''} (η : Sub Δ Γ) (ρ : Env Δ' Δ) (η' : Ren Δ'' Δ') →
+  rendenv η' (evalS₀ η ρ) ≃D evalS₀ η (renenv η' ρ)
+ren-evalS ε ρ η' = _
+ren-evalS (η , v) ρ η' = (ren-evalS η ρ η') ,
+  {!!}
+
+
 evalR-wkr : ∀{Γ Δ Δ' a} (η : Ren Δ Γ) (ρ : Env Δ' Δ) (v : Val Δ' a) →
   evalR (wkr η) (ρ , v) ≡ evalR η ρ
 evalR-wkr ε _ _ = refl
@@ -414,7 +426,6 @@ evalS-wks {σ = σ , t} {ρ} ρ≃ρ {v} v≃v {ρ' = ρ' , v'} (σρ≃σ'ρ' ,
   (subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-id ρ))
   v≃v'))
 
-
 lemma : ∀{Γ a Δ₁ Δ₂ Δ} {σ : Sub Δ₁ Γ} {σ' : Sub Δ₂ Γ}
   → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ) {ρ' : Env Δ Δ₂}
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
@@ -443,7 +454,19 @@ fundt : ∀{Γ a} (t : Tm Γ a)
   → ∀{ρ' : Env Δ Δ₂}(ρ'≃ρ' : ρ' ≃E ρ')
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t) ρ'
-fundt = {!!}
+fundt (var zero) (σ , v) (σ' , v₁) ρ≃ρ ρ'≃ρ' (_ , p') = p'
+fundt (var (suc x)) (σ , v) (σ' , v₁) ρ≃ρ ρ'≃ρ' (p , _) =
+  fundt (var x) σ σ' ρ≃ρ ρ'≃ρ' p 
+fundt (abs t) σ σ' ρ≃ρ ρ'≃ρ' p =
+  delay≃ _ now⇓ _ now⇓
+    λ η u u' u≃u' → ≃later $
+      fundt t (lifts σ)
+              (lifts σ')
+              (renE≃ η ρ≃ρ , V∋≃refl _ u≃u' )
+              ((renE≃ η ρ'≃ρ' , V∋≃refl _ (V∋≃sym _ u≃u') ))
+              ((≃Dtrans (evalS-wks (renE≃ η ρ≃ρ) (V∋≃refl _ u≃u') {!!}) (≃Dsym (evalS-wks (renE≃ η ρ'≃ρ') (V∋≃refl _ (V∋≃sym _ u≃u')) {!!}))) , (delay≃ _ now⇓ _ now⇓ u≃u'))
+
+fundt (app t t₁) σ σ' ρ≃ρ ρ'≃ρ' p = {!!}
 
 fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
