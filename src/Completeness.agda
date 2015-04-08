@@ -125,7 +125,7 @@ C∋≃refl : ∀{Γ a} {v v' : Delay ∞ (Val Γ a)} →
            a C∋ v ≃ v' → a C∋ v ≃ v
 C∋≃refl (delay≃ v v⇓ v' v'⇓ r) = delay≃ v v⇓ v v⇓ (V∋≃refl r)
 
--- Strong bisimilar values can be swapped out.
+-- Strongly bisimilar values can be swapped out.
 
 C∋≃bisim-l : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)}
   → (p : v₀? ≈ v₁?)
@@ -493,6 +493,22 @@ fundt (app t u) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =
   ⟦app⟧ (fundt t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
         (fundt u σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
 
+
+fundeta : ∀ {Γ Δ₁ Δ₂ Δ Δ₃ a b} (t : Tm Γ (a ⇒ b))
+  → (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
+  → {ρ  : Env Δ Δ₁} (ρ≃ρ   : ρ  ≃E ρ )
+  → {ρ' : Env Δ Δ₂} (ρ'≃ρ' : ρ' ≃E ρ')
+  → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
+  → (η : Ren Δ₃ Δ)
+  → (t≃t : (a ⇒ b) C∋ eval (sub σ t) ρ ≃ eval (sub σ' t) ρ')
+  → {u u' : Val Δ₃ a} (u≃u' : a V∋ u ≃ u')
+  → b C∋ eval (sub (lifts σ) (ren (wkr renId) t)) (renenv η ρ , u)
+            >>= (λ f → apply f u)
+       ≃  apply (renval η (Delay_∋_≃_.b t≃t)) u'
+fundeta {a = a} t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' η t≃t u≃u'
+  rewrite liftSubRen {a = a} σ t = {!!}
+--  rewrite subren (lifts {σ = a} σ) (wkr renId) t = {!!}
+
 fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
   → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ)
@@ -511,7 +527,11 @@ fund' (beta≡ {t = t}{u = u}) σ σ' {ρ} ρ≃ρ ρ'≃ρ' σρ≃σ'ρ'
   D≃bind⇓ (λ v → later (beta (sub (wks σ , var zero) t) ρ v)) uσρ⇓
   (later-beta-l _
    (fundt t (lifts σ) (σ' , sub σ' u) (ρ≃ρ , Delay_∋_≃_.rab (C∋≃refl u≃u)) ρ'≃ρ' (lemma ρ≃ρ σρ≃σ'ρ' u uσρ⇓ u≃u)))
-fund' eta≡ σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (eta≡ t) σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' =
+  let t≃t = fundt t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' in
+  let delay≃ tσρ tσρ⇓ tσ'ρ' tσ'ρ'⇓ r = t≃t in
+  delay≃ _ now⇓ _ tσ'ρ'⇓ (λ η u u' u≃u' → later-beta-l _
+   (fundeta t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' η t≃t u≃u'))
 fund' (refl≡ t)   σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = fundt t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ'
 fund' (sym≡ t'≡t) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' = C∋≃sym (fund' t'≡t σ' σ ρ'≃ρ' ρ≃ρ (≃Dsym σρ≃σ'ρ'))
 fund' (trans≡ t₁≡t₂ t₂≡t₃) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' =

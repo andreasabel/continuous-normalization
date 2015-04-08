@@ -21,7 +21,7 @@ data _≡βη_ {Γ : Cxt} : ∀{σ} → Tm Γ σ → Tm Γ σ → Set where
           app t u ≡βη app t' u'
   beta≡ : ∀{σ τ}{t : Tm (Γ , σ) τ}{u : Tm Γ σ} →
           app (abs t) u ≡βη sub (subId , u) t
-  eta≡   : ∀{σ τ}{t : Tm Γ (σ ⇒ τ)} →
+  eta≡   : ∀{σ τ}(t : Tm Γ (σ ⇒ τ)) →
            abs (app (ren (wkr renId) t) (var zero)) ≡βη t
   refl≡  : ∀{a} (t : Tm Γ a) → t ≡βη t
   sym≡   : ∀{a}{t t' : Tm Γ a}    (t'≡t : t' ≡βη t) → t ≡βη t'
