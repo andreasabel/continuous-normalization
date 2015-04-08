@@ -11,6 +11,8 @@ open import Evaluation
 open import EquationalTheory
 open import Termination using (rennereadback⇓)
 
+{-# BUILTIN REWRITE _≡_ #-}
+
 record Delay_∋_≃_ {A} (R : A → A → Set) (a? b? : Delay ∞ A) : Set where
   constructor delay≃
   field
@@ -48,6 +50,9 @@ D≃now a⇓ (delay≃ a′ a′⇓ b b⇓ rab) with uniq⇓ a⇓ a′⇓
 D≃now a⇓ (delay≃ a a′⇓ b b⇓ rab) | refl = delay≃ a now⇓ b b⇓ rab
 -- delay≃ fa (bind⇓ f a⇓ fa⇓) b b⇓ rab
 
+-- D≃bind-cong : ∀{Γ a} {v? v?' : Delay ∞ (Val Γ a}
+--   → (v≃v' : a C∋ v? ≅ v'?)
+--   → (∀ (v : Val Δ a
 
 -- _≃_ : ∀{Γ} (v v' : Val Γ ★) → Set
 -- ne v ≃ ne v' = ∃ λ n → nereadback v ⇓ n × nereadback v' ⇓ n
@@ -358,11 +363,13 @@ ren-evalR : ∀{Γ Δ Δ' Δ''} (η : Ren Δ Γ) (ρ : Env Δ' Δ) (η' : Ren Δ
   renenv η' (evalR η ρ) ≡ evalR η (renenv η' ρ)
 ren-evalR ε ρ η' = refl
 ren-evalR (η , x) ρ η' rewrite ren-evalR η ρ η' | lookup≤ x ρ η' = refl
+-- {-# REWRITE ren-evalR #-} -- does not fire
 
 evalR-wkr : ∀{Γ Δ Δ' a} (η : Ren Δ Γ) (ρ : Env Δ' Δ) (v : Val Δ' a) →
   evalR (wkr η) (ρ , v) ≡ evalR η ρ
 evalR-wkr ε _ _ = refl
 evalR-wkr (η , x) ρ v rewrite evalR-wkr η ρ v = refl
+-- {-# REWRITE evalR-wkr #-}
 
 lookup-ren :  ∀{Γ Δ Δ' a} (x : Var Γ a) (η : Ren Δ Γ) (ρ : Env Δ' Δ)
   → lookup (lookr η x) ρ ≡ lookup x (evalR η ρ)
@@ -370,12 +377,45 @@ lookup-ren zero (η , x) ρ = refl
 lookup-ren (suc x) (η , ()) ε
 lookup-ren (suc x) (η , _) ρ = lookup-ren x η ρ
 
+{- NOT PROVABLE FOR ABSTRACTION
+eval-ren≡ : ∀{Γ Δ Δ' a} (t : Tm Γ a) (η : Ren Δ Γ) (ρ : Env Δ' Δ)
+  → eval t (evalR η ρ) ≡ eval (ren η t) ρ
+eval-ren≡ (var x)   η ρ = {!!}
+eval-ren≡ (abs t)   η ρ = {!!}
+eval-ren≡ (app t u) η ρ = {!!}
+-}
+
+≃lookup :  ∀{Γ Δ a} (x : Var Γ a) {ρ ρ' : Env Δ Γ}
+  → (ρ≃ρ' : ρ ≃E ρ')
+  → a V∋ lookup x ρ ≃ lookup x ρ'
+≃lookup zero    {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = v≃v'
+≃lookup (suc x) {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = ≃lookup x ρ≃ρ'
+
+≃evalR : ∀{Γ Δ Δ'} (η : Ren Δ Γ) {ρ ρ' : Env Δ' Δ}
+  → (ρ≃ρ' : ρ ≃E ρ')
+  → evalR η ρ ≃E evalR η ρ'
+≃evalR ε ρ≃ρ' = _
+≃evalR (η , x) ρ≃ρ' = ≃evalR η ρ≃ρ' , ≃lookup x ρ≃ρ'
+
+fundr : ∀{Γ Δ Δ' a} (t : Tm Γ a) (η : Ren Δ Γ) {ρ ρ' : Env Δ' Δ}
+  → (ρ≃ρ' : ρ ≃E ρ')
+  → a C∋ eval (ren η t) ρ ≃ eval t (evalR η ρ')
+fundr (var x) η {ρ} ρ≃ρ' rewrite lookup-ren x η ρ = ⟦var⟧ x (≃evalR η ρ≃ρ')
+--  delay≃ _ now⇓ _ now⇓ (≃lookup x (≃evalR η ρ≃ρ'))
+fundr (abs t) η ρ≃ρ' = {! ⟦abs⟧ _ _ ρ≃ρ' (λ η q → fundr t η (renE≃ η ρ≃ρ' , q))!}
+fundr (app t u) η ρ≃ρ' = ⟦app⟧ (fundr t η ρ≃ρ') (fundr u η ρ≃ρ')
+
+-- "Substitution lemma" for renaming.  Fails for case of application.
 eval-ren : ∀{Γ Δ Δ' a} (t : Tm Γ a) {η : Ren Δ Γ} {ρ : Env Δ' Δ} {v? : Delay ∞ (Val Δ' a)}
   → (r : a C∋ eval t (evalR η ρ) ≃ v?)
   → a C∋ eval (ren η t) ρ ≃ v?
 eval-ren (var x) {η} {ρ} r rewrite lookup-ren x η ρ = r
-eval-ren (abs t) (delay≃ ._ now⇓ v v⇓ r) = delay≃ {!!} now⇓ v v⇓ (λ η' u u' u≃u' → later-beta-l {!!} (eval-ren t {η = liftr _} {!beta-later-l ? (r η' u u' u≃u')!}))
-eval-ren (app t u) r = {!!}
+eval-ren (abs t) (delay≃ ._ now⇓ v v⇓ r) = delay≃ _ now⇓ v v⇓ (λ η' u u' u≃u' →
+  later-beta-l _ (eval-ren t {η = liftr _}
+  (subst (λ z → _ C∋ eval t (z , u) ≃ apply (renval η' v) u') (sym (evalR-wkr _ _ u))
+  (subst (λ z → _ C∋ eval t (z , u) ≃ apply (renval η' v) u') (ren-evalR _ _ η')
+  (beta-later-l t (r η' u u' u≃u'))))))
+eval-ren (app t u) r = {!eval-ren t!}
 
 -- Not general enough to be provable (case abs)
 eval-wkr : ∀{Γ Δ a b} (t : Tm Γ a) {ρ : Env Δ Γ} {v : Val Δ b} {v? : Delay ∞ (Val Δ a)}
