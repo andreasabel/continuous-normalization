@@ -81,8 +81,8 @@ mutual
 
   _V∋_≃_ : ∀{Γ}(a : Ty) (v v' : Val Γ a) → Set
   _V∋_≃_         ★       (ne n) (ne n') = n ≃ n'
-  _V∋_≃_ {Γ = Γ} (a ⇒ b) f     f'       = ∀{Δ}(ρ : Ren Δ Γ)(u u' : Val Δ a)
-    (u≃u' : a V∋ u ≃ u') → b C∋ (apply (renval ρ f) u) ≃ (apply (renval ρ f') u')
+  _V∋_≃_ {Γ = Γ} (a ⇒ b) f     f'       = ∀{Δ}(η : Ren Δ Γ)(u u' : Val Δ a)
+    (u≃u' : a V∋ u ≃ u') → b C∋ (apply (renval η f) u) ≃ (apply (renval η f') u')
 
   VLR : ∀{Γ}(a : Ty) (v v' : Val Γ a) → Set
   VLR a v v' = _V∋_≃_ a v v'
@@ -288,6 +288,10 @@ later-beta : ∀ {Δ Γ a b} {t t' : Tm (Γ , a) b}
        (Delay (b V∋_≃_) ∋ later (beta t ρ u) ≃ later (beta t' ρ' u'))
 later-beta (delay≃ a a⇓ b b⇓ rab) = delay≃ a (later⇓ a⇓) b (later⇓ b⇓) rab
 
+≃later : ∀{A}{R : A → A → Set}{a∞ b∞ : ∞Delay ∞ A}
+  → Delay R ∋ force a∞ ≃ force b∞
+  → Delay R ∋ later a∞ ≃ later b∞
+≃later (delay≃ a a⇓ b b⇓ rab) = delay≃ a (later⇓ a⇓) b (later⇓ b⇓) rab
 
 ⟦abs⟧ : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b) -- (t≡t' : t ≡βη t')
   {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃E ρ') →
@@ -401,8 +405,11 @@ fundr : ∀{Γ Δ Δ' a} (t : Tm Γ a) (η : Ren Δ Γ) {ρ ρ' : Env Δ' Δ}
   → (ρ≃ρ' : ρ ≃E ρ')
   → a C∋ eval (ren η t) ρ ≃ eval t (evalR η ρ')
 fundr (var x) η {ρ} ρ≃ρ' rewrite lookup-ren x η ρ = ⟦var⟧ x (≃evalR η ρ≃ρ')
---  delay≃ _ now⇓ _ now⇓ (≃lookup x (≃evalR η ρ≃ρ'))
-fundr (abs t) η ρ≃ρ' = {! ⟦abs⟧ _ _ ρ≃ρ' (λ η q → fundr t η (renE≃ η ρ≃ρ' , q))!}
+fundr (abs t) η {ρ} {ρ'} ρ≃ρ' = delay≃ _ now⇓ _ now⇓ (λ η' u u' u≃u' →
+  ≃later
+  (subst (λ z → _ C∋ eval (ren (liftr η) t) (renenv η' ρ , u) ≃ eval t (z , u')) (sym (ren-evalR _ _ η'))
+  (subst (λ z → _ C∋ eval (ren (liftr η) t) (renenv η' ρ , u) ≃ eval t (z , u')) (evalR-wkr η _ u')
+  (fundr t (liftr η) {renenv η' ρ , u} {renenv η' ρ' , u'} (renE≃ η' ρ≃ρ' , u≃u')))))
 fundr (app t u) η ρ≃ρ' = ⟦app⟧ (fundr t η ρ≃ρ') (fundr u η ρ≃ρ')
 
 -- "Substitution lemma" for renaming.  Fails for case of application.
