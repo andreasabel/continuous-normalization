@@ -125,6 +125,20 @@ C∋≃refl : ∀{Γ a} {v v' : Delay ∞ (Val Γ a)} →
            a C∋ v ≃ v' → a C∋ v ≃ v
 C∋≃refl (delay≃ v v⇓ v' v'⇓ r) = delay≃ v v⇓ v v⇓ (V∋≃refl r)
 
+-- Strong bisimilar values can be swapped out.
+
+C∋≃bisim-l : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)}
+  → (p : v₀? ≈ v₁?)
+  → (q : a C∋ v₁? ≃ v₂?)
+  → a C∋ v₀? ≃ v₂?
+C∋≃bisim-l p (delay≃ v₁ v₁⇓ v₂ v₂⇓ r) = delay≃ v₁ (subst≈⇓ v₁⇓ (≈sym p)) v₂ v₂⇓ r
+
+C∋≃bisim-r : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)}
+  → (p : a C∋ v₀? ≃ v₁?)
+  → (q : v₁? ≈ v₂?)
+  → a C∋ v₀? ≃ v₂?
+C∋≃bisim-r (delay≃ v₀ v₀⇓ v₁ v₁⇓ r) q = delay≃ v₀ v₀⇓ v₁ (subst≈⇓ v₁⇓ q) r
+
 -- Environments ρ and ρ' are related.
 
 _≃E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
