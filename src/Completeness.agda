@@ -261,16 +261,6 @@ _≃T_ {Γ} {a} t t' =
 ⟦var⟧ (suc x) {Δ} {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = ⟦var⟧ x ρ≃ρ'
 
 
-{-
--- Trivial lemma, if you think about it. (UNUSED)
-sound-β : ∀ {Δ Γ a b} (t t' : Tm (Γ , a) b)
-  {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃E ρ')
-  {u u' : Val Δ a} (u≃u' : VLR a u u')
-  → b C∋ (eval t    (ρ , u)) ≃ (eval t'    (ρ' , u'))
-  → b C∋ (apply (lam t ρ) u) ≃ (apply (lam t' ρ') u')
-sound-β t t' ρ≃ρ' u≃u' eq = ≃later (≃delay eq)
--}
-
 beta-later-l :  ∀ {Δ Γ a b} (t : Tm (Γ , a) b)
        {ρ : Env Δ Γ} {u : Val Δ a} {v? : Delay ∞ (Val Δ b)} →
        (r : Delay (b V∋_≃_) ∋ later (beta t ρ u) ≃ v?) →
@@ -388,14 +378,6 @@ lookup-ren zero (η , x) ρ = refl
 lookup-ren (suc x) (η , ()) ε
 lookup-ren (suc x) (η , _) ρ = lookup-ren x η ρ
 
-{- NOT PROVABLE FOR ABSTRACTION
-eval-ren≡ : ∀{Γ Δ Δ' a} (t : Tm Γ a) (η : Ren Δ Γ) (ρ : Env Δ' Δ)
-  → eval t (evalR η ρ) ≡ eval (ren η t) ρ
-eval-ren≡ (var x)   η ρ = {!!}
-eval-ren≡ (abs t)   η ρ = {!!}
-eval-ren≡ (app t u) η ρ = {!!}
--}
-
 ≃lookup :  ∀{Γ Δ a} (x : Var Γ a) {ρ ρ' : Env Δ Γ}
   → (ρ≃ρ' : ρ ≃E ρ')
   → a V∋ lookup x ρ ≃ lookup x ρ'
@@ -419,40 +401,19 @@ fundr (abs t) η {ρ} {ρ'} ρ≃ρ' = delay≃ _ now⇓ _ now⇓ (λ η' u u' u
   (fundr t (liftr η) {renenv η' ρ , u} {renenv η' ρ' , u'} (renE≃ η' ρ≃ρ' , u≃u')))))
 fundr (app t u) η ρ≃ρ' = ⟦app⟧ (fundr t η ρ≃ρ') (fundr u η ρ≃ρ')
 
--- "Substitution lemma" for renaming.  Fails for case of application.
-eval-ren : ∀{Γ Δ Δ' a} (t : Tm Γ a) {η : Ren Δ Γ} {ρ : Env Δ' Δ} {v? : Delay ∞ (Val Δ' a)}
-  → (r : a C∋ eval t (evalR η ρ) ≃ v?)
-  → a C∋ eval (ren η t) ρ ≃ v?
-eval-ren (var x) {η} {ρ} r rewrite lookup-ren x η ρ = r
-eval-ren (abs t) (delay≃ ._ now⇓ v v⇓ r) = delay≃ _ now⇓ v v⇓ (λ η' u u' u≃u' →
-  later-beta-l _ (eval-ren t {η = liftr _}
-  (subst (λ z → _ C∋ eval t (z , u) ≃ apply (renval η' v) u') (sym (evalR-wkr _ _ u))
-  (subst (λ z → _ C∋ eval t (z , u) ≃ apply (renval η' v) u') (ren-evalR _ _ η')
-  (beta-later-l t (r η' u u' u≃u'))))))
-eval-ren (app t u) r = {!eval-ren t!}
-
--- Not general enough to be provable (case abs)
-eval-wkr : ∀{Γ Δ a b} (t : Tm Γ a) {ρ : Env Δ Γ} {v : Val Δ b} {v? : Delay ∞ (Val Δ a)}
-  → (r : a C∋ eval t ρ ≃ v?)
-  → a C∋ eval (ren (wkr renId) t) (ρ , v) ≃ v?
-eval-wkr t tρ≃v = {!fundr t (wkr renId) (ρ!}
-{-
-eval-wkr {b = b} (var x) r rewrite lookrwkr {τ = b} renId x | lookrid x = r
-eval-wkr (abs t) (delay≃ ._ now⇓ v v⇓ r) = delay≃ _ now⇓ v v⇓ (λ ρ u u' u≃u' → later-beta-l (ren (liftr (wkr renId)) t) {!!}) --
-eval-wkr (app t u) r = {!!}
--}
-
 evalS-wks :
   ∀{Γ a Δ₁ Δ} {σ : Sub Δ₁ Γ} {ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ)
   → {v : Val Δ a} (v≃v : a V∋ v ≃ v) {ρ' : DEnv Δ Γ}
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D ρ')
   → evalS₀ (wks σ) (ρ , v) ≃D ρ'
 evalS-wks {σ = ε}     ρ≃ρ         v≃v       σρ≃σ'ρ'          = σρ≃σ'ρ'
-evalS-wks {σ = σ , t} {ρ} ρ≃ρ {v} v≃v {ρ' = ρ' , v'} (σρ≃σ'ρ' , v≃v') = evalS-wks ρ≃ρ v≃v σρ≃σ'ρ' ,  C∋≃trans _ (fundr t (wkr renId) {ρ , v} {ρ , v} (ρ≃ρ , v≃v)) (
-  subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-wkr renId ρ v))
+evalS-wks {σ = σ , t} {ρ} ρ≃ρ {v} v≃v {ρ' = ρ' , v'} (σρ≃σ'ρ' , v≃v') =
+  evalS-wks ρ≃ρ v≃v σρ≃σ'ρ' ,
+  C∋≃trans _ (fundr t (wkr renId) {ρ , v} {ρ , v} (ρ≃ρ , v≃v))
+  (subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-wkr renId ρ v))
   (subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-id ρ))
   v≃v'))
---  eval-wkr t v≃v'
+
 
 lemma : ∀{Γ a Δ₁ Δ₂ Δ} {σ : Sub Δ₁ Γ} {σ' : Sub Δ₂ Γ}
   → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ) {ρ' : Env Δ Δ₂}
@@ -467,7 +428,7 @@ lemma ρ≃ρ σρ≃σ'ρ' u u⇓ (delay≃ uσρ uσρ⇓v v' uσ'ρ'⇓v' r) 
   D≃now u⇓ (delay≃ uσρ uσρ⇓v v' uσ'ρ'⇓v' r)
 
 
-
+-- Candidate for trash:
 lemma' : ∀{Γ a}
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
   → (σρ≃σ'ρ' : Delay _≃E_ ∋ evalS σ ρ ≃ evalS σ' ρ')
