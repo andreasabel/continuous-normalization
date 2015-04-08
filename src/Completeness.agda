@@ -100,24 +100,26 @@ V∋≃sym ★       {ne _}{ne _} p          = ≃sym p
 V∋≃sym (a ⇒ b)              p ρ u u' q =
   D≃sym (V∋≃sym b) (p ρ u' u (V∋≃sym a q))
 
+mutual
 
-V∋≃trans : ∀{Γ}(a : Ty){v v' v'' : Val Γ a} →
-           a V∋ v ≃ v' → a V∋ v' ≃ v'' → a V∋ v ≃ v''
-V∋≃trans ★ {ne n}{ne n'}{ne n''} p q = ≃trans p q
-V∋≃trans (a ⇒ b) p q ρ u u' r =
-  D≃trans {R = VLR b} (V∋≃trans b)
-                     (p ρ u u (V∋≃trans a r (V∋≃sym a r)))
-                     (q ρ u u' r)
+  V∋≃trans : ∀{Γ}(a : Ty){v v' v'' : Val Γ a} →
+             a V∋ v ≃ v' → a V∋ v' ≃ v'' → a V∋ v ≃ v''
+  V∋≃trans ★ {ne n}{ne n'}{ne n''} p q = ≃trans p q
+  V∋≃trans (a ⇒ b) p q ρ u u' r        = C∋≃trans b
+    (p ρ u u (V∋≃trans a r (V∋≃sym a r)))
+    (q ρ u u' r)
 
-{-
+  C∋≃trans : ∀{Γ}(a : Ty){v v' v'' : Delay ∞ (Val Γ a)} →
+             a C∋ v ≃ v' → a C∋ v' ≃ v'' → a C∋ v ≃ v''
+  C∋≃trans a p q = D≃trans (V∋≃trans a) p q
+
 V∋≃refl : ∀{Γ}(a : Ty){v v' : Val Γ a} →
            a V∋ v ≃ v' → a V∋ v ≃ v
 V∋≃refl a p = V∋≃trans a p (V∋≃sym a p)
 
 C∋≃refl : ∀{Γ}(a : Ty){v v' : Delay ∞ (Val Γ a)} →
            a C∋ v ≃ v' → a C∋ v ≃ v
-C∋≃refl a p = ≃trans (V∋≃trans a) p (≃sym (V∋≃sym a) p)
--}
+C∋≃refl a (delay≃ v v⇓ v' v'⇓ r) = delay≃ v v⇓ v v⇓ (V∋≃refl a r)
 
 -- Environments ρ and ρ' are related.
 
@@ -375,6 +377,11 @@ evalR-wkr ε _ _ = refl
 evalR-wkr (η , x) ρ v rewrite evalR-wkr η ρ v = refl
 -- {-# REWRITE evalR-wkr #-}
 
+evalR-id : ∀{Γ Δ} (ρ : Env Δ Γ) →
+  evalR renId ρ ≡ ρ
+evalR-id ε       = refl
+evalR-id (ρ , v) = cong (_, v) (trans (evalR-wkr renId ρ v) (evalR-id ρ))
+
 lookup-ren :  ∀{Γ Δ Δ' a} (x : Var Γ a) (η : Ren Δ Γ) (ρ : Env Δ' Δ)
   → lookup (lookr η x) ρ ≡ lookup x (evalR η ρ)
 lookup-ren zero (η , x) ρ = refl
@@ -428,25 +435,38 @@ eval-ren (app t u) r = {!eval-ren t!}
 eval-wkr : ∀{Γ Δ a b} (t : Tm Γ a) {ρ : Env Δ Γ} {v : Val Δ b} {v? : Delay ∞ (Val Δ a)}
   → (r : a C∋ eval t ρ ≃ v?)
   → a C∋ eval (ren (wkr renId) t) (ρ , v) ≃ v?
+eval-wkr t tρ≃v = {!fundr t (wkr renId) (ρ!}
+{-
 eval-wkr {b = b} (var x) r rewrite lookrwkr {τ = b} renId x | lookrid x = r
 eval-wkr (abs t) (delay≃ ._ now⇓ v v⇓ r) = delay≃ _ now⇓ v v⇓ (λ ρ u u' u≃u' → later-beta-l (ren (liftr (wkr renId)) t) {!!}) --
 eval-wkr (app t u) r = {!!}
+-}
 
 evalS-wks :
-  ∀{Γ a Δ₁ Δ} {σ : Sub Δ₁ Γ} {ρ : Env Δ Δ₁} {v : Val Δ a} {ρ' : DEnv Δ Γ}
+  ∀{Γ a Δ₁ Δ} {σ : Sub Δ₁ Γ} {ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ)
+  → {v : Val Δ a} (v≃v : a V∋ v ≃ v) {ρ' : DEnv Δ Γ}
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D ρ')
   → evalS₀ (wks σ) (ρ , v) ≃D ρ'
-evalS-wks {σ = ε}     σρ≃σ'ρ' = σρ≃σ'ρ'
-evalS-wks {σ = σ , t} {ρ' = ρ' , v'} (σρ≃σ'ρ' , v≃v') = evalS-wks σρ≃σ'ρ' ,  eval-wkr t v≃v'
+evalS-wks {σ = ε}     ρ≃ρ         v≃v       σρ≃σ'ρ'          = σρ≃σ'ρ'
+evalS-wks {σ = σ , t} {ρ} ρ≃ρ {v} v≃v {ρ' = ρ' , v'} (σρ≃σ'ρ' , v≃v') = evalS-wks ρ≃ρ v≃v σρ≃σ'ρ' ,  C∋≃trans _ (fundr t (wkr renId) {ρ , v} {ρ , v} (ρ≃ρ , v≃v)) (
+  subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-wkr renId ρ v))
+  (subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-id ρ))
+  v≃v'))
+--  eval-wkr t v≃v'
 
-lemma : ∀{Γ a Δ₁ Δ₂ Δ} {σ : Sub Δ₁ Γ} {σ' : Sub Δ₂ Γ} {ρ : Env Δ Δ₁}{ρ' : Env Δ Δ₂}
+lemma : ∀{Γ a Δ₁ Δ₂ Δ} {σ : Sub Δ₁ Γ} {σ' : Sub Δ₂ Γ}
+  → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ) {ρ' : Env Δ Δ₂}
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → (u : Tm Γ a) {uσρ : Val Δ a}
   → (u⇓ : eval (sub σ u) ρ ⇓ uσρ)
   → (u≃u : a C∋ eval (sub σ u) ρ  ≃  eval (sub σ' u) ρ')
   → evalS₀ (lifts σ) (ρ , uσρ) ≃D evalS₀ (σ' , sub σ' u) ρ'
-fst (lemma σρ≃σ'ρ' u u⇓ u≃u) = evalS-wks σρ≃σ'ρ'
-snd (lemma σρ≃σ'ρ' u u⇓ u≃u) = D≃now u⇓ u≃u
+lemma ρ≃ρ σρ≃σ'ρ' u u⇓ (delay≃ v uσρ⇓v v' uσ'ρ'⇓v' r) with uniq⇓ u⇓ uσρ⇓v
+lemma ρ≃ρ σρ≃σ'ρ' u u⇓ (delay≃ uσρ uσρ⇓v v' uσ'ρ'⇓v' r) | refl =
+  evalS-wks ρ≃ρ (V∋≃refl _ r) σρ≃σ'ρ' ,
+  D≃now u⇓ (delay≃ uσρ uσρ⇓v v' uσ'ρ'⇓v' r)
+
+
 
 lemma' : ∀{Γ a}
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
@@ -457,29 +477,33 @@ lemma' : ∀{Γ a}
 lemma' σ σ' ρ ρ' σρ≃σ'ρ' u⇓ = {!!}
 
 fundt : ∀{Γ a} (t : Tm Γ a)
-  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
+  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
+  → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ)
+  → ∀{ρ' : Env Δ Δ₂}(ρ'≃ρ' : ρ' ≃E ρ')
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t) ρ'
 fundt = {!!}
 
 fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
-  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
+  → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
+  → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ)
+  → ∀{ρ' : Env Δ Δ₂}(ρ'≃ρ' : ρ' ≃E ρ')
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
   → a C∋ eval (sub σ t) ρ  ≃  eval (sub σ' t') ρ'
-fund' (var≡ x) σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
-fund' (abs≡ t≡t') σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
-fund' (app≡ t≡t' t≡t'') σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
-fund' (beta≡ {t = t}{u = u}) σ σ' ρ ρ' σρ≃σ'ρ'
+fund' (var≡ x) σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (abs≡ t≡t') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (app≡ t≡t' t≡t'') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (beta≡ {t = t}{u = u}) σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ'
   rewrite sym (subcomp σ' (subId , u) t) | sidr σ' =
-  let u≃u = fundt u σ σ' ρ ρ' σρ≃σ'ρ' in
+  let u≃u = fundt u σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' in
   let uσρ⇓ = Delay_∋_≃_.a⇓ u≃u in
   D≃bind⇓ (λ v → later (beta (sub (wks σ , var zero) t) ρ v)) uσρ⇓
   (later-beta-l _
-   (fundt t (lifts σ) (σ' , sub σ' u) (ρ , _) ρ' (lemma σρ≃σ'ρ' u uσρ⇓ u≃u)))
-fund' eta≡ σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
-fund' refl≡ σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
-fund' (sym≡ t≡t') σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
-fund' (trans≡ t≡t' t≡t'') σ σ' ρ ρ' σρ≃σ'ρ' = {!!}
+   (fundt t (lifts σ) (σ' , sub σ' u) (ρ≃ρ , Delay_∋_≃_.rab (C∋≃refl _ u≃u)) ρ'≃ρ' (lemma ρ≃ρ σρ≃σ'ρ' u uσρ⇓ u≃u)))
+fund' eta≡ σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' refl≡ σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (sym≡ t≡t') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
+fund' (trans≡ t≡t' t≡t'') σ σ' {ρ} ρ≃ρ {ρ'} ρ'≃ρ' σρ≃σ'ρ' = {!!}
 
 --  → evalS σ ρ ≃E evalS σ' ρ'
 
