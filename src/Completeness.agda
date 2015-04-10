@@ -139,6 +139,16 @@ C∋≃bisim-r : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)}
   → a C∋ v₀? ≃ v₂?
 C∋≃bisim-r (delay≃ v₀ v₀⇓ v₁ v₁⇓ r) q = delay≃ v₀ v₀⇓ v₁ (subst≈⇓ v₁⇓ q) r
 
+C∋≃converg-l : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)} → 
+  (p : a C∋ v₀? ≃ v₁?) →
+  v₂? ⇓ Delay_∋_≃_.a p → a C∋ v₂? ≃ v₁?
+C∋≃converg-l (delay≃ a₁ a⇓ b b⇓ rab) q = delay≃ _ q b b⇓ rab
+
+C∋≃converg-r : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)} → 
+  (p : a C∋ v₀? ≃ v₁?) →
+  v₂? ⇓ Delay_∋_≃_.b p → a C∋ v₀? ≃ v₂?
+C∋≃converg-r (delay≃ a₁ a⇓ b b⇓ rab) q = delay≃ a₁ a⇓ _ q rab
+
 -- Environments ρ and ρ' are related.
 
 _≃E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
@@ -229,6 +239,11 @@ renC∋ a η (delay≃ a₁ a⇓ b b⇓ rab) = delay≃ _ (map⇓ (renval η) a�
 renD≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : DEnv Δ Γ} (ρ≃ρ' : ρ ≃D ρ') → (rendenv η ρ) ≃D (rendenv η ρ')
 renD≃ η {ε} {ε} _ = _
 renD≃ η {ρ , v}{ρ' , v'} (p , p') = (renD≃ η p) , renC∋ _ η p'
+
+renD≃' : ∀{Γ₀ Γ₁ Γ' Δ Δ′} (η : Ren Δ′ Δ){σ : Sub Γ₀ Γ'}{σ' : Sub Γ₁ Γ'} {ρ : Env Δ Γ₀}{ρ' : Env Δ Γ₁} (ρ≃ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ') →
+         evalS₀ σ (renenv η ρ) ≃D evalS₀ σ' (renenv η ρ')
+renD≃' η {ε} {ε} _ = _
+renD≃' η {σ , t} {σ' , t'} (p , p') = renD≃' η p , C∋≃bisim-r (C∋≃bisim-l (≈sym (reneval t _ η)) (renC∋ _ η p')) (reneval t' _ η)
 
 
 
@@ -462,7 +477,7 @@ lemma ρ≃ρ σρ≃σ'ρ' u u⇓ (delay≃ uσρ uσρ⇓v v' uσ'ρ'⇓v' r) 
   evalS-wks ρ≃ρ (V∋≃refl r) σρ≃σ'ρ' ,
   D≃now u⇓ (delay≃ uσρ uσρ⇓v v' uσ'ρ'⇓v' r)
 
-
+{-
 -- Candidate for trash:
 lemma' : ∀{Γ a}
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ) (ρ : Env Δ Δ₁) (ρ' : Env Δ Δ₂)
@@ -471,7 +486,7 @@ lemma' : ∀{Γ a}
   → (u⇓ : eval (sub σ u) ρ ⇓ uσρ)
   → Delay _≃E_ ∋ evalS (lifts σ) (ρ , uσρ) ≃ evalS (σ' , sub σ' u) ρ'
 lemma' σ σ' ρ ρ' σρ≃σ'ρ' u⇓ = {!!}
-
+-}
 fundvar : ∀{Γ a} (x : Var Γ a)
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
   → ∀{ρ : Env Δ Δ₁}{ρ' : Env Δ Δ₂}
@@ -512,9 +527,23 @@ fundeta : ∀ {Γ Δ₁ Δ₂ Δ Δ₃ a b} (t : Tm Γ (a ⇒ b))
   → b C∋ eval (sub (lifts σ) (ren (wkr renId) t)) (renenv η ρ , u)
             >>= (λ f → apply f u)
        ≃  apply (renval η (Delay_∋_≃_.b t≃t)) u'
-fundeta {a = a} t σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' η t≃t u≃u'
-  rewrite liftSubRen {a = a} σ t = {!!}
---  rewrite subren (lifts {σ = a} σ) (wkr renId) t = {!!}
+fundeta {a = a} t σ σ' {ρ} ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' η (delay≃ a1 a2 a3 a4 a5) {u} u≃u'
+  rewrite liftSubRen {a = a} σ t =
+   let delay≃ b1 b2 b3 b4 b5 = fundt t (wks σ) σ {renenv η ρ , u} ((renE≃ η ρ≃ρ) , (V∋≃refl u≃u')) {renenv η ρ} (renE≃ η ρ≃ρ) (evalS-wks (renE≃ η ρ≃ρ) (V∋≃refl u≃u') (≃Drefl (renD≃' η σρ≃σ'ρ')))
+       delay≃ c1 c2 c3 c4 c5 = b5 renId u _ (V∋≃refl u≃u')
+
+   in
+     C∋≃trans
+      (delay≃ c1
+              (bind⇓ (λ f → apply f u)
+                     b2
+                     (subst (λ f → apply f u ⇓ c1) (renvalid b1) c2))
+              c3
+              (⇓bind (λ f → apply f u)
+                 (subst≈⇓ (map⇓ (renval η) a2) (reneval (sub σ t) ρ η)) (bind⇓ (λ f → apply f u) b4 (subst (λ f → apply f u ⇓ c3) (renvalid b3) c4)))
+              c5)
+      (a5 η _ _ u≃u')
+
 
 fund' : ∀{Γ a}{t t' : Tm Γ a} (t≡t' : t ≡βη t')
   → ∀{Δ₁ Δ₂ Δ} (σ : Sub Δ₁ Γ) (σ' : Sub Δ₂ Γ)
