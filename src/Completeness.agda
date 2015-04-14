@@ -246,7 +246,6 @@ renD≃' η {ε} {ε} _ = _
 renD≃' η {σ , t} {σ' , t'} (p , p') = renD≃' η p , C∋≃bisim-r (C∋≃bisim-l (≈sym (reneval t _ η)) (renC∋ _ η p')) (reneval t' _ η)
 
 
-
 {-
 -- Closure under renaming
 
@@ -465,6 +464,19 @@ evalS-wks {σ = σ , t} {ρ} ρ≃ρ {v} v≃v {ρ' = ρ' , v'} (σρ≃σ'ρ' ,
   (subst (λ z → _ C∋ eval t z ≃ v') (sym (evalR-id ρ))
   v≃v'))
 
+subevalS₀ : ∀{Γ Δ}{ρ ρ' : Env Γ Δ} → ρ ≃E ρ' → evalS₀ subId ρ ≃D evalS₀ subId ρ'
+subevalS₀ {ρ = ε}    {ε}       _        = _
+subevalS₀ {ρ = ρ , v}{ρ' , v'} (p , p') =
+  evalS-wks (≃Erefl p)
+            (V∋≃refl p')
+            (≃Dsym (evalS-wks (≃Erefl (≃Esym p))
+                              (V∋≃refl (V∋≃sym p'))
+                              (≃Dsym (subevalS₀ p))))
+  ,
+  delay≃ _ now⇓ _ now⇓ p'
+
+
+
 lemma : ∀{Γ a Δ₁ Δ₂ Δ} {σ : Sub Δ₁ Γ} {σ' : Sub Δ₂ Γ}
   → ∀{ρ : Env Δ Δ₁} (ρ≃ρ : ρ ≃E ρ) {ρ' : Env Δ Δ₂}
   → (σρ≃σ'ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ')
@@ -576,24 +588,15 @@ fund' (trans≡ t₁≡t₂ t₂≡t₃) σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ' 
     (fund' t₁≡t₂ σ σ  ρ≃ρ ρ≃ρ  (≃Drefl σρ≃σ'ρ'))
     (fund' t₂≡t₃ σ σ' ρ≃ρ ρ'≃ρ' σρ≃σ'ρ')
 
---  → evalS σ ρ ≃E evalS σ' ρ'
 
-{-
 -- Equal terms evaluate to equal values.
 fund : ∀{Γ a}{t t' : Tm Γ a} →
   (t≡t' : t ≡βη t') → t ≃T t'
-fund (var≡ {x = x} refl) ρ≃ρ' =  ⟦var⟧ x ρ≃ρ'
-fund (abs≡ t≡t') ρ≃ρ' = ⟦abs⟧' (fund t≡t') ρ≃ρ'
-fund (app≡ eq eq₁) ρ≃ρ' = ⟦app⟧ (fund eq ρ≃ρ') (fund eq₁ ρ≃ρ')
-fund (beta≡ {t = t}{u = u}){Δ}{ρ}{ρ'} ρ≃ρ' =
-  {!idext t !}
-fund (eta≡ {t = t}) ρ≃ρ' = {!(idext t ρ≃ρ') !}
-fund (sym≡ eq) ρ≃ρ' = ≃sym (V∋≃sym _) (fund eq (≃Esym ρ≃ρ'))
-fund (trans≡ eq eq₁) ρ≃ρ' = ≃trans (V∋≃trans _) (fund eq (≃Erefl ρ≃ρ')) (fund eq₁ ρ≃ρ')
-fund (refl≡ {t = t}) {ρ = ρ}{ρ'} p = idext t p
-
-
--- -}
--- -}
--- -}
--- -}
+fund {a = a}{t}{t'} p {Δ}{ρ}{ρ'} q =
+  subst
+    (λ t' → a C∋ eval t ρ ≃ eval t' ρ')
+    (subid t')
+    (subst
+      (λ t → a C∋ eval t ρ ≃ eval (sub subId t') ρ')
+      (subid t)
+      (fund' p subId subId (≃Erefl q) (≃Erefl (≃Esym q)) (subevalS₀ q)))
