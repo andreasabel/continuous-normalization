@@ -635,3 +635,18 @@ mutual
                (bind⇓2 (λ m n₁ → now (app m n₁))
                   (subst≈⇓ (map⇓ (rennen η) a4) (rennereadback η n')) b4 now⇓)
                (cong (app (rennen η a1)) b5)))
+
+varcomp : ∀{Γ a}(x : Var Γ a) → a V∋ ne (var x) ≃ ne (var x)
+varcomp {a = a} x = reflect a (delay≃ (var x) now⇓ (var x) now⇓ refl)
+
+
+idecomp : ∀ Γ → ide Γ ≃E ide Γ
+idecomp ε       = _
+idecomp (Γ , a) = renE≃ (wkr renId) (idecomp Γ) , varcomp zero
+
+completeness : ∀ Γ a {t t' : Tm Γ a} → t ≡βη t' → Delay _≡_ ∋ nf t ≃ nf t'
+completeness Γ a p =
+  let delay≃ a1 a2 a3 a4 a5 = fund p (idecomp Γ)
+      delay≃ b1 b2 b3 b4 b5 = reify a a5
+  in  delay≃ b1 (bind⇓ readback a2 b2) b3 (bind⇓ readback a4 b4) b5
+
