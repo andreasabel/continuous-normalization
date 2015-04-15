@@ -600,3 +600,27 @@ fund {a = a}{t}{t'} p {Δ}{ρ}{ρ'} q =
       (λ t → a C∋ eval t ρ ≃ eval (sub subId t') ρ')
       (subid t)
       (fund' p subId subId (≃Erefl q) (≃Erefl (≃Esym q)) (subevalS₀ q)))
+
+-- reify, reflect
+
+mutual
+  reify : ∀{Γ} a {v v' : Val Γ a} →
+          a V∋ v ≃ v' → Delay _≡_ ∋ readback v ≃ readback v'
+  reify ★ {ne n} {ne n'} (ne≃ n'' n⇓ n'⇓) =
+    delay≃ (ne n'') (map⇓ ne n⇓) (ne n'') (map⇓ ne n'⇓) refl
+  reify (a ⇒ b) p =
+    let delay≃ a1 a2 a3 a4 a5 = p (wkr renId)
+                                  (ne (var zero))
+                                  (ne (var zero))
+                                  (reflect a (delay≃ _ now⇓ _ now⇓ refl))
+        delay≃ b1 b2 b3 b4 b5 = reify b a5
+    in  ≃later $ delay≃ (abs b1)
+                        (map⇓ abs (bind⇓ readback a2 b2))
+                        (abs b3)
+                        (map⇓ abs (bind⇓ readback a4 b4))
+                        (cong abs b5)
+
+  reflect : ∀{Γ} a {n n' : NeVal Γ a} →
+            Delay _≡_ ∋ nereadback n ≃ nereadback n' → a V∋ ne n ≃ ne n'
+  reflect ★ (delay≃ n'' n⇓ .n'' n'⇓ refl) = ne≃ n'' n⇓ n'⇓
+  reflect (a ⇒ b) p η u u' u≃u' = {!!}
