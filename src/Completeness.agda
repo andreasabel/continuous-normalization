@@ -623,4 +623,15 @@ mutual
   reflect : ∀{Γ} a {n n' : NeVal Γ a} →
             Delay _≡_ ∋ nereadback n ≃ nereadback n' → a V∋ ne n ≃ ne n'
   reflect ★ (delay≃ n'' n⇓ .n'' n'⇓ refl) = ne≃ n'' n⇓ n'⇓
-  reflect (a ⇒ b) p η u u' u≃u' = {!!}
+  reflect (a ⇒ b) {n}{n'} (delay≃ a1 a2 .a1 a4 refl) η u u' u≃u' =
+    let delay≃ b1 b2 b3 b4 b5 = reify a u≃u'
+    in  delay≃ _ now⇓ _ now⇓ (reflect b (delay≃
+               (app (rennen η a1) b1)
+               (bind⇓2 (λ m n → now (app m n))
+                       (subst≈⇓ (map⇓ (rennen η) a2) (rennereadback η n))
+                       b2
+                       now⇓)
+               (app (rennen η a1) b3)
+               (bind⇓2 (λ m n₁ → now (app m n₁))
+                  (subst≈⇓ (map⇓ (rennen η) a4) (rennereadback η n')) b4 now⇓)
+               (cong (app (rennen η a1)) b5)))

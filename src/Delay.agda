@@ -310,6 +310,17 @@ bind⇓ : ∀{A B}(f : A → Delay ∞ B)
 bind⇓ f now⇓ q = q
 bind⇓ f (later⇓ p) q = later⇓ (bind⇓ f p q)
 
+bind⇓2 : ∀{A B C}(f : A → B → Delay ∞ C)
+         {?a : Delay ∞ A}{a : A} → ?a ⇓ a →
+         {?b : Delay ∞ B}{b : B} → ?b ⇓ b →
+         {c : C} → f a b ⇓ c → (?a >>= (λ a → ?b >>= f a)) ⇓ c
+bind⇓2 f now⇓ now⇓ r = r
+bind⇓2 f now⇓ (later⇓ q) r = later⇓ (bind⇓2 f now⇓ q r)
+bind⇓2 f (later⇓ p) q r = later⇓ (bind⇓2 f p q r)
+
+-- nereadback w >>= λ m → app m <$> readback v
+
+
 -- handy when you can't pattern match like in a let definition
 unlater : ∀{A}{∞a : ∞Delay ∞ A}{a : A} → later ∞a ⇓ a → force ∞a ⇓ a
 unlater (later⇓ p) = p
