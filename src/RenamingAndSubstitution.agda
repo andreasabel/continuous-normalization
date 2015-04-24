@@ -298,15 +298,20 @@ ren2subren f (app t u) = cong₂ app (ren2subren f t) (ren2subren f u)
 wkrscomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Sub Γ Δ) →
   subComp (ren2sub (wkr {σ = σ} xs)) ys ≡ wks {σ = σ} (subComp (ren2sub xs) ys)
 wkrscomp xs ε        = refl
-wkrscomp xs (ys , y) = cong₂
-  Sub._,_
-  (wkrscomp xs ys)
-  (trans (sym $ ren2subren (wkr xs) y)
-          (trans (trans (cong (λ zs → ren zs y)
-                                 (trans (cong wkr (sym $ lidr xs))
-                                         (sym $ wkrcomp renId xs) ))
-                          (rencomp (wkr renId) xs y) )
-                  (cong (ren (wkr renId)) (ren2subren xs y))))
+wkrscomp xs (ys , y) = begin
+  subComp (ren2sub (wkr xs)) ys , sub (ren2sub (wkr xs)) y                 ≡⟨ cong₂ _,_ (wkrscomp xs ys) (sym $ ren2subren (wkr xs) y) ⟩
+  wks (subComp (ren2sub xs) ys) , ren (wkr xs) y                           ≡⟨ cong (λ f → wks (subComp (ren2sub xs) ys) , ren (wkr f) y) (sym $ lidr xs) ⟩
+  wks (subComp (ren2sub xs) ys) , ren (wkr (renComp renId xs))  y          ≡⟨ cong (λ f → wks (subComp (ren2sub xs) ys) , ren f y) (sym $ wkrcomp renId xs) ⟩
+  wks (subComp (ren2sub xs) ys) , ren (renComp (wkr renId)  xs) y          ≡⟨ cong (wks (subComp (ren2sub xs) ys) ,_) (rencomp (wkr renId) xs y) ⟩
+  wks (subComp (ren2sub xs) ys) , ren (wkr renId) (ren xs y)               ≡⟨ cong (λ t → wks (subComp (ren2sub xs) ys) , ren (wkr renId) t) (ren2subren xs y)  ⟩
+  wks (subComp (ren2sub xs) ys) , ren (wkr renId) (sub (ren2sub xs) y)     ∎
+
+liftrscomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Sub Γ Δ) →
+  subComp (ren2sub (liftr {σ = σ} xs)) (lifts ys) ≡ lifts {σ = σ} (subComp (ren2sub xs) ys)
+liftrscomp xs ys = begin
+  (subComp (ren2sub (wkr xs) , var zero) (wks ys) , var zero) ≡⟨ cong (_, var zero) (lemss (ren2sub (wkr xs)) (var zero) ys) ⟩
+  (subComp (ren2sub (wkr xs)) ys                  , var zero) ≡⟨ cong (_, var zero) (wkrscomp xs ys) ⟩
+  (wks (subComp (ren2sub xs) ys)                  , var zero) ∎
 
 renlooks : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Sub Γ B){σ}(x : Var B σ) →
          (ren f ∘ looks g) x ≡ looks (subComp (ren2sub f) g) x
@@ -316,12 +321,10 @@ renlooks f (g , _) (suc x) = renlooks f g x
 rensub : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Sub Γ B){σ}(t : Tm B σ) →
          (ren f ∘ sub g) t ≡ sub (subComp (ren2sub f) g) t
 rensub f g (var x) = renlooks f g x
-rensub f g (abs t) = cong Tm.abs $
-  trans (rensub (liftr f) (lifts g) t)
-         (cong (λ zs → sub zs t)
-                (cong (λ zs → zs Sub., var zero)
-                       (trans (lemss (ren2sub (wkr f)) (var zero) g)
-                               (wkrscomp f g))))
+rensub f g (abs t) = begin
+  abs (ren (liftr f) (sub (lifts g) t))               ≡⟨ cong abs $ rensub (liftr f) (lifts g) t ⟩
+  abs (sub (subComp (ren2sub (liftr f)) (lifts g)) t) ≡⟨ cong (λ f → abs (sub f t)) (liftrscomp f g) ⟩
+  abs (sub (lifts (subComp (ren2sub f) g)) t)         ∎
 rensub f g (app t u) = cong₂ app (rensub f g t) (rensub f g u)
 
 lookscomp : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Sub Γ B){σ}(x : Var B σ) →
@@ -331,38 +334,44 @@ lookscomp f (g , _) (suc x) = lookscomp f g x
 
 ren2subid : ∀{Γ} → subId {Γ} ≡ ren2sub renId
 ren2subid {ε}     = refl
-ren2subid {Γ , a} = cong (λ xs → xs , var zero)
-                         (trans (cong wks (ren2subid {Γ}))
-                                (sym $ ren2subwk renId))
+ren2subid {Γ , a} = begin
+  (wks subId           , var zero) ≡⟨ cong (λ f → wks f , var zero) (ren2subid {Γ}) ⟩
+  (wks (ren2sub renId) , var zero) ≡⟨ cong (_, var zero) (sym $ ren2subwk renId) ⟩
+  (ren2sub (wkr renId) , var zero) ∎
 
 wksscomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Sub Γ Δ) →
   subComp (wks {σ = σ} xs) ys ≡ wks {σ = σ} (subComp xs ys)
 wksscomp xs ε        = refl
-wksscomp xs (ys , y) = cong₂
-  Sub._,_
-  (wksscomp xs ys)
-  (trans (cong (λ xs → sub xs y)
-                 (trans (cong wks (sym $ sidl xs))
-                        (trans (cong (λ ys → wks (subComp ys xs)) ren2subid)
-                               (sym $ wkrscomp renId xs) )))
-          (sym $ rensub (wkr renId) xs y))
+wksscomp xs (ys , y) = begin
+  subComp (wks xs) ys , sub (wks xs)                           y ≡⟨ cong (λ f → subComp (wks xs) ys , sub (wks f) y) (sym $ sidl xs) ⟩
+  subComp (wks xs) ys , sub (wks (subComp subId xs))           y ≡⟨ cong₂ _,_ (wksscomp xs ys) (cong (λ f → sub (wks (subComp f xs)) y) ren2subid) ⟩
+  wks (subComp xs ys) , sub (wks (subComp (ren2sub renId) xs)) y ≡⟨ cong (λ f → wks (subComp xs ys) , sub f y) (sym $ wkrscomp renId xs) ⟩
+  wks (subComp xs ys) , sub (subComp (ren2sub (wkr renId)) xs) y ≡⟨ cong (wks (subComp xs ys) ,_) (sym $ rensub (wkr renId) xs y) ⟩
+  wks (subComp xs ys) , ren (wkr renId) (sub xs y)               ∎
 
 sidr : ∀{B Γ}(xs : Sub B Γ) → subComp xs subId ≡ xs
-sidr xs = trans (cong (subComp xs) ren2subid) (sidr2 xs)
+sidr xs = begin
+  subComp xs subId           ≡⟨ cong (subComp xs) ren2subid ⟩
+  subComp xs (ren2sub renId) ≡⟨ sidr2 xs ⟩
+  xs                         ∎
+
+liftscomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Sub Γ Δ) →
+  subComp (lifts {σ = σ} xs) (lifts ys) ≡ lifts {σ = σ} (subComp xs ys)
+liftscomp xs ys = begin
+  subComp (wks xs , var zero) (wks ys) , var zero ≡⟨ cong (_, var zero) (lemss (wks xs) (var zero) ys) ⟩
+  subComp (wks xs) ys                  , var zero ≡⟨ cong (_, var zero) (wksscomp xs ys) ⟩
+  wks (subComp xs ys)                  , var zero ∎
 
 subcomp : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Sub Γ B){σ}(t : Tm B σ) →
           sub (subComp f g) t ≡ (sub f ∘ sub g) t
 subcomp f g (var x)   = lookscomp f g x
-subcomp f g (abs t)   = cong abs $
-  trans (cong (λ xs → sub xs t)
-                (cong (λ zs → zs Sub., var zero)
-                       (trans (sym $ wksscomp f g)
-                               (sym $ lemss (wks f) (var zero) g))))
-         (subcomp (lifts f) (lifts g) t)
+subcomp f g (abs t)   = begin
+  abs (sub (lifts (subComp f g)) t)         ≡⟨ cong (λ f → abs (sub f t)) (sym $ liftscomp f g) ⟩
+  abs (sub (subComp (lifts f) (lifts g)) t) ≡⟨ cong abs (subcomp (lifts f) (lifts g) t) ⟩
+  abs (sub (lifts f) (sub (lifts g) t))     ∎
 subcomp f g (app t u) = cong₂ app (subcomp f g t) (subcomp f g u)
 
 --
-
 
 mutual
   renembNe : ∀{Γ Δ a}(u : Ne Γ a)(σ : Ren Δ Γ) →
