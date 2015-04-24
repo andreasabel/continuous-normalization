@@ -2,6 +2,7 @@ module RenamingAndSubstitution where
 
 open import Library
 open import Syntax
+open ≡-Reasoning
 
 infixr 4 _,_
 
@@ -44,24 +45,34 @@ lookrcomp f (g , v) zero = refl
 lookrcomp f (g , v) (suc i) = lookrcomp f g i
 
 lookrwkr : ∀{Γ Δ σ τ}(xs : Ren Δ Γ)(i : Var Γ σ) →
-           lookr (wkr {σ = τ} xs) i ≡ Var.suc {b = τ} (lookr xs i)
+           lookr (wkr {σ = τ} xs) i ≡ suc (lookr xs i)
 lookrwkr (xs , _) zero    = refl
 lookrwkr (xs , _) (suc i) = lookrwkr xs i
 
 lemrr : ∀{B Γ Δ σ}(xs : Ren B Γ)(x : Var B σ)(ys : Ren Γ Δ) →
        renComp (xs , x) (wkr ys) ≡ renComp xs ys
 lemrr xs x ε        = refl
-lemrr xs x (ys , y) = cong (λ zs → zs , lookr xs y) (lemrr xs x ys)
+lemrr xs x (ys , y) = cong (_, lookr xs y) (lemrr xs x ys)
 
 
 wkrcomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Ren Γ Δ) →
        renComp (wkr {σ = σ} xs) ys ≡ wkr {σ = σ} (renComp xs ys)
 wkrcomp xs ε        = refl
-wkrcomp xs (ys , y) = cong₂ Ren._,_ (wkrcomp xs ys) (lookrwkr xs y)
+wkrcomp xs (ys , y) = cong₂ _,_ (wkrcomp xs ys) (lookrwkr xs y)
+
+liftrcomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Ren Γ Δ) →
+       renComp (liftr {σ = σ} xs) (liftr {σ = σ} ys) ≡ liftr {σ = σ} (renComp xs ys)
+liftrcomp xs ys = begin
+  renComp (wkr xs , zero) (wkr ys) , zero  ≡⟨ cong (_, zero) (lemrr (wkr xs) zero ys) ⟩
+  renComp (wkr xs) ys              , zero  ≡⟨ cong (_, zero) (wkrcomp xs ys) ⟩
+  wkr (renComp xs ys)              , zero  ∎
 
 lookrid : ∀{Γ σ}(x : Var Γ σ) → lookr renId x ≡ x
 lookrid zero    = refl
-lookrid (suc x) = trans (lookrwkr renId x) (cong suc (lookrid x))
+lookrid (suc x) = begin
+  lookr (wkr renId) x  ≡⟨ lookrwkr renId x ⟩
+  suc (lookr renId x)  ≡⟨ cong suc (lookrid x) ⟩
+  suc x                ∎
 
 renid : ∀{Γ σ}(t : Tm Γ σ) → ren renId t ≡ t
 renid (var x)   = cong var (lookrid x)
@@ -70,23 +81,22 @@ renid (app t u) = cong₂ app (renid t) (renid u)
 
 lidr : ∀{B Γ}(xs : Ren B Γ) → renComp renId xs ≡ xs
 lidr ε        = refl
-lidr (xs , x) = cong₂ Ren._,_ (lidr xs) (lookrid x)
+lidr (xs , x) = cong₂ _,_ (lidr xs) (lookrid x)
 
 ridr : ∀{B Γ}(xs : Ren B Γ) → renComp xs renId ≡ xs
 ridr {Γ = ε}     ε  = refl
-ridr {Γ = Γ , σ} (xs , x) =
-  cong (λ zs → zs Ren., x)
-        (trans (lemrr xs x renId)
-                (ridr {Γ = Γ} xs))
+ridr {Γ = Γ , σ} (xs , x) = begin
+  renComp (xs , x) (wkr renId) , x  ≡⟨ cong (_, x) (lemrr xs x renId) ⟩
+  renComp xs renId             , x  ≡⟨ cong (_, x) (ridr xs) ⟩
+  xs                           , x  ∎
 
 rencomp : ∀ {B Γ Δ}(f : Ren Δ Γ)(g : Ren Γ B){σ}(t : Tm B σ) →
             ren (renComp f g) t ≡ (ren f ∘ ren g) t
-rencomp f g (var x)   = cong Tm.var (lookrcomp f g x)
-rencomp f g (abs t)   = cong abs $
-  trans (cong (λ xs → ren xs t)
-         (cong (λ zs → zs Ren., zero)
-                (trans (sym (wkrcomp f g)) (sym (lemrr (wkr f) zero g)))))
-         (rencomp (liftr f) (liftr g) t)
+rencomp f g (var x)   = cong var (lookrcomp f g x)
+rencomp f g (abs t)   = begin
+  abs (ren (liftr (renComp f g))         t)   ≡⟨ cong (λ xs → abs $ ren xs t) (sym $ liftrcomp f g) ⟩
+  abs (ren (renComp (liftr f) (liftr g)) t)   ≡⟨ cong abs (rencomp (liftr f) (liftr g) t) ⟩
+  abs (ren (liftr f) (ren (liftr g) t))       ∎
 rencomp f g (app t u) = cong₂ app (rencomp f g t) (rencomp f g u)
 
 -- Renaming of normal forms.
@@ -201,20 +211,31 @@ wksrcomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Ren Γ Δ) →
 wksrcomp xs ε        = refl
 wksrcomp xs (ys , y) = cong₂ Sub._,_ (wksrcomp xs ys) (lookswks y xs)
 
+liftsrcomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Ren Γ Δ) →
+             subComp (lifts {σ = σ} xs) (ren2sub (liftr ys)) ≡ lifts {σ = σ} (subComp xs (ren2sub ys))
+liftsrcomp xs ys = begin
+  subComp (wks xs , var zero) (ren2sub (wkr ys)) , var zero ≡⟨ cong (_, var zero) (lemsr (wks xs) (var zero) ys) ⟩
+  subComp (wks xs) (ren2sub ys)                  , var zero ≡⟨ cong (_, var zero) (wksrcomp xs ys) ⟩
+  wks (subComp xs (ren2sub ys))                  , var zero ∎
+
 subren : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Ren Γ B){σ}(t : Tm B σ) →
          (sub f ∘ ren g) t ≡ sub (subComp f (ren2sub g)) t
 subren f g (var x)   = sym $ lookslookr f g x
-subren f g (abs t)   = cong Tm.abs $
-  trans (subren (lifts f) (liftr g) t)
-         (cong (λ xs → sub xs t)
-                (cong (λ zs → zs Sub., var zero)
-                       (trans (lemsr (wks f) (var zero) g)
-                               (wksrcomp f g))))
+subren f g (abs t)   = begin
+  abs (sub (lifts f) (ren (liftr g) t))               ≡⟨ cong abs $ subren (lifts f) (liftr g) t ⟩
+  abs (sub (subComp (lifts f) (ren2sub (liftr g))) t) ≡⟨ cong (λ f → abs (sub f t)) $ liftsrcomp f g ⟩
+  abs (sub (lifts (subComp f (ren2sub g))) t)         ∎
 subren f g (app t u) = cong₂ app (subren f g t) (subren f g u)
 
 looksid : ∀{Γ σ}(x : Var Γ σ) → looks subId x ≡ var x
 looksid zero    = refl
-looksid (suc x) = trans (lookswks x subId) (trans (cong (ren (wkr renId)) (looksid x)) (cong var (trans (lookrwkr renId x) (cong suc (lookrid x)))))
+looksid (suc x) = begin
+  looks (wks subId) x             ≡⟨ lookswks x subId ⟩
+  ren (wkr renId) (looks subId x) ≡⟨ cong (ren (wkr renId)) (looksid x) ⟩
+  ren (wkr renId) (var x)         ≡⟨⟩
+  var (lookr (wkr renId) x)       ≡⟨ cong var $ lookrwkr renId x ⟩
+  var (suc (lookr renId x))       ≡⟨ cong (λ x → var (suc x)) (lookrid x) ⟩ -- using ∘ makes it go yellow
+  var (suc x)                     ∎
 
 subid : ∀{Γ σ}(t : Tm Γ σ) → sub subId t ≡ t
 subid (var x)   = looksid x
