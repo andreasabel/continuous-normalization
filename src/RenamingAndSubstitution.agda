@@ -248,66 +248,52 @@ sidl (xs , t) = cong₂ _,_ (sidl xs) (subid t)
 
 sidr2 : ∀{B Γ}(xs : Sub B Γ) → subComp xs (ren2sub renId) ≡ xs
 sidr2 {Γ = ε} ε            = refl
-sidr2 {Γ = Γ , a} (xs , x) = cong
-  (λ zs → zs , x)
-  (trans (lemsr xs x renId) ( sidr2 {Γ = Γ} xs ))
+sidr2 {Γ = Γ , a} (xs , x) = begin
+  subComp (xs , x) (ren2sub (wkr renId)) , x ≡⟨ cong (_, x) (lemsr xs x renId) ⟩
+  subComp xs (ren2sub renId)             , x ≡⟨ cong (_, x) (sidr2 xs) ⟩
+  xs                                     , x ∎
 
 liftSubRen : ∀{Γ Δ a b} (f : Sub Δ Γ) (t : Tm Γ b)
   → sub (lifts f) (weak a t) ≡ sub (wks f) t
---  → sub (lifts f) (weak a t) ≡ weak a (sub f t)
 liftSubRen {a = a} f t = begin
-
-    sub (lifts f) (weak a t)
-
-  ≡⟨ subren (lifts f) (wkr renId) t ⟩
-
-    sub (subComp (lifts f) (ren2sub (wkr renId))) t
-
-  ≡⟨ cong (λ f' → sub f' t) (lemsr (wks f) (var zero) renId) ⟩
-
-    sub (subComp (wks f) (ren2sub renId)) t
-
-  ≡⟨ cong (λ f' → sub f' t) (sidr2 (wks f)) ⟩
-
-    sub (wks f) t
-
-  -- ≡⟨ {!!} ⟩
-  --   weak a (sub f t)
-  ∎ where open ≡-Reasoning
+  sub (lifts f) (weak a t)  ≡⟨ subren (lifts f) (wkr renId) t ⟩
+  sub (subComp (lifts f) (ren2sub (wkr renId))) t ≡⟨ cong (λ f' → sub f' t) (lemsr (wks f) (var zero) renId) ⟩
+  sub (subComp (wks f) (ren2sub renId)) t ≡⟨ cong (λ f' → sub f' t) (sidr2 (wks f)) ⟩
+  sub (wks f) t ∎
 
 lemss : ∀{B Γ Δ σ}(xs : Sub B Γ)(x : Tm B σ)(ys : Sub Γ Δ) →
         subComp (xs , x) (wks ys) ≡ subComp xs ys
 lemss xs x ε        = refl
-lemss xs x (ys , y) = cong₂
-  Sub._,_
-  (lemss xs x ys)
-  (trans (subren (xs , x) (wkr renId) y)
-          (cong (λ xs → sub xs y)
-                 (trans (lemsr xs x renId)
-                        (sidr2 xs))))
+lemss xs x (ys , y) = begin
+  subComp (xs , x) (wks ys) , sub (xs , x) (ren (wkr renId) y)               ≡⟨ cong₂ _,_ (lemss xs x ys) (subren (xs , x) (wkr renId) y) ⟩
+  subComp xs       ys       , sub (subComp (xs , x) (ren2sub (wkr renId))) y ≡⟨ cong (λ g → subComp xs ys , sub g y) (lemsr xs x renId) ⟩
+  subComp xs       ys       , sub (subComp xs       (ren2sub renId))       y ≡⟨ cong (λ g → subComp xs ys , sub g y) (sidr2 xs) ⟩
+  subComp xs       ys       , sub xs                                       y ∎
 
 ren2sublook : ∀{Γ Δ σ}(f : Ren Δ Γ)(i : Var Γ σ) →
-              Tm.var (lookr f i) ≡ looks (ren2sub f) i
+              var (lookr f i) ≡ looks (ren2sub f) i
 ren2sublook (f , _) zero    = refl
 ren2sublook (f , _) (suc i) = ren2sublook f i
 
 ren2subwk : ∀{Γ Δ σ}(g : Ren Δ Γ) →
             ren2sub (wkr {σ = σ} g) ≡ wks {σ = σ} (ren2sub g)
 ren2subwk ε       = refl
-ren2subwk (g , x) = cong₂
-  Sub._,_
-  (ren2subwk g)
-  (cong var
-         (trans (cong Var.suc (sym $ lookrid x))
-                 (sym $ lookrwkr renId x)))
+ren2subwk (g , x) = begin
+  (ren2sub (wkr g) , var (suc x))               ≡⟨ cong₂ (λ xs x → xs , var (suc x)) (ren2subwk g) (sym $ lookrid x) ⟩
+  (wks (ren2sub g) , var (suc (lookr renId x))) ≡⟨ cong (λ x → wks (ren2sub g) , var x) (sym $ lookrwkr renId x) ⟩
+  (wks (ren2sub g) , var (lookr (wkr renId) x)) ∎
+
+ren2sublift : ∀{Γ Δ σ}(g : Ren Δ Γ) →
+            ren2sub (liftr {σ = σ} g) ≡ lifts {σ = σ} (ren2sub g)
+ren2sublift g = cong (_, var zero) (ren2subwk g)
 
 ren2subren : ∀{Γ Δ σ}(f : Ren Δ Γ)(t : Tm Γ σ) → ren f t ≡ sub (ren2sub f) t
 ren2subren f (var x)   = ren2sublook f x
-ren2subren f (abs t)   = cong Tm.abs $
-  trans (ren2subren (liftr f) t)
-  (cong (λ xs → sub xs t) (cong (λ zs → zs , var zero) (ren2subwk f)))
+ren2subren f (abs t)   = begin
+  abs (ren (liftr f) t)               ≡⟨ cong abs (ren2subren (liftr f) t) ⟩
+  abs (sub (ren2sub (liftr f)) t)     ≡⟨ cong (λ f → abs (sub f t)) (ren2sublift f) ⟩
+  abs (sub (lifts (ren2sub f)) t) ∎
 ren2subren f (app t u) = cong₂ app (ren2subren f t) (ren2subren f u)
-
 
 wkrscomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Sub Γ Δ) →
   subComp (ren2sub (wkr {σ = σ} xs)) ys ≡ wks {σ = σ} (subComp (ren2sub xs) ys)
