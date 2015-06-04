@@ -1,3 +1,5 @@
+{-# OPTIONS --copatterns #-}
+
 module RenamingAndSubstitution where
 
 open import Library
@@ -113,15 +115,19 @@ mutual
 -- Renaming of values.
 
 mutual
-  renval : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → Val Γ σ → Val Δ σ
+  renval : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → Val i Γ σ → Val i Δ σ
   renval f (ne x)    = ne (rennev f x)
   renval f (lam t ρ) = lam t (renenv f ρ)
+  renval f (delay v) = delay (∞renval f v)
 
-  renenv : ∀{Γ Δ} → Ren Δ Γ → ∀ {B} → Env Γ B → Env Δ B
+  ∞renval : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → ∞Val i Γ σ → ∞Val i Δ σ
+  ∞Val.force (∞renval f v) = renval f (∞Val.force v)
+
+  renenv : ∀{i Γ Δ} → Ren Δ Γ → ∀ {B} → Env i Γ B → Env i Δ B
   renenv f ε       = ε
   renenv f (e , v) = renenv f e , renval f v
 
-  rennev : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → NeVal Γ σ → NeVal Δ σ
+  rennev : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → NeVal i Γ σ → NeVal i Δ σ
   rennev f (var x)   = var (lookr f x)
   rennev f (app t u) = app (rennev f t) (renval f u)
 

@@ -58,12 +58,31 @@ mutual
 
 mutual
 
-  data Env (Δ : Cxt) : (Γ : Cxt) → Set where
-    ε   : Env Δ ε
-    _,_ : ∀ {Γ a} (ρ : Env Δ Γ) (v : Val Δ a) → Env Δ (Γ , a)
+  data Env (i : Size) (Δ : Cxt) : (Γ : Cxt) → Set where
+    ε   : Env i Δ ε
+    _,_ : ∀ {Γ a} (ρ : Env i Δ Γ) (v : Val i Δ a) → Env i Δ (Γ , a)
 
-  NeVal = GNe Val
+  NeVal = λ i → GNe (Val i)
 
-  data Val (Δ : Cxt) : (a : Ty) → Set where
-    ne  : ∀{a}      (n : NeVal Δ a)                   → Val Δ a
-    lam : ∀{Γ a b}  (t : Tm (Γ , a) b) (ρ : Env Δ Γ)  → Val Δ (a ⇒ b)
+  data Val (i : Size) (Δ : Cxt) : (a : Ty) → Set where
+    ne    : ∀{a}      (n : NeVal i Δ a)                   → Val i Δ a
+    lam   : ∀{Γ a b}  (t : Tm (Γ , a) b) (ρ : Env i Δ Γ)  → Val i Δ (a ⇒ b)
+    later : ∀{a}      (v∞ : ∞Val i Δ a)                   → Val i Δ a
+
+  record ∞Val (i : Size) (Δ : Cxt) (a : Ty) : Set where
+    coinductive
+    constructor delay
+    field
+      force : {j : Size< i} → Val j Δ a
+
+
+  -- Note: this is not the same thing as Delay i (Val i Δ a)
+  -- because now the sizes are not uniform, but the size is
+  -- the sum on the longest path
+
+  -- ALT:
+  -- data Delay (i : Size) (A : Size → Set) : Set where
+  --   now : A i → Delay i A
+  --   ...
+  -- but we would need to tell Agda that A is antitone
+  -- otherwise Delay i A is not antitone in i

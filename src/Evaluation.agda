@@ -5,44 +5,50 @@ module Evaluation where
 open import Library
 open import Delay
 open import Syntax
-open import RenamingAndSubstitution
+-- open import RenamingAndSubstitution
 
 -- Identity environment.
 
-ide : ∀ Γ → Env Γ Γ
-ide ε = ε
-ide (Γ , a) = renenv (wkr renId) (ide Γ) , ne (var zero)
+-- ide : ∀ Γ → Env Γ Γ
+-- ide ε = ε
+-- ide (Γ , a) = renenv (wkr renId) (ide Γ) , ne (var zero)
 
 -- Looking up in an environment.
 
-lookup : ∀ {Γ Δ a} → Var Γ a → Env Δ Γ → Val Δ a
+lookup : ∀ {i Γ Δ a} → Var Γ a → Env i Δ Γ → Val i Δ a
 lookup zero    (ρ , v) = v
 lookup (suc x) (ρ , v) = lookup x ρ
 
-lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env Δ Γ) (η : Ren Δ' Δ) →
-  renval η (lookup x ρ) ≡ lookup x (renenv η ρ)
-lookup≤ zero    (ρ , v) η = refl
-lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
+-- lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env Δ Γ) (η : Ren Δ' Δ) →
+--   renval η (lookup x ρ) ≡ lookup x (renenv η ρ)
+-- lookup≤ zero    (ρ , v) η = refl
+-- lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
 
 -- Weakening a value to an extended context.
 
-weakVal : ∀ {Δ a c} → Val Δ c → Val (Δ , a) c
-weakVal = renval (wkr renId)
+postulate
+  weakVal : ∀ {i Δ a c} → Val i Δ c → Val i (Δ , a) c
+-- weakVal = renval (wkr renId)
 
 mutual
-  eval : ∀{i Γ Δ a} → Tm Γ a → Env Δ Γ → Delay i (Val Δ a)
-  eval (var x)   ρ = now (lookup x ρ)
-  eval (abs t)   ρ = now (lam t ρ)
-  eval (app t u) ρ = eval t ρ >>= λ f → eval u ρ >>= apply f
+  eval : ∀{i Γ Δ a} → Tm Γ a → Env i Δ Γ → Val i Δ a
+  eval (var x)   ρ = lookup x ρ
+  eval (abs t)   ρ = lam t ρ
+  eval (app t u) ρ = apply (eval t ρ) (eval u ρ)
 
-  apply : ∀ {i Δ a b} → Val Δ (a ⇒ b) → Val Δ a → Delay i (Val Δ b)
-  apply (ne w)    v = now (ne (app w v))
+  apply : ∀ {i Δ a b} → Val i Δ (a ⇒ b) → Val i Δ a → Val i Δ b
+  apply (ne w)    v = ne (app w v)
   apply (lam t ρ) v = later (beta t ρ v)
+  apply (later w) v = later (∞apply w v)
+
+  ∞apply : ∀ {i Δ a b} → ∞Val i Δ (a ⇒ b) → Val i Δ a → ∞Val i Δ b
+  ∞Val.force (∞apply w v) = apply (∞Val.force w) v
 
   beta : ∀ {i Γ a b} (t : Tm (Γ , a) b)
-    {Δ : Cxt} (ρ : Env Δ Γ) (v : Val Δ a) → ∞Delay i (Val Δ b)
-  force (beta t ρ v) = eval t (ρ , v)
+    {Δ : Cxt} (ρ : Env i Δ Γ) (v : Val i Δ a) → ∞Val i Δ b
+  ∞Val.force (beta t ρ v) = eval t (ρ , v)
 
+{-
 
 mutual
   reneval    : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env Δ Γ) (η : Ren Δ′ Δ) →
@@ -99,20 +105,26 @@ mutual
           (η : Ren E Δ) →
           (renval η ∞<$> (beta t ρ v)) ∞≈⟨ i ⟩≈ beta t (renenv η ρ) (renval η v)
   ≈force (renbeta t ρ v η) = reneval t (ρ , v) η
+-}
 
 mutual
-  readback : ∀{i Γ a} → Val Γ a → Delay i (Nf Γ a)
+  readback : ∀{i Γ a} → Val i Γ a → Delay i (Nf Γ a)
   readback {a = ★} (ne w) = ne  <$> nereadback w
+  readback {a = ★} (later w) = later (∞readback w)
   readback {a = _ ⇒ _} v = abs <$> later (eta v)
 
-  eta : ∀{i Γ a b} → Val Γ (a ⇒ b) → ∞Delay i (Nf (Γ , a) b)
-  force (eta v) = readback =<< apply (weakVal v) (ne (var zero))
+  ∞readback : ∀{i Γ a} → ∞Val i Γ a → ∞Delay i (Nf Γ a)
+  ∞Delay.force (∞readback w) = readback (∞Val.force w)
 
-  nereadback : ∀{i Γ a} → NeVal Γ a → Delay i (Ne Γ a)
+  eta : ∀{i Γ a b} → Val i Γ (a ⇒ b) → ∞Delay i (Nf (Γ , a) b)
+  force (eta v) = readback (apply (weakVal v) (ne (var zero)))
+
+  nereadback : ∀{i Γ a} → NeVal i Γ a → Delay i (Ne Γ a)
   nereadback (var x)   = now (var x)
   nereadback (app w v) =
     nereadback w >>= λ m → app m <$> readback v
 
+{-
 mutual
   rennereadback : ∀{i Γ Δ a}(η : Ren Δ Γ)(t : NeVal Γ a) →
                 (rennen η <$> nereadback t) ≈⟨ i ⟩≈ (nereadback (rennev η t))
@@ -234,3 +246,5 @@ mutual
 
 nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
 nf t = eval t (ide _) >>= readback
+
+-- -}
