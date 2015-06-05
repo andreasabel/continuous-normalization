@@ -95,15 +95,15 @@ mutual
   data NeVal∋_≈_ {i}{Δ} : {a : Ty}(a? b? : NeVal ∞ Δ a) → Set where
     ≈var : ∀{a}{x : Var Δ a} → NeVal∋ var x ≈ var x
     ≈app : ∀{a b}{n n' : NeVal ∞ Δ (a ⇒ b)} → NeVal∋ n ≈⟨ i ⟩≈ n' →
-           {v v' : Val ∞ Δ a} → Val∋ v ≈ v' → NeVal∋ app n v ≈ app n' v'
+           {v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → NeVal∋ app n v ≈ app n' v'
  
   data Env∋_≈_ {i}{Δ} : ∀{Γ} → Env ∞ Δ Γ → Env ∞ Δ Γ → Set where
     ≈ε : Env∋ ε ≈ ε
-    _≈,_ : ∀{Γ a}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈ ρ' →
+    _≈,_ : ∀{Γ a}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
            {v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → Env∋ (ρ , v) ≈ (ρ' , v')
     
   data Val∋_≈_ {i}{Δ} : {a : Ty}(a? b? : Val ∞ Δ a) → Set where
-    ≈lam : ∀{Γ a b}{t : Tm (Γ , a) b}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈ ρ' →
+    ≈lam : ∀{Γ a b}{t : Tm (Γ , a) b}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
            Val∋ lam t ρ ≈ lam t ρ'
     ≈ne  : ∀{a}{n n' : NeVal ∞ Δ a} → NeVal∋ n ≈⟨ i ⟩≈ n' → Val∋ ne n ≈ ne n'
     ≈later : ∀ {a}{a∞ b∞ : ∞Val ∞ Δ a}(eq : ∞Val∋ a∞ ≈⟨ i ⟩≈ b∞) →
@@ -177,3 +177,28 @@ mutual
     Env∋ v' ≈⟨ i ⟩≈ v'' → Env∋ v ≈⟨ i ⟩≈ v''
   ≈transEnv ≈ε       ≈ε         = ≈ε
   ≈transEnv (p ≈, q) (p' ≈, q') = (≈transEnv p p') ≈, ≈transVal q q'
+
+{-
+  ≈congVal : ∀{i Δ Γ a b}(f : Val ∞ Δ a → Val ∞ Γ b){v v' : Val ∞ Δ a} →
+             Val∋ v ≈⟨ i ⟩≈ v' → Val∋ f v ≈⟨ i ⟩≈ f v'
+  ≈congVal f (≈lam x) = {!!}
+  ≈congVal f (≈ne x) = {!!}
+  ≈congVal f (≈later eq) = {!!}
+-}
+≈Valsetoid : (i : Size)(Δ : Cxt)(a : Ty) → Setoid lzero lzero
+≈Valsetoid i Δ a = record
+  { Carrier       = Val ∞ Δ a
+  ; _≈_           = Val∋_≈_ {i}
+  ; isEquivalence = record
+    { refl  = ≈reflVal _
+    ; sym   = ≈symVal
+    ; trans = ≈transVal
+    }
+  }
+
+module ≈Val-Reasoning {i : Size}{Δ : Cxt}{a : Ty} where
+  open Pre (Setoid.preorder (≈Valsetoid i Δ a)) public
+--    using (begin_; _∎) (_≈⟨⟩_ to _≈⟨⟩_; _≈⟨_⟩_ to _≈⟨_⟩_)
+    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_; begin_ to proof_)
+
+

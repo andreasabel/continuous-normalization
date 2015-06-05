@@ -47,67 +47,62 @@ mutual
     {Δ : Cxt} (ρ : Env i Δ Γ) (v : Val i Δ a) → ∞Val i Δ b
   ∞Val.force (beta t ρ v) = eval t (ρ , v)
 
+-- apply-cong
+mutual 
+  eval-cong : ∀{i Γ Δ a}(t : Tm Γ a){ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' → 
+         Val∋ eval t ρ ≈⟨ i ⟩≈ eval t ρ'
+  eval-cong (var zero)    (p ≈, q) = q
+  eval-cong (var (suc x)) (p ≈, q) = eval-cong (var x) p
+  eval-cong (abs t)   p = ≈lam p
+  eval-cong (app t u) p = apply-cong (eval-cong t p) (eval-cong u p)
+
+  apply-cong : ∀ {i Δ a b}{f f' : Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
+               Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' → 
+               Val∋ apply f v ≈⟨ i ⟩≈ apply f' v'
+  apply-cong (≈lam p)    q = ≈later (beta-cong _ p q)
+  apply-cong (≈ne p)     q = ≈ne (≈app p q)
+  apply-cong (≈later p) q = ≈later (∞apply-cong p q)             
+
+  ∞apply-cong : ∀ {i Δ a b}{f f' : ∞Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
+               ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' → 
+               ∞Val∋ ∞apply f v ≈⟨ i ⟩≈ ∞apply f' v'
+  ∞Val∋_≈⟨_⟩≈_.≈force (∞apply-cong p q) =
+    apply-cong (∞Val∋_≈⟨_⟩≈_.≈force p) q
+
+  beta-cong : ∀ {i Γ a b} (t : Tm (Γ , a) b)
+    {Δ : Cxt}{ρ ρ' : Env ∞ Δ Γ}{v v' : Val ∞ Δ a} → 
+    Env∋ ρ ≈⟨ i ⟩≈ ρ' → Val∋ v ≈⟨ i ⟩≈ v' →
+    ∞Val∋ beta t ρ v ≈⟨ i ⟩≈ beta t ρ' v'
+  ∞Val∋_≈⟨_⟩≈_.≈force (beta-cong t p q) = eval-cong t (p ≈, q)
+  
 mutual
   reneval : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env ∞ Δ Γ) (η : Ren Δ′ Δ) →
     Val∋ (renval η $ eval t ρ) ≈⟨ i ⟩≈ (eval t $ renenv η ρ)
   reneval (var x)   ρ η = lookup≤ x ρ η
   reneval (abs t)   ρ η = ≈lam (≈reflEnv (renenv η ρ))
-  reneval (app t u) ρ η = {!!}
-{-  
-  reneval (abs t)   ρ η = ≈now _ _ refl
-  reneval (app t u) ρ η =
-    proof
-    ((eval t ρ >>=
-      (λ f → eval u ρ >>= (λ v → apply f v)))
-        >>= (λ x′ → now (renval η x′)))
-    ≈⟨ bind-assoc (eval t ρ) ⟩
-    (eval t ρ >>=
-      λ f → eval u ρ >>= (λ v → apply f v)
-        >>= (λ x′ → now (renval η x′)))
-    ≈⟨ bind-cong-r (eval t ρ) (λ t₁ → bind-assoc (eval u ρ)) ⟩
-    (eval t ρ >>=
-      λ f → eval u ρ >>= λ v → apply f v
-        >>= (λ x′ → now (renval η x′)))
-    ≈⟨ bind-cong-r (eval t ρ)
-                   (λ t₁ → bind-cong-r (eval u ρ)
-                                       (λ u₁ → renapply t₁ u₁ η )) ⟩
-    (eval t ρ >>=
-     λ x′ → eval u ρ >>= (λ x′′ → apply (renval η x′) (renval η x′′)))
-    ≡⟨⟩
-    (eval t ρ >>= λ x′ →
-        (eval u ρ >>= λ x′′ → now (renval η x′′) >>=
-          λ v → apply (renval η x′) v))
-    ≈⟨ bind-cong-r (eval t ρ) (λ a → ≈sym (bind-assoc (eval u ρ))) ⟩
-    (eval t ρ >>= λ x′ →
-        (eval u ρ >>= λ x′′ → now (renval η x′′)) >>=
-          (λ v → apply (renval η x′) v))
-    ≈⟨ bind-cong-r (eval t ρ) (λ x′ → bind-cong-l  (reneval u ρ η) (λ _ → _)) ⟩
-    (eval t ρ >>= λ x′ →
-        eval u (renenv η ρ) >>= (λ v → apply (renval η x′) v))
-    ≡⟨⟩
-    (eval t ρ >>= λ x′ → now (renval η x′) >>=
-      (λ f → eval u (renenv η ρ) >>= (λ v → apply f v)))
-    ≈⟨ ≈sym (bind-assoc (eval t ρ)) ⟩
-    ((eval t ρ >>= (λ x′ → now (renval η x′))) >>=
-      (λ f → eval u (renenv η ρ) >>= (λ v → apply f v)))
-    ≈⟨ bind-cong-l (reneval t ρ η) (λ _ → _) ⟩
-    (eval t (renenv η ρ) >>=
-      (λ f → eval u (renenv η ρ) >>= (λ v → apply f v)))
-    ∎
-    where open ≈-Reasoning
--}
+  reneval (app t u) ρ η = proof
+    renval η (apply (eval t ρ) (eval u ρ))
+    ≈⟨ renapply (eval t ρ) (eval u ρ) η ⟩
+    apply (renval η (eval t ρ)) (renval η (eval u ρ))
+    ≈⟨ apply-cong (reneval t ρ η) (reneval u ρ η) ⟩
+    apply (eval t (renenv η ρ)) (eval u (renenv η ρ))
+    ∎ where open ≈Val-Reasoning
+
   renapply  : ∀{i Γ Δ a b} (f : Val ∞ Γ (a ⇒ b))(v : Val ∞ Γ a)(η : Ren Δ Γ) →
-            Val∋ (renval η $ apply f v) ≈⟨ i ⟩≈ (apply (renval η f) (renval η v))
-  renapply = {!!}
-{-
-  renapply (ne x)    v η = ≈refl refl _
+    Val∋ (renval η $ apply f v) ≈⟨ i ⟩≈ (apply (renval η f) (renval η v))
+  renapply (ne x)    v η = ≈reflVal _
   renapply (lam t ρ) v η = ≈later (renbeta t ρ v η)
+  renapply (later p) v η = ≈later (∞renapply p v η)
+
+  ∞renapply  : ∀{i Γ Δ a b} (f : ∞Val ∞ Γ (a ⇒ b))(v : Val ∞ Γ a)(η : Ren Δ Γ) →
+     ∞Val∋ (∞renval η $ ∞apply f v) ≈⟨ i ⟩≈ (∞apply (∞renval η f) (renval η v))
+  ∞Val∋_≈⟨_⟩≈_.≈force (∞renapply f v η) = renapply (∞Val.force f) v η
 
   renbeta : ∀ {i Γ Δ E a b} (t : Tm (Γ , a) b)(ρ : Env ∞ Δ Γ) (v : Val ∞ Δ a) →
-          (η : Ren E Δ) →
-          ∞Val∋ {!renval η $ (beta t ρ v)!} ≈⟨ i ⟩≈ (beta t (renenv η ρ) (renval η v))
-  ≈force (renbeta t ρ v η) = reneval t (ρ , v) η
--}
+    (η : Ren E Δ) →
+     ∞Val∋ ∞renval η $ (beta t ρ v) ≈⟨ i ⟩≈ (beta t (renenv η ρ) (renval η v))
+  ∞Val∋_≈⟨_⟩≈_.≈force (renbeta t ρ v η) = reneval t (ρ , v) η
+
 mutual
   readback : ∀{i Γ a} → Val i Γ a → Delay i (Nf Γ a)
   readback {a = ★} (ne w) = ne  <$> nereadback w
