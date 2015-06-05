@@ -152,4 +152,28 @@ mutual
   ≈symEnv : ∀{i}{Δ}{Γ}{e e' : Env ∞ Δ Γ} →
              Env∋ e ≈⟨ i ⟩≈ e' → Env∋ e' ≈⟨ i ⟩≈ e
   ≈symEnv ≈ε       = ≈ε
-  ≈symEnv (p ≈, q) = ≈symEnv p ≈, ≈symVal q      
+  ≈symEnv (p ≈, q) = ≈symEnv p ≈, ≈symVal q
+
+mutual
+  ≈transVal : ∀{i}{Δ}{a}{v v' v'' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → 
+            Val∋ v' ≈⟨ i ⟩≈ v'' → Val∋ v ≈⟨ i ⟩≈ v''
+  ≈transVal (≈lam p)   (≈lam p')   = ≈lam (≈transEnv p p')
+  ≈transVal (≈ne p)    (≈ne p')    = ≈ne (≈transNeVal p p')
+  ≈transVal (≈later p) (≈later p') = ≈later (∞≈transVal p p')            
+
+  ∞≈transVal : ∀{i}{Δ}{a}{v v' v'' : ∞Val ∞ Δ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' → 
+    ∞Val∋ v' ≈⟨ i ⟩≈ v'' → ∞Val∋ v ≈⟨ i ⟩≈ v''
+  ∞Val∋_≈⟨_⟩≈_.≈force (∞≈transVal p q) =
+    ≈transVal (∞Val∋_≈⟨_⟩≈_.≈force p) (∞Val∋_≈⟨_⟩≈_.≈force q)
+
+  ≈transNeVal : ∀{i}{Δ}{a}{v v' v'' : NeVal ∞ Δ a} →
+              NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v'' → 
+              NeVal∋ v ≈⟨ i ⟩≈ v''
+  ≈transNeVal ≈var       ≈var        = ≈var
+  ≈transNeVal (≈app p q) (≈app p' q') =
+    ≈app (≈transNeVal p p' ) (≈transVal q q')
+  
+  ≈transEnv : ∀{i}{Δ}{a}{v v' v'' : Env ∞ Δ a} → Env∋ v ≈⟨ i ⟩≈ v' → 
+    Env∋ v' ≈⟨ i ⟩≈ v'' → Env∋ v ≈⟨ i ⟩≈ v''
+  ≈transEnv ≈ε       ≈ε         = ≈ε
+  ≈transEnv (p ≈, q) (p' ≈, q') = (≈transEnv p p') ≈, ≈transVal q q'
