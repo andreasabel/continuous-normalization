@@ -58,12 +58,12 @@ lemrr xs x (ys , y) = cong (_, lookr xs y) (lemrr xs x ys)
 
 
 wkrcomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Ren Γ Δ) →
-       renComp (wkr {σ = σ} xs) ys ≡ wkr {σ = σ} (renComp xs ys)
+  renComp (wkr {σ = σ} xs) ys ≡ wkr {σ = σ} (renComp xs ys)
 wkrcomp xs ε        = refl
 wkrcomp xs (ys , y) = cong₂ _,_ (wkrcomp xs ys) (lookrwkr xs y)
 
 liftrcomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Ren Γ Δ) →
-       renComp (liftr {σ = σ} xs) (liftr {σ = σ} ys) ≡ liftr {σ = σ} (renComp xs ys)
+  renComp (liftr {σ = σ} xs) (liftr {σ = σ} ys) ≡ liftr {σ = σ} (renComp xs ys)
 liftrcomp xs ys = begin
   renComp (wkr xs , zero) (wkr ys) , zero  ≡⟨ cong (_, zero) (lemrr (wkr xs) zero ys) ⟩
   renComp (wkr xs) ys              , zero  ≡⟨ cong (_, zero) (wkrcomp xs ys) ⟩
@@ -118,7 +118,7 @@ mutual
   renval : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → Val i Γ σ → Val i Δ σ
   renval f (ne x)    = ne (rennev f x)
   renval f (lam t ρ) = lam t (renenv f ρ)
-  renval f (delay v) = delay (∞renval f v)
+  renval f (later v) = later (∞renval f v)
 
   ∞renval : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → ∞Val i Γ σ → ∞Val i Δ σ
   ∞Val.force (∞renval f v) = renval f (∞Val.force v)
@@ -133,36 +133,39 @@ mutual
 
 
 -- Functoriality of the renaming action on values.
-
+{-
 mutual
-  renvalid : {Γ : Cxt} {σ : Ty} (v : Val Γ σ) → renval renId v ≡ v
+  renvalid : ∀{i}{Γ : Cxt} {σ : Ty} (v : Val i Γ σ) → renval renId v ≡ v
   renvalid (ne x)    = cong ne (rennevid x)
   renvalid (lam t ρ) = cong (lam t) (renenvid ρ)
-
-  renenvid : {Γ Δ : Cxt}(e : Env Γ Δ) → renenv renId e ≡ e
+  renvalid (later p) = {!!}
+  
+  renenvid : ∀{i}{Γ Δ : Cxt}(e : Env i Γ Δ) → renenv renId e ≡ e
   renenvid ε       = refl
   renenvid (e , v) = cong₂ _,_ (renenvid e) (renvalid v)
 
-  rennevid : {Γ : Cxt} {σ : Ty} (n : NeVal Γ σ) → rennev renId n ≡ n
+  rennevid : ∀{i}{Γ : Cxt} {σ : Ty} (n : NeVal i Γ σ) → rennev renId n ≡ n
   rennevid (var x)   = cong var (lookrid x)
   rennevid (app n v) = cong₂ app (rennevid n) (renvalid v)
 
 mutual
-  renenvcomp : ∀ {Γ Δ₁ Δ₂ Δ₃} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (ρ : Env Δ₃ Γ) →
-           renenv η (renenv η' ρ) ≡ renenv (renComp η η') ρ
+  renenvcomp : ∀{i Γ Δ₁ Δ₂ Δ₃}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(ρ : Env i Δ₃ Γ) →
+    renenv η (renenv η' ρ) ≡ renenv (renComp η η') ρ
   renenvcomp η η' ε       = refl
   renenvcomp η η' (ρ , v) = cong₂ _,_ (renenvcomp η η' ρ) (renvalcomp η η' v)
 
-  renvalcomp : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (v : Val Δ₃ a) →
-           renval η (renval η' v) ≡ renval (renComp η η') v
+  renvalcomp : ∀{i Δ₁ Δ₂ Δ₃ a}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(v : Val i Δ₃ a) →
+    renval η (renval η' v) ≡ renval (renComp η η') v
   renvalcomp η η' (ne t) = cong ne (rennevcomp η η' t)
   renvalcomp η η' (lam t ρ) = cong (lam t) (renenvcomp η η' ρ)
-
-  rennevcomp : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (t : NeVal Δ₃ a) →
-           rennev η (rennev η' t) ≡ rennev (renComp η η') t
+  renvalcomp η η' (later p) = {!!}
+  
+  rennevcomp : ∀{i Δ₁ Δ₂ Δ₃ a}
+    (η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(t : NeVal i Δ₃ a) →
+    rennev η (rennev η' t) ≡ rennev (renComp η η') t
   rennevcomp η η' (var x)   = cong var (sym $ lookrcomp η η' x)
   rennevcomp η η' (app t u) = cong₂ app (rennevcomp η η' t) (renvalcomp η η' u)
-
+-}
 -- sub
 
 data Sub (Δ : Cxt) : (Γ : Cxt) → Set where

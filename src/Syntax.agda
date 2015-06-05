@@ -1,5 +1,5 @@
 -- Syntax: Types, terms and contexts.
-
+{-# OPTIONS --copatterns --sized-types #-}
 module Syntax where
 
 open import Library
@@ -86,3 +86,70 @@ mutual
   --   ...
   -- but we would need to tell Agda that A is antitone
   -- otherwise Delay i A is not antitone in i
+
+mutual
+  Val∋_≈⟨_⟩≈_ = λ {Δ}{a} a? i b? → Val∋_≈_ {i}{Δ}{a} a? b?
+  NeVal∋_≈⟨_⟩≈_ = λ {Δ}{a} a? i b? → NeVal∋_≈_ {i}{Δ}{a} a? b?
+  Env∋_≈⟨_⟩≈_ = λ {Δ}{Γ} a? i b? → Env∋_≈_ {i}{Δ}{Γ} a? b?
+
+  data NeVal∋_≈_ {i}{Δ} : {a : Ty}(a? b? : NeVal ∞ Δ a) → Set where
+    ≈var : ∀{a}{x : Var Δ a} → NeVal∋ var x ≈ var x
+    ≈app : ∀{a b}{n n' : NeVal ∞ Δ (a ⇒ b)} → NeVal∋ n ≈⟨ i ⟩≈ n' →
+           {v v' : Val ∞ Δ a} → Val∋ v ≈ v' → NeVal∋ app n v ≈ app n' v'
+ 
+  data Env∋_≈_ {i}{Δ} : ∀{Γ} → Env ∞ Δ Γ → Env ∞ Δ Γ → Set where
+    ≈ε : Env∋ ε ≈ ε
+    _≈,_ : ∀{Γ a}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈ ρ' →
+           {v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → Env∋ (ρ , v) ≈ (ρ' , v')
+    
+  data Val∋_≈_ {i}{Δ} : {a : Ty}(a? b? : Val ∞ Δ a) → Set where
+    ≈lam : ∀{Γ a b}{t : Tm (Γ , a) b}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈ ρ' →
+           Val∋ lam t ρ ≈ lam t ρ'
+    ≈ne  : ∀{a}{n n' : NeVal ∞ Δ a} → NeVal∋ n ≈⟨ i ⟩≈ n' → Val∋ ne n ≈ ne n'
+    ≈later : ∀ {a}{a∞ b∞ : ∞Val ∞ Δ a}(eq : ∞Val∋ a∞ ≈⟨ i ⟩≈ b∞) →
+             Val∋ later a∞ ≈ later b∞
+
+  record ∞Val∋_≈⟨_⟩≈_ {Δ a} (a∞ : ∞Val ∞ Δ a) i (b∞ : ∞Val ∞ Δ a) : Set where
+    coinductive
+    field
+      ≈force : {j : Size< i} → Val∋ ∞Val.force a∞ ≈⟨ j ⟩≈ ∞Val.force b∞
+
+  ∞Val∋_≈_ = λ {i}{Δ}{a} a? b? → ∞Val∋_≈⟨_⟩≈_ {Δ}{a} a? i b?
+
+mutual
+  ≈reflVal : ∀{i}{Δ}{a}(v : Val ∞ Δ a) → Val∋ v ≈⟨ i ⟩≈ v
+  ≈reflVal {i} (ne n) = ≈ne (≈reflNeVal {i = i} n)
+  ≈reflVal (lam t ρ)  = ≈lam (≈reflEnv ρ)
+  ≈reflVal (later v∞) = ≈later (∞≈reflVal v∞)
+
+  ∞≈reflVal : ∀{i}{Δ}{a}(v : ∞Val ∞ Δ a) → ∞Val∋ v ≈⟨ i ⟩≈ v
+  ∞Val∋_≈⟨_⟩≈_.≈force (∞≈reflVal v) = ≈reflVal (∞Val.force v) 
+
+  ≈reflNeVal : ∀{i}{Δ}{a}(v : NeVal ∞ Δ a) → NeVal∋ v ≈⟨ i ⟩≈ v
+  ≈reflNeVal (var x) = ≈var
+  ≈reflNeVal (app v o) = ≈app (≈reflNeVal v) (≈reflVal o)
+
+  ≈reflEnv : ∀{i}{Δ}{Γ}(e : Env ∞ Δ Γ) → Env∋ e ≈⟨ i ⟩≈ e
+  ≈reflEnv ε = ≈ε
+  ≈reflEnv (e , v) = ≈reflEnv e ≈, ≈reflVal v
+
+mutual
+  ≈symVal : ∀{i}{Δ}{a}{v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → 
+            Val∋ v' ≈⟨ i ⟩≈ v
+  ≈symVal (≈lam p) = ≈lam (≈symEnv p )
+  ≈symVal (≈ne p)  = ≈ne (≈symNeVal p)
+  ≈symVal (≈later p) = ≈later (∞≈symVal p)
+
+  ∞≈symVal : ∀{i}{Δ}{a}{v v' : ∞Val ∞ Δ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' → 
+             ∞Val∋ v' ≈⟨ i ⟩≈ v
+  ∞Val∋_≈⟨_⟩≈_.≈force (∞≈symVal p) = ≈symVal (∞Val∋_≈⟨_⟩≈_.≈force p)
+
+  ≈symNeVal : ∀{i}{Δ}{a}{v v' : NeVal ∞ Δ a} →
+              NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v
+  ≈symNeVal ≈var       = ≈var
+  ≈symNeVal (≈app p q) = ≈app (≈symNeVal p) (≈symVal q)
+  
+  ≈symEnv : ∀{i}{Δ}{Γ}{e e' : Env ∞ Δ Γ} →
+             Env∋ e ≈⟨ i ⟩≈ e' → Env∋ e' ≈⟨ i ⟩≈ e
+  ≈symEnv ≈ε       = ≈ε
+  ≈symEnv (p ≈, q) = ≈symEnv p ≈, ≈symVal q      
