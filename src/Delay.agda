@@ -251,6 +251,14 @@ map-cong : ∀{i A B}{a? b? : Delay ∞ A} (f : A → B) →
   a? ≈⟨ i ⟩≈ b? → (f <$> a?) ≈⟨ i ⟩≈ (f <$> b?)
 map-cong f eq = bind-cong-l eq (now ∘ f)
 
+∞map-cong : ∀{i A B}{a? b? : ∞Delay ∞ A} (f : A → B) →
+  a? ∞≈⟨ i ⟩≈ b? → (f ∞<$> a?) ∞≈⟨ i ⟩≈ (f ∞<$> b?)
+∞map-cong f eq = ∞bind-cong-l eq (now ∘ f)
+
+*-cong : ∀{i A B}{a? b? : Delay ∞ A}{f f' : Delay ∞ (A → B)} →
+  f ≈⟨ i ⟩≈ f' → a? ≈⟨ i ⟩≈ b? → (f <*> a?) ≈⟨ i ⟩≈ (f' <*> b?)
+*-cong p q = bind-cong p (λ f → bind-cong-l q (now ∘ f))
+
 -- Termination/Convergence.  Makes sense only for Delay A ∞.
 
 data _⇓_ {A : Set} : (a? : Delay ∞ A) (a : A) → Set where
@@ -409,3 +417,38 @@ mutual
               (a? : ∞Delay ∞ A){b? : ∞Delay ∞ A} → ∞Delay R ∋ a? ≈⟨ i ⟩≈ b? →
               ∞Delay R ∋ a? ≈⟨ i ⟩≈ a?
   ≈force (∞≈reflPER X a? p) = ≈reflPER X (force a?) (≈force p)
+
+-- some laws about <$> and <*>
+lifta2lem1 : ∀{A B C D}
+             (f : A → B → C)(g : C → D)(a : Delay ∞ A)(b : Delay ∞ B) →
+             (g <$> (f <$> a <*> b)) ≈ ((λ a b → g (f a b)) <$> a <*> b)
+lifta2lem1 f g a b = proof 
+  (((a >>= now ∘ f) >>= (λ f' → b >>= now ∘ f')) >>= now ∘ g)
+  ≈⟨ bind-assoc (a >>= now ∘ f) ⟩
+  ((a >>= now ∘ f) >>= (λ f → (b >>= now ∘ f) >>= now ∘ g))
+  ≈⟨ bind-cong-r (a >>= now ∘ f) (λ f' → bind-assoc b) ⟩
+  ((a >>= now ∘ f) >>= ( λ f → b >>= λ a' → now (g (f a'))))
+  ≈⟨ bind-assoc a ⟩
+  (a >>= (λ x' → b >>= λ a' → now (g (f x' a'))))
+  ≈⟨ ≈sym (bind-assoc a) ⟩
+  ((a >>= (λ x' → now (g ∘ f x'))) >>= (λ f' → b >>= now ∘ f'))
+  ∎ 
+ where open ≈-Reasoning
+
+lifta2lem2 : ∀{A A' B B' C : Set}
+             (f : A → B → C)(g : A' → A)(h : B' → B)
+             (a : Delay ∞ A')(b : Delay ∞ B') →
+             ((λ a' b' → f (g a') (h b')) <$> a <*> b) ≈
+             (f <$> (g <$> a) <*> (h <$> b))
+lifta2lem2 f g h a b = proof 
+  ((a >>= (λ x' → now (λ b' → f (g x') (h b')))) >>= (λ f' → b >>= (now ∘ f')))
+  ≈⟨ bind-assoc a ⟩
+  (a >>= (λ x' → b >>= λ x → now (f (g x') (h x))))
+  ≈⟨ bind-cong-r a (λ x → ≈sym (bind-assoc b)) ⟩
+  (a >>= (λ x → b >>= (now ∘ h) >>= now ∘ f (g x)))
+  ≈⟨ ≈sym (bind-assoc a) ⟩
+  ((a >>= (now ∘ g)) >>= (λ x' → b >>= (now ∘ h) >>= now ∘ f x' ))
+  ≈⟨ ≈sym (bind-assoc (a >>= now ∘ g)) ⟩
+  (((a >>= (now ∘ g)) >>= (now ∘ f)) >>= (λ f' → b >>= (now ∘ h) >>= now ∘ f'))
+  ∎
+  where open ≈-Reasoning

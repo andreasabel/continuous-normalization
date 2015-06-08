@@ -131,6 +131,28 @@ mutual
   rennev f (var x)   = var (lookr f x)
   rennev f (app t u) = app (rennev f t) (renval f u)
 
+mutual
+  renval-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {σ} → {v v' : Val ∞ Γ σ} →
+                Val∋ v ≈⟨ i ⟩≈ v' → Val∋ renval η v ≈⟨ i ⟩≈ renval η v'
+  renval-cong η (≈lam p)   = ≈lam   (renenv-cong η p)
+  renval-cong η (≈ne p)    = ≈ne    (rennev-cong η p)
+  renval-cong η (≈later p) = ≈later (∞renval-cong η p)
+
+  ∞renval-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {σ} → {v v' : ∞Val ∞ Γ σ} →
+                ∞Val∋ v ≈⟨ i ⟩≈ v' → ∞Val∋ ∞renval η v ≈⟨ i ⟩≈ ∞renval η v'
+  ∞Val∋_≈⟨_⟩≈_.≈force (∞renval-cong η p) =
+    renval-cong η ( ∞Val∋_≈⟨_⟩≈_.≈force p)
+
+  rennev-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {σ} → {n n' : NeVal ∞ Γ σ} →
+                NeVal∋ n ≈⟨ i ⟩≈ n' → NeVal∋ rennev η n ≈⟨ i ⟩≈ rennev η n'
+  rennev-cong η ≈var       = ≈var
+  rennev-cong η (≈app p q) = ≈app (rennev-cong η p) (renval-cong η q)                
+
+  renenv-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {B} → {ρ ρ' : Env ∞ Γ B} → 
+                Env∋ ρ ≈⟨ i ⟩≈ ρ' → Env∋ renenv η ρ ≈⟨ i ⟩≈ renenv η ρ'
+  renenv-cong η ≈ε       = ≈ε
+  renenv-cong η (p ≈, q) = renenv-cong η p ≈, renval-cong η q
+
 
 -- Functoriality of the renaming action on values.
 {-
@@ -147,25 +169,31 @@ mutual
   rennevid : ∀{i}{Γ : Cxt} {σ : Ty} (n : NeVal i Γ σ) → rennev renId n ≡ n
   rennevid (var x)   = cong var (lookrid x)
   rennevid (app n v) = cong₂ app (rennevid n) (renvalid v)
-
+-}
 mutual
-  renenvcomp : ∀{i Γ Δ₁ Δ₂ Δ₃}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(ρ : Env i Δ₃ Γ) →
-    renenv η (renenv η' ρ) ≡ renenv (renComp η η') ρ
-  renenvcomp η η' ε       = refl
-  renenvcomp η η' (ρ , v) = cong₂ _,_ (renenvcomp η η' ρ) (renvalcomp η η' v)
+  renenvcomp : ∀{i Γ Δ₁ Δ₂ Δ₃}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(ρ : Env ∞ Δ₃ Γ) →
+    Env∋ renenv η (renenv η' ρ) ≈⟨ i ⟩≈ renenv (renComp η η') ρ
+  renenvcomp η η' ε       = ≈ε
+  renenvcomp η η' (ρ , v) = renenvcomp η η' ρ ≈, renvalcomp η η' v
 
-  renvalcomp : ∀{i Δ₁ Δ₂ Δ₃ a}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(v : Val i Δ₃ a) →
-    renval η (renval η' v) ≡ renval (renComp η η') v
-  renvalcomp η η' (ne t) = cong ne (rennevcomp η η' t)
-  renvalcomp η η' (lam t ρ) = cong (lam t) (renenvcomp η η' ρ)
-  renvalcomp η η' (later p) = {!!}
+  renvalcomp : ∀{i Δ₁ Δ₂ Δ₃ a}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(v : Val ∞ Δ₃ a) →
+    Val∋ renval η (renval η' v) ≈⟨ i ⟩≈ renval (renComp η η') v
+  renvalcomp η η' (ne n)    = ≈ne (rennevcomp η η' n)
+  renvalcomp η η' (lam t ρ) = ≈lam (renenvcomp η η' ρ)
+  renvalcomp η η' (later p) = ≈later (∞renvalcomp η η' p)
+
+  ∞renvalcomp : ∀{i Δ₁ Δ₂ Δ₃ a}
+                (η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(v : ∞Val ∞ Δ₃ a) →
+                ∞Val∋ ∞renval η (∞renval η' v) ≈⟨ i ⟩≈ ∞renval (renComp η η') v
+  ∞Val∋_≈⟨_⟩≈_.≈force (∞renvalcomp η η' v) =
+    renvalcomp η η' (∞Val.force v)
   
   rennevcomp : ∀{i Δ₁ Δ₂ Δ₃ a}
-    (η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(t : NeVal i Δ₃ a) →
-    rennev η (rennev η' t) ≡ rennev (renComp η η') t
-  rennevcomp η η' (var x)   = cong var (sym $ lookrcomp η η' x)
-  rennevcomp η η' (app t u) = cong₂ app (rennevcomp η η' t) (renvalcomp η η' u)
--}
+    (η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(t : NeVal ∞ Δ₃ a) →
+    NeVal∋ rennev η (rennev η' t) ≈⟨ i ⟩≈ rennev (renComp η η') t
+  rennevcomp η η' (var x) rewrite lookrcomp η η' x = ≈var
+  rennevcomp η η' (app t u) = ≈app (rennevcomp η η' t) (renvalcomp η η' u)
+
 -- sub
 
 data Sub (Δ : Cxt) : (Γ : Cxt) → Set where
@@ -392,3 +420,4 @@ mutual
              ren σ (embNf n) ≡ embNf (rennf σ n)
   renembNf (abs n) σ = cong abs (renembNf n (liftr σ))
   renembNf (ne n)  σ = renembNe n σ
+-- -}
