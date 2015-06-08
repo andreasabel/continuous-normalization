@@ -155,21 +155,27 @@ mutual
 
 
 -- Functoriality of the renaming action on values.
-{-
 mutual
-  renvalid : ∀{i}{Γ : Cxt} {σ : Ty} (v : Val i Γ σ) → renval renId v ≡ v
-  renvalid (ne x)    = cong ne (rennevid x)
-  renvalid (lam t ρ) = cong (lam t) (renenvid ρ)
-  renvalid (later p) = {!!}
+  renvalid : ∀{i}{Γ : Cxt} {σ : Ty} (v : Val ∞ Γ σ) →
+             Val∋ renval renId v ≈⟨ i ⟩≈ v
+  renvalid (ne n)    = ≈ne (rennevid n)
+  renvalid (lam t ρ) = ≈lam (renenvid ρ)
+  renvalid (later p) = ≈later (∞renvalid p)
   
-  renenvid : ∀{i}{Γ Δ : Cxt}(e : Env i Γ Δ) → renenv renId e ≡ e
-  renenvid ε       = refl
-  renenvid (e , v) = cong₂ _,_ (renenvid e) (renvalid v)
+  ∞renvalid : ∀{i}{Γ : Cxt} {σ : Ty} (v : ∞Val ∞ Γ σ) →
+             ∞Val∋ ∞renval renId v ≈⟨ i ⟩≈ v
+  ∞Val∋_≈⟨_⟩≈_.≈force (∞renvalid v) = renvalid (∞Val.force v)
+  
+  renenvid : ∀{i}{Γ Δ : Cxt}(e : Env ∞ Γ Δ) →
+             Env∋ renenv renId e ≈⟨ i ⟩≈ e
+  renenvid ε       = ≈ε
+  renenvid (e , v) = renenvid e ≈, renvalid v
 
-  rennevid : ∀{i}{Γ : Cxt} {σ : Ty} (n : NeVal i Γ σ) → rennev renId n ≡ n
-  rennevid (var x)   = cong var (lookrid x)
-  rennevid (app n v) = cong₂ app (rennevid n) (renvalid v)
--}
+  rennevid : ∀{i}{Γ : Cxt} {σ : Ty} (n : NeVal ∞ Γ σ) →
+             NeVal∋ rennev renId n ≈⟨ i ⟩≈ n
+  rennevid (var x) rewrite lookrid x = ≈var
+  rennevid (app n v) = ≈app (rennevid n) (renvalid v)
+
 mutual
   renenvcomp : ∀{i Γ Δ₁ Δ₂ Δ₃}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(ρ : Env ∞ Δ₃ Γ) →
     Env∋ renenv η (renenv η' ρ) ≈⟨ i ⟩≈ renenv (renComp η η') ρ
