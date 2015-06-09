@@ -9,10 +9,32 @@ open import Syntax
 open import RenamingAndSubstitution
 open import Evaluation
 open import EquationalTheory
-open import Termination using (rennereadback⇓)
+--open import Termination using (rennereadback⇓)
 
 {-# BUILTIN REWRITE _≡_ #-}
 
+mutual
+
+  -- Values v and v' are related at type a.
+
+  _V∋_≃_ : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
+  _V∋_≃_         ★       (ne n)    (ne n')    = {!!}
+  _V∋_≃_         ★       (ne n)    (later p') = {!p'!}
+  _V∋_≃_         ★       (later p) (ne n')    = {!!}  
+  _V∋_≃_         ★       (later p) (later p') = {!!}
+  _V∋_≃_ {Γ = Γ} (a ⇒ b) f     f'       = ∀{Δ}(η : Ren Δ Γ)(u u' : Val ∞ Δ a)
+    (u≃u' : a V∋ u ≃ u') → b V∋ (apply (renval η f) u) ≃ (apply (renval η f') u')
+
+  VLR : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
+  VLR a v v' = _V∋_≃_ a v v'
+
+  -- Value computations v? and w? are related at type a.
+
+--  _C∋_≃_ : ∀{Γ}(a : Ty) (v? w? : Delay ∞ (Val Γ a)) → Set
+--  a C∋ v? ≃ w? = ? -- Delay (VLR a) ∋ v? ≃ w?
+
+
+{-
 record Delay_∋_≃_ {A} (R : A → A → Set) (a? b? : Delay ∞ A) : Set where
   constructor delay≃
   field
@@ -650,3 +672,4 @@ completeness Γ a p =
       delay≃ b1 b2 b3 b4 b5 = reify a a5
   in  delay≃ b1 (bind⇓ readback a2 b2) b3 (bind⇓ readback a4 b4) b5
 
+-- -}

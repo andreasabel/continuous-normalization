@@ -71,7 +71,7 @@ mutual
 
   record ∞Val (i : Size) (Δ : Cxt) (a : Ty) : Set where
     coinductive
-    constructor delay
+    constructor ∞val
     field
       force : {j : Size< i} → Val j Δ a
 

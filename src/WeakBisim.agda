@@ -25,7 +25,7 @@ mutual
     field
       ~force : {j : Size< i} → Delay R ∋ force a∞ ~⟨ j ⟩~ force b∞
 
-open ∞Delay_∋_~⟨_⟩~_ public
+--open ∞Delay_∋_~⟨_⟩~_ public
 ∞Delay_∋_~_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_~⟨_⟩~_ {A} R a∞ i b∞
 
 mutual
@@ -40,7 +40,7 @@ mutual
          (f : A → B)
          (g : ∀ a a' → R a a' → S (f a) (f a')) →
          ∞Delay R ∋ a ~ a' → ∞Delay S ∋ f ∞<$> a ~ (f ∞<$> a')
-  ~force (∞map~ f g p) = map~ f g (~force p)
+  ∞Delay_∋_~⟨_⟩~_.~force (∞map~ f g p) = map~ f g (∞Delay_∋_~⟨_⟩~_.~force p)
 
 
 -- Delaying left only
@@ -83,7 +83,7 @@ _~_ = λ {i} {A} a b → _~⟨_⟩~_ {A} a i b
 _∞~⟨_⟩~_ = λ {A} a∞ i b∞ → ∞Delay_∋_~⟨_⟩~_ {A} _≡_ a∞ i b∞
 _∞~_ = λ {i} {A} a∞ b∞ → _∞~⟨_⟩~_ {A} a∞ i b∞
 
-open ∞Delay_∋_~⟨_⟩~_ public
+--open ∞Delay_∋_~⟨_⟩~_ public
 
 -- Strong bisimilarity implies weak bisimilarity.
 
@@ -96,7 +96,7 @@ mutual
   ∞≈→~ : ∀{i A R}{a∞ b∞ : ∞Delay ∞ A} →
          ∞Delay R ∋ a∞ ≈⟨ i ⟩≈ b∞ →
          ∞Delay R ∋ a∞ ~⟨ i ⟩~ b∞
-  ~force (∞≈→~ eq) = ≈→~ (≈force eq)
+  ∞Delay_∋_~⟨_⟩~_.~force (∞≈→~ eq) = ≈→~ (≈force eq)
 
 {-
 bindlem : ∀{A B R i}{f f' : A → Delay ∞ B}{v v' : A}{v? v?' : Delay ∞ A} →
@@ -117,7 +117,7 @@ subst~⇓        now⇓       (~now a⇓ b⇓ aRb)          = _ , b⇓
 subst~⇓ {R = R}(later⇓ p) (~now (later⇓ a⇓) b⇓ aRb) =
   subst~⇓ {R = R} p (~now a⇓ b⇓ aRb)
 subst~⇓        (later⇓ p) (~later ∞p)               =
-  let n' , p = subst~⇓ p (~force ∞p) in n' , later⇓ p
+  let n' , p = subst~⇓ p (∞Delay_∋_~⟨_⟩~_.~force ∞p) in n' , later⇓ p
 
 -- don't want to assume symmetry of R in ~trans, so...
 subst~⇓' : ∀{A R}{t t' : Delay ∞ A}{n : A} → t' ⇓ n → Delay R ∋ t ~ t' → t ⇓
@@ -125,14 +125,14 @@ subst~⇓'         now⇓       (~now a⇓ b⇓ aRb)          = _  , a⇓
 subst~⇓' {R = R} (later⇓ p) (~now a⇓ (later⇓ b⇓) aRb) =
   subst~⇓' {R = R} p (~now a⇓ b⇓ aRb)
 subst~⇓'         (later⇓ p) (~later ∞p)               =
-  let n' , p = subst~⇓' p (~force ∞p) in n' , later⇓ p
+  let n' , p = subst~⇓' p (∞Delay_∋_~⟨_⟩~_.~force ∞p) in n' , later⇓ p
 
 
 det~⇓ : ∀{A R}{t t' : Delay ∞ A}{n n' : A} →
         t ⇓ n → Delay R ∋ t ~ t' → t' ⇓ n' → R n n'
 det~⇓ p (~now a⇓ b⇓ aRb) r with uniq⇓ p a⇓ | uniq⇓ b⇓ r
 ... | refl | refl = aRb
-det~⇓ (later⇓ p) (~later ∞p) (later⇓ r) = det~⇓ p (~force ∞p) r
+det~⇓ (later⇓ p) (~later ∞p) (later⇓ r) = det~⇓ p (∞Delay_∋_~⟨_⟩~_.~force ∞p) r
 
 
 
@@ -164,7 +164,7 @@ mutual
   ∞~sym : ∀ {i A R} {a? b? : ∞Delay ∞ A} →
           (∀ {a b} → R a b → R b a) →
           ∞Delay R ∋ a? ~⟨ i ⟩~ b? → ∞Delay R ∋ b? ~⟨ i ⟩~ a?
-  ~force (∞~sym X p) = ~sym X (~force p)
+  ∞Delay_∋_~⟨_⟩~_.~force (∞~sym X p) = ~sym X (∞Delay_∋_~⟨_⟩~_.~force p)
 
 -- Transitivity
 
@@ -187,7 +187,7 @@ mutual
     (∀ {a b c} → R a b → R b c → R a c) →
     (eq : ∞Delay R ∋ a∞ ~⟨ ∞ ⟩~ b∞) (eq' : ∞Delay R ∋ b∞ ~⟨ ∞ ⟩~ c∞) →
     ∞Delay R ∋ a∞ ~⟨ i ⟩~ c∞
-  ~force (∞~trans X p p') = ~trans X (~force p) (~force p')
+  ∞Delay_∋_~⟨_⟩~_.~force (∞~trans X p p') = ~trans X (∞Delay_∋_~⟨_⟩~_.~force p) (∞Delay_∋_~⟨_⟩~_.~force p')
 
 bindlem : ∀{A B R i}{v : A} {f : A → Delay ∞ B} → Delay R ∋ f v ~ f v  →
          {v? : Delay ∞ A} →
@@ -209,3 +209,78 @@ mutual
               ∞Delay R ∋ a? ~⟨ i ⟩~ a?
   ~force (∞~reflPER X a? p) = ~reflPER X (force a?) (~force p)
 -}
+
+open import Syntax
+
+mutual
+  Val∋_~⟨_⟩~_ = λ {Δ}{a} a? i b? → Val∋_~_ {i}{Δ}{a} a? b?
+  NeVal∋_~⟨_⟩~_ = λ {Δ}{a} a? i b? → NeVal∋_~_ {i}{Δ}{a} a? b?
+  Env∋_~⟨_⟩~_ = λ {Δ}{Γ} a? i b? → Env∋_~_ {i}{Δ}{Γ} a? b?
+
+  data NeVal∋_~_ {i}{Δ} : {a : Ty}(a? b? : NeVal ∞ Δ a) → Set where
+    ~var : ∀{a}{x : Var Δ a} → NeVal∋ var x ~ var x
+    ~app : ∀{a b}{n n' : NeVal ∞ Δ (a ⇒ b)} → NeVal∋ n ~⟨ i ⟩~ n' →
+           {v v' : Val ∞ Δ a} → Val∋ v ~⟨ i ⟩~ v' → NeVal∋ app n v ~ app n' v'
+ 
+  data Env∋_~_ {i}{Δ} : ∀{Γ} → Env ∞ Δ Γ → Env ∞ Δ Γ → Set where
+    ~ε : Env∋ ε ~ ε
+    _~,_ : ∀{Γ a}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ~⟨ i ⟩~ ρ' →
+           {v v' : Val ∞ Δ a} → Val∋ v ~⟨ i ⟩~ v' → Env∋ (ρ , v) ~ (ρ' , v')
+    
+  data Val∋_~_ {i}{Δ} : {a : Ty}(a? b? : Val ∞ Δ a) → Set where
+    ~lam : ∀{Γ a b}{t : Tm (Γ , a) b}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ~⟨ i ⟩~ ρ' →
+           Val∋ lam t ρ ~ lam t ρ'
+    ~ne  : ∀{a}{n n' : NeVal ∞ Δ a} → NeVal∋ n ~⟨ i ⟩~ n' → Val∋ ne n ~ ne n'
+    ~llater : ∀ {a}{a∞ : ∞Val ∞ Δ a}{b : Val ∞ Δ a}
+              (eq : ∞Val∋ a∞ ~⟨ i ⟩~ ∞val b ) → Val∋ later a∞ ~ b
+    ~rlater : ∀ {t}{a : Val ∞ Δ t}{b∞ : ∞Val ∞ Δ t}
+              (eq : ∞Val∋ ∞val a ~⟨ i ⟩~ b∞) → Val∋ a ~ later b∞
+
+  record ∞Val∋_~⟨_⟩~_ {Δ a} (a∞ : ∞Val ∞ Δ a) i (b∞ : ∞Val ∞ Δ a) : Set where
+    coinductive
+    constructor ∞~val
+    field
+      ~forceVal : {j : Size< i} → Val∋ ∞Val.force a∞ ~⟨ j ⟩~ ∞Val.force b∞
+
+  ∞Val∋_~_ = λ {i}{Δ}{a} a? b? → ∞Val∋_~⟨_⟩~_ {Δ}{a} a? i b?
+open ∞Val∋_~⟨_⟩~_ public
+
+mutual
+  ~symVal : ∀{i Δ a}{v v' : Val ∞ Δ a} →
+            Val∋ v ~⟨ i ⟩~ v' → Val∋ v' ~⟨ i ⟩~ v
+  ~symVal (~lam p)     = ~lam (~symEnv p)
+  ~symVal (~ne p)      = ~ne (~symNeVal p)
+  ~symVal (~llater p) = ~rlater (∞~symVal p)
+  ~symVal (~rlater p) = ~llater (∞~symVal p)
+
+  ∞~symVal : ∀{i Δ a}{v v' : ∞Val ∞ Δ a} →
+            ∞Val∋ v ~⟨ i ⟩~ v' → ∞Val∋ v' ~⟨ i ⟩~ v
+  ~forceVal (∞~symVal p) = ~symVal (~forceVal p)
+
+  ~symNeVal : ∀{i Δ a}{n n' : NeVal ∞ Δ a} →
+              NeVal∋ n ~⟨ i ⟩~ n' → NeVal∋ n' ~⟨ i ⟩~ n
+  ~symNeVal ~var       = ~var
+  ~symNeVal (~app p q) = ~app (~symNeVal p) (~symVal q)              
+
+  ~symEnv : ∀{i Δ Γ}{ρ ρ' : Env ∞ Δ Γ} →
+            Env∋ ρ ~⟨ i ⟩~ ρ' → Env∋ ρ' ~⟨ i ⟩~ ρ
+  ~symEnv ~ε       = ~ε
+  ~symEnv (p ~, q) = ~symEnv p ~, ~symVal q            
+           
+mutual
+  ~transVal : ∀{i Δ a}{v v' v'' : Val ∞ Δ a} →
+            Val∋ v ~⟨ i ⟩~ v' → Val∋ v' ~⟨ i ⟩~ v'' → Val∋ v ~⟨ ∞ ⟩~ v''
+  ~transVal (~lam p)    (~lam q)    = ~lam {!!}
+  ~transVal (~lam p)    (~rlater q) = {!!}
+  ~transVal (~ne p)     (~ne q)     = ~ne {!!}
+  ~transVal (~ne p)     (~rlater q) = ~rlater (∞~transVal {!∞~val (~ne p)!} q)
+  ~transVal (~llater p) (~lam q)    = {!!}
+  ~transVal (~llater p) (~ne q)     = {!!}
+  ~transVal (~llater p) (~llater q) = {!!}
+  ~transVal (~llater p) (~rlater q) = {!!}
+  ~transVal (~rlater p) (~llater q) = {!!}
+  ~transVal (~rlater p) (~rlater q) = {!!}            
+
+  ∞~transVal : ∀{i Δ a}{v v' v'' : ∞Val ∞ Δ a} →
+            ∞Val∋ v ~⟨ i ⟩~ v' → ∞Val∋ v' ~⟨ i ⟩~ v'' → ∞Val∋ v ~⟨ ∞ ⟩~ v''
+  ∞~transVal = {!!}
