@@ -269,18 +269,18 @@ mutual
            
 mutual
   ~transVal : ∀{i Δ a}{v v' v'' : Val ∞ Δ a} →
-            Val∋ v ~⟨ i ⟩~ v' → Val∋ v' ~⟨ i ⟩~ v'' → Val∋ v ~⟨ ∞ ⟩~ v''
-  ~transVal (~lam p)    (~lam q)    = ~lam {!!}
-  ~transVal (~lam p)    (~rlater q) = {!!}
-  ~transVal (~ne p)     (~ne q)     = ~ne {!!}
-  ~transVal (~ne p)     (~rlater q) = ~rlater (∞~transVal {!∞~val (~ne p)!} q)
-  ~transVal (~llater p) (~lam q)    = {!!}
-  ~transVal (~llater p) (~ne q)     = {!!}
+            Val∋ v ~⟨ ∞ ⟩~ v' → Val∋ v' ~⟨ ∞ ⟩~ v'' → Val∋ v ~⟨ i ⟩~ v''
+  ~transVal (~lam p)    (~lam q)    = ~lam {!~transEnv p q!}
+  ~transVal (~lam p)    (~rlater q) = ~rlater (∞~transVal (∞~val (~lam p)) q)
+  ~transVal (~ne p)     (~ne q)     = ~ne {!~transNeVal p q!}
+  ~transVal (~ne p)     (~rlater q) = ~rlater (∞~transVal (∞~val (~ne p)) q)
+  ~transVal (~llater p) (~lam q)    = ~llater (∞~transVal p (∞~val (~lam q)))
+  ~transVal (~llater p) (~ne q)     = ~llater (∞~transVal p (∞~val (~ne q)))
   ~transVal (~llater p) (~llater q) = {!!}
   ~transVal (~llater p) (~rlater q) = {!!}
   ~transVal (~rlater p) (~llater q) = {!!}
   ~transVal (~rlater p) (~rlater q) = {!!}            
 
   ∞~transVal : ∀{i Δ a}{v v' v'' : ∞Val ∞ Δ a} →
-            ∞Val∋ v ~⟨ i ⟩~ v' → ∞Val∋ v' ~⟨ i ⟩~ v'' → ∞Val∋ v ~⟨ ∞ ⟩~ v''
+            ∞Val∋ v ~⟨ ∞ ⟩~ v' → ∞Val∋ v' ~⟨ ∞ ⟩~ v'' → ∞Val∋ v ~⟨ i ⟩~ v''
   ∞~transVal = {!!}
