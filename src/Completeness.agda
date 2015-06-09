@@ -19,7 +19,7 @@ mutual
 
   _V∋_≃_ : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
   _V∋_≃_         ★       (ne n)    (ne n')    = {!!}
-  _V∋_≃_         ★       (ne n)    (later p') = {!p'!}
+  _V∋_≃_         ★       (ne n)    (later p') = {!!}
   _V∋_≃_         ★       (later p) (ne n')    = {!!}  
   _V∋_≃_         ★       (later p) (later p') = {!!}
   _V∋_≃_ {Γ = Γ} (a ⇒ b) f     f'       = ∀{Δ}(η : Ren Δ Γ)(u u' : Val ∞ Δ a)

@@ -270,9 +270,9 @@ mutual
 mutual
   ~transVal : ∀{i Δ a}{v v' v'' : Val ∞ Δ a} →
             Val∋ v ~⟨ ∞ ⟩~ v' → Val∋ v' ~⟨ ∞ ⟩~ v'' → Val∋ v ~⟨ i ⟩~ v''
-  ~transVal (~lam p)    (~lam q)    = ~lam {!~transEnv p q!}
+  ~transVal (~lam p)    (~lam q)    = ~lam (~transEnv p q)
   ~transVal (~lam p)    (~rlater q) = ~rlater (∞~transVal (∞~val (~lam p)) q)
-  ~transVal (~ne p)     (~ne q)     = ~ne {!~transNeVal p q!}
+  ~transVal (~ne p)     (~ne q)     = ~ne (~transNeVal p q)
   ~transVal (~ne p)     (~rlater q) = ~rlater (∞~transVal (∞~val (~ne p)) q)
   ~transVal (~llater p) (~lam q)    = ~llater (∞~transVal p (∞~val (~lam q)))
   ~transVal (~llater p) (~ne q)     = ~llater (∞~transVal p (∞~val (~ne q)))
@@ -281,6 +281,16 @@ mutual
   ~transVal (~rlater p) (~llater q) = {!!}
   ~transVal (~rlater p) (~rlater q) = {!!}            
 
+  ~transNeVal : ∀{i Δ a}{n n' n'' : NeVal ∞ Δ a} →
+    NeVal∋ n ~⟨ ∞ ⟩~ n' → NeVal∋ n' ~⟨ ∞ ⟩~ n'' → NeVal∋ n ~⟨ i ⟩~ n''
+  ~transNeVal ~var       ~var         = ~var
+  ~transNeVal (~app p q) (~app p' q') = ~app (~transNeVal p p') (~transVal q q')
+
+  ~transEnv : ∀{i Δ Γ}{ρ ρ' ρ'' : Env ∞ Δ Γ} →
+              Env∋ ρ ~⟨ ∞ ⟩~ ρ' → Env∋ ρ' ~⟨ ∞ ⟩~ ρ'' → Env∋ ρ ~⟨ i ⟩~ ρ''
+  ~transEnv ~ε       ~ε         = ~ε
+  ~transEnv (p ~, q) (p' ~, q') = ~transEnv p p' ~, ~transVal q q'
+
   ∞~transVal : ∀{i Δ a}{v v' v'' : ∞Val ∞ Δ a} →
             ∞Val∋ v ~⟨ ∞ ⟩~ v' → ∞Val∋ v' ~⟨ ∞ ⟩~ v'' → ∞Val∋ v ~⟨ i ⟩~ v''
-  ∞~transVal = {!!}
+  ~forceVal (∞~transVal p q) = ~transVal (~forceVal p) (~forceVal q)
