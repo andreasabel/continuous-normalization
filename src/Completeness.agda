@@ -1,4 +1,4 @@
-{-# OPTIONS --copatterns --sized-types #-}
+{-# OPTIONS --copatterns --sized-types --rewriting #-}
 
 module Completeness where
 

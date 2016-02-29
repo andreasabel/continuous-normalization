@@ -33,11 +33,11 @@ V∋subst : ∀{Γ}{a : Ty}{t t' : Tm Γ a}{v : Val Γ a} → a V∋ t ~ v → t
 V∋subst p refl = p
 
 ≡to≡βη : ∀{Γ a}{t t' : Tm Γ a} → t ≡ t' → t ≡βη t'
-≡to≡βη refl = refl≡
+≡to≡βη refl = refl≡ _
 
 ren≡βη : ∀{Γ a} {t : Tm Γ a}{t' : Tm Γ a} → t ≡βη t' → ∀{Δ}(σ : Ren Δ Γ) →
         ren σ t ≡βη ren σ t'
-ren≡βη (var≡ p)     σ = var≡ (cong (lookr σ) p)
+ren≡βη (var≡ p)     σ = var≡ _
 ren≡βη (abs≡ p)     σ = abs≡ (ren≡βη p (liftr σ))
 ren≡βη (app≡ p q)   σ = app≡ (ren≡βη p σ) (ren≡βη q σ)
 ren≡βη (beta≡ {t = t}{u = u})        σ = trans≡ beta≡ $ ≡to≡βη $
@@ -48,8 +48,8 @@ ren≡βη (beta≡ {t = t}{u = u})        σ = trans≡ beta≡ $ ≡to≡βη 
                             (trans (sidl (ren2sub σ)) (sym $ sidr (ren2sub σ))))
                             (ren2subren σ u)))
                (sym $ rensub σ (subId , u) t))
-ren≡βη (eta≡ {t = t}) σ = trans≡ (abs≡ (app≡ (≡to≡βη (trans (sym $ rencomp (liftr σ) (wkr renId) t) (trans (cong (λ xs → ren xs t) (trans (lemrr (wkr σ) zero renId) (trans (ridr (wkr σ)) (trans (cong wkr (sym $ lidr σ)) (sym $ wkrcomp renId σ))))) (rencomp (wkr renId) σ t)))) refl≡)) eta≡
-ren≡βη refl≡        σ = refl≡
+ren≡βη (eta≡ t) σ = trans≡ (abs≡ (app≡ (≡to≡βη (trans (sym $ rencomp (liftr σ) (wkr renId) t) (trans (cong (λ xs → ren xs t) (trans (lemrr (wkr σ) zero renId) (trans (ridr (wkr σ)) (trans (cong wkr (sym $ lidr σ)) (sym $ wkrcomp renId σ))))) (rencomp (wkr renId) σ t)))) (refl≡ _))) (eta≡ _)
+ren≡βη (refl≡ t)        σ = refl≡ _
 ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
 ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
 
@@ -71,7 +71,7 @@ V∋subst' (a ⇒ b) {t}{t'} p q ρ s u r = transD
     (λ v → b V∋ app (ren ρ t) s ~ v)
     (λ v → b V∋ app (ren ρ t') s ~ v)
     id
-    (λ {v} r → V∋subst' b r (app≡ (ren≡βη q ρ) refl≡)) (p ρ s u r))
+    (λ {v} r → V∋subst' b r (app≡ (ren≡βη q ρ) (refl≡ _))) (p ρ s u r))
 
 renV∋ : ∀{Γ} a {t : Tm Γ a}{v :  Val Γ a} → a V∋ t ~ v →
            ∀{Δ}(σ : Ren Δ Γ) → a V∋ ren σ t ~ renval σ v
@@ -223,7 +223,7 @@ mutual
       readback
       (λ v → reify b {v = v})
       (p (wkr renId) (var zero) (ne (var zero))
-      (reflect a {t = var zero}{var zero} (now₁ refl≡)))
+      (reflect a {t = var zero}{var zero} (now₁ (refl≡ _))))
 
   reify-eta : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{v : Val Γ (a ⇒ b)} →
              Delay₁
@@ -235,7 +235,7 @@ mutual
     mapD (λ n → app (ren (wkr renId) t) (var zero) ≡βη embNf n)
          (λ n → t ≡βη embNf n)
          Nf.abs
-         (λ p → trans≡ (sym≡ eta≡) (abs≡ p))
+         (λ p → trans≡ (sym≡ (eta≡ _)) (abs≡ p))
          p
 
   reflect : ∀{Γ} a {t : Tm Γ a}{u : NeVal Γ a} →
@@ -258,7 +258,7 @@ mutual
 
 
 ~var : ∀{Γ a}(x : Var Γ a) → a V∋ var x ~ ne (var x)
-~var x = reflect _ (now₁ refl≡)
+~var x = reflect _ (now₁ (refl≡ _))
 
 ide~E : ∀ Γ → subId {Γ} ~E ide Γ
 ide~E ε       = _
@@ -280,3 +280,4 @@ soundness Γ a t = bindD
                   (trans≡ (≡to≡βη (sym $ subid t)))
                   (reify a p))
   (fund t (ide~E Γ))
+-- -}
