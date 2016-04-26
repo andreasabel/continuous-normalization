@@ -284,6 +284,18 @@ map⇓ : ∀ {A B} {a : A} {a? : Delay ∞ A}
 map⇓ f now⇓        = now⇓
 map⇓ f (later⇓ a⇓) = later⇓ (map⇓ f a⇓)
 
+
+map2⇓ : ∀ {A B C}
+        {a : A}{a? : Delay ∞ A}
+        {b : B}{b? : Delay ∞ B}
+        (f : A → B → C)
+        (a⇓ : a? ⇓ a) →
+        (b⇓ : b? ⇓ b) →
+        (f <$> a? <*> b?) ⇓ f a b
+map2⇓ f now⇓        now⇓       = now⇓
+map2⇓ f now⇓        (later⇓ p) = later⇓ (map2⇓ f now⇓ p)
+map2⇓ f (later⇓ p) q           = later⇓ (map2⇓ f p q)
+
 {-
 bind⇓' : ∀ {A B} {a : A} {a? : Delay ∞ A}
   (f : A → Delay ∞ B) (a⇓ : a? ⇓ a) → (a? >>= f) ⇓ f a
