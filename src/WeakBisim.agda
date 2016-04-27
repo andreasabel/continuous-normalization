@@ -266,7 +266,7 @@ mutual
             Env∋ ρ ~⟨ i ⟩~ ρ' → Env∋ ρ' ~⟨ i ⟩~ ρ
   ~symEnv ~ε       = ~ε
   ~symEnv (p ~, q) = ~symEnv p ~, ~symVal q            
-           
+{-           
 mutual
   ~transVal : ∀{i Δ a}{v v' v'' : Val ∞ Δ a} →
             Val∋ v ~⟨ ∞ ⟩~ v' → Val∋ v' ~⟨ ∞ ⟩~ v'' → Val∋ v ~⟨ i ⟩~ v''
@@ -294,3 +294,4 @@ mutual
   ∞~transVal : ∀{i Δ a}{v v' v'' : ∞Val ∞ Δ a} →
             ∞Val∋ v ~⟨ ∞ ⟩~ v' → ∞Val∋ v' ~⟨ ∞ ⟩~ v'' → ∞Val∋ v ~⟨ i ⟩~ v''
   ~forceVal (∞~transVal p q) = ~transVal (~forceVal p) (~forceVal q)
+-}
