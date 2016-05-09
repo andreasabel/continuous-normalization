@@ -402,6 +402,12 @@ mutual
              ∞Delay₁ i P a? → ∞Delay₁ i Q (f ∞<$> a?)
   force₁ (∞mapD P Q f p q) = mapD P Q f p (force₁ q)
 
+postulate mapD2 : ∀{i}{A B C : Set}(P : A → Set)(Q : B → Set)(R : C → Set)
+                  {a? : Delay ∞ A}{b? : Delay ∞ B}
+                  (f : A → B → C) →
+                  (∀ {a b} → P a → Q b → R (f a b)) →
+                  Delay₁ i P a? → Delay₁ i Q b? → Delay₁ i R (f <$> a? <*> b?)
+
 mutual
   -- bind
   bindD : ∀{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A} →
