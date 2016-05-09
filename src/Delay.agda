@@ -64,6 +64,9 @@ _∞<$>_ : ∀ {i A B} (f : A → B) (∞a : ∞Delay i A) → ∞Delay i B
 f ∞<$> ∞a = ∞a ∞>>= λ a → return (f a)
 -- force (f ∞<$> ∞a) = f <$> force ∞a
 
+
+_∞<*>_ : ∀ {i A B} (f : ∞Delay i (A → B))(a : Delay i A) → ∞Delay i B
+f ∞<*> a = f ∞>>= λ f → f <$> a
 -- Double bind
 
 _=<<2_,_ : ∀ {i A B C} → (A → B → Delay i C) → Delay i A → Delay i B → Delay i C
@@ -401,12 +404,26 @@ mutual
              (∀ {a} → P a → Q (f a)) →
              ∞Delay₁ i P a? → ∞Delay₁ i Q (f ∞<$> a?)
   force₁ (∞mapD P Q f p q) = mapD P Q f p (force₁ q)
+mutual
+  mapD2 : ∀{i}{A B C : Set}(P : A → Set)(Q : B → Set)(R : C → Set)
+          {a? : Delay ∞ A}{b? : Delay ∞ B}
+          (f : A → B → C) →
+          (∀ {a b} → P a → Q b → R (f a b)) →
+          Delay₁ i P a? →
+          Delay₁ i Q b? →
+          Delay₁ i R (f <$> a? <*> b?)
+  mapD2 P Q R f p (now₁ p₁) (now₁ p₂) = now₁ (p p₁ p₂)
+  mapD2 P Q R f p (now₁ p₁) (later₁ x) = later₁ (∞mapD Q R (f _) (p p₁) x)
+  mapD2 P Q R f p (later₁ x) p₂ = later₁ (∞mapD2 P Q R f p x p₂)
 
-postulate mapD2 : ∀{i}{A B C : Set}(P : A → Set)(Q : B → Set)(R : C → Set)
-                  {a? : Delay ∞ A}{b? : Delay ∞ B}
-                  (f : A → B → C) →
-                  (∀ {a b} → P a → Q b → R (f a b)) →
-                  Delay₁ i P a? → Delay₁ i Q b? → Delay₁ i R (f <$> a? <*> b?)
+  ∞mapD2 : ∀{i}{A B C : Set}(P : A → Set)(Q : B → Set)(R : C → Set)
+           {a? : ∞Delay ∞ A}{b? : Delay ∞ B}
+           (f : A → B → C) →
+           (∀ {a b} → P a → Q b → R (f a b)) →
+           ∞Delay₁ i P a? →
+           Delay₁ i Q b? →
+           ∞Delay₁ i R ((f ∞<$> a?) ∞<*> b?  )
+  force₁ (∞mapD2 P Q R f p q r) = mapD2 P Q R f p (force₁ q) r
 
 mutual
   -- bind
