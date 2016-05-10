@@ -27,18 +27,8 @@ ren≡βη (beta≡ {t = t}{u = u})        σ = trans≡ beta≡ $ ≡to≡βη 
                             (trans (sidl (ren2sub σ)) (sym $ sidr (ren2sub σ))))
                             (ren2subren σ u)))
                (sym $ rensub σ (subId , u) t))
-ren≡βη (eta≡ t) σ =
-  trans≡
-    (abs≡ (app≡ (≡to≡βη (trans (sym $ rencomp (liftr σ) (wkr renId) t)
-                               (trans (cong (λ xs → ren xs t)
-                                            (trans (lemrr (wkr σ) zero renId)
-                                                   (trans (ridr (wkr σ))
-                                                          (trans (cong wkr (sym $ lidr σ))
-                                                                 (sym $ wkrcomp renId σ)))))
-                                      (rencomp (wkr renId) σ t))))
-          (refl≡ _)))
-    (eta≡ _)
-ren≡βη (refl≡ p)        σ = refl≡ _
+ren≡βη (eta≡ t) σ = trans≡ (abs≡ (app≡ (≡to≡βη (trans (sym $ rencomp (liftr σ) (wkr renId) t) (trans (cong (λ xs → ren xs t) (trans (lemrr (wkr σ) zero renId) (trans (ridr (wkr σ)) (trans (cong wkr (sym $ lidr σ)) (sym $ wkrcomp renId σ))))) (rencomp (wkr renId) σ t)))) (refl≡ _))) (eta≡ _)
+ren≡βη (refl≡ t)        σ = refl≡ _
 ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
 ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
 

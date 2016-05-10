@@ -59,7 +59,10 @@ open import Relation.Binary.HeterogeneousEquality public
   renaming (sym to hsym; trans to htrans; cong to hcong;
             cong₂ to hcong₂; subst to hsubst)
 
-hcong₃ : {A : Set}{B : A → Set}{C : ∀ a → B a → Set}{D : ∀ a b → C a b → Set}
+hcong₃ : {A : Set}
+         {B : A → Set}
+         {C : ∀ a → B a → Set}
+         {D : ∀ a b → C a b → Set}
          (f : ∀ a b c → D a b c)
          {a a' : A} → a ≅ a' →
          {b : B a}{b' : B a'} → b ≅ b' →
@@ -90,10 +93,12 @@ record Fun (C D : Cat) : Set where
                 HMap (comp C f g) ≅ comp D (HMap f) (HMap g)
 
 open Fun public
-
+{-
 postulate ext : {A : Set}{B B' : A → Set}{f : ∀ a → B a}{g : ∀ a → B' a} →
                 (∀ a → f a ≅ g a) → f ≅ g
 
-postulate iext : {A : Set}{B B' : A → Set}{f : ∀ {a} → B a}{g : ∀{a} → B' a} →
+postulate iext : {A : Set}{B B' : A → Set}
+                 {f : ∀ {a} → B a}{g : ∀{a} → B' a} →
                  (∀ a → f {a} ≅ g {a}) →
                  _≅_ {_}{ {a : A} → B a} f { {a : A} → B' a} g
+-}
