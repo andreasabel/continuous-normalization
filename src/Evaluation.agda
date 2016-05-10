@@ -94,7 +94,7 @@ mutual
   renapply (lam t ρ) v η = ≈later (renbeta t ρ v η)
   renapply (later p) v η = ≈later (∞renapply p v η)
 
-  ∞renapply  : ∀{i Γ Δ a b} (f : ∞Val ∞ Γ (a ⇒ b))(v : Val ∞ Γ a)(η : Ren Δ Γ) →
+  ∞renapply  : ∀{i Γ Δ a b}(f : ∞Val ∞ Γ (a ⇒ b))(v : Val ∞ Γ a)(η : Ren Δ Γ) →
      ∞Val∋ (∞renval η $ ∞apply f v) ≈⟨ i ⟩≈ (∞apply (∞renval η f) (renval η v))
   ∞Val∋_≈⟨_⟩≈_.≈force (∞renapply f v η) = renapply (∞Val.force f) v η
 
@@ -142,9 +142,8 @@ mutual
 
   eta-cong : ∀{i Γ a b}{v v' : Val ∞ Γ (a ⇒ b)} →
              Val∋ v ≈⟨ i ⟩≈ v' → eta v ∞≈⟨ i ⟩≈ eta v'
-  ≈force (eta-cong p) = readback-cong _ (apply-cong (renval-cong (wkr renId) p) (≈ne ≈var))
-
-
+  ≈force (eta-cong p) = 
+    readback-cong _ (apply-cong (renval-cong (wkr renId) p) (≈ne ≈var))
 
 -- these proofs could surely be shortened, readback-cong would help
 mutual

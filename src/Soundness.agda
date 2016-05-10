@@ -27,7 +27,17 @@ ren≡βη (beta≡ {t = t}{u = u})        σ = trans≡ beta≡ $ ≡to≡βη 
                             (trans (sidl (ren2sub σ)) (sym $ sidr (ren2sub σ))))
                             (ren2subren σ u)))
                (sym $ rensub σ (subId , u) t))
-ren≡βη (eta≡ t) σ = trans≡ (abs≡ (app≡ (≡to≡βη (trans (sym $ rencomp (liftr σ) (wkr renId) t) (trans (cong (λ xs → ren xs t) (trans (lemrr (wkr σ) zero renId) (trans (ridr (wkr σ)) (trans (cong wkr (sym $ lidr σ)) (sym $ wkrcomp renId σ))))) (rencomp (wkr renId) σ t)))) (refl≡ _))) (eta≡ _)
+ren≡βη (eta≡ t) σ = trans≡
+  (abs≡ (app≡ (≡to≡βη 
+    (trans (sym $ rencomp (liftr σ) (wkr renId) t)
+           (trans (cong (λ xs → ren xs t) 
+                        (trans (lemrr (wkr σ) zero renId) 
+                               (trans (ridr (wkr σ)) 
+                                      (trans (cong wkr (sym (lidr σ)))
+                                             (sym (wkrcomp renId σ))))))
+                  (rencomp (wkr renId) σ t))))
+    (refl≡ _)))
+  (eta≡ _)
 ren≡βη (refl≡ t)        σ = refl≡ _
 ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
 ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
@@ -123,12 +133,25 @@ fund : ∀{Γ a} (t : Tm Γ a) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env ∞ Δ Γ} (σ~ρ : σ ~E ρ) →
     a V∋ sub σ t ~ eval t ρ
 fund (var x)   p = fundvar x p
-fund {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p ρ' s u s~u =
-    V∋substβη b (V∋step b (fund t
-                            {σ = subComp (ren2sub ρ') σ , s}
-                            {ρ = renenv ρ' ρ , u}
-                            (ren~E p ρ' , s~u)))
-            (trans≡ (≡to≡βη (trans (trans (cong (λ f → sub f t) (cong (_, s) (trans (sym $ sidl (subComp (ren2sub ρ') σ)) (sym $ lemss subId s (subComp (ren2sub ρ') σ))))) (subcomp (subId , s) (lifts (subComp (ren2sub ρ') σ)) t)) (cong (sub (subId , s)) (trans (cong (λ f → sub f t) (sym $ liftrscomp ρ' σ)) (sym (rensub (liftr ρ') (lifts σ) t)))))) (sym≡ beta≡))
+fund {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p ρ' s u s~u = V∋substβη 
+  b 
+  (V∋step b (fund 
+    t
+    {σ = subComp (ren2sub ρ') σ , s}
+    {ρ = renenv ρ' ρ , u}
+    (ren~E p ρ' , s~u)))
+  (trans≡ (≡to≡βη (trans 
+    (trans 
+      (cong 
+        (λ f → sub f t) 
+        (cong (_, s) 
+              (trans (sym $ sidl (subComp (ren2sub ρ') σ))
+                     (sym $ lemss subId s (subComp (ren2sub ρ') σ)))))
+      (subcomp (subId , s) (lifts (subComp (ren2sub ρ') σ)) t))
+    (cong (sub (subId , s))
+          (trans (cong (λ f → sub f t) (sym $ liftrscomp ρ' σ)) 
+                 (sym (rensub (liftr ρ') (lifts σ) t)))))) 
+          (sym≡ beta≡))
 
 fund (app t u) p =
     V∋subst (V∋subst' _
@@ -137,7 +160,10 @@ fund (app t u) p =
             (cong (λ f → app f (sub _ u)) (renid _))
 
 lemma : ∀{Γ a b}
-        {t : Tm Γ (a ⇒ b)}{s : Tm Γ a}{f : NeVal ∞ Γ (a ⇒ b)}{u : Val ∞ Γ a} →
+        {t : Tm Γ (a ⇒ b)}
+        {s : Tm Γ a}
+        {f : NeVal ∞ Γ (a ⇒ b)}
+        {u : Val ∞ Γ a} →
         Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback f) →
         Delay₁ ∞ (λ n → s ≡βη embNf n) (readback u) →
         Delay₁ ∞ (λ n → app t s ≡βη embNe n) (nereadback (app f u))

@@ -13,9 +13,6 @@ V⟦ ★     ⟧ t = readback t ⇓
 V⟦ a ⇒ b ⟧ f = ∀{Δ}(ρ : Ren Δ _)(u : Val ∞ Δ a)
     (u⇓ : V⟦ a ⟧ u) → V⟦ b ⟧ (apply (renval ρ f) u)
 
--- can't use subst anymore, so need a special thing for substituting
--- by strong bisim.
-
 substV⟦⟧ : ∀{Γ} a {v v' : Val ∞ Γ a} → Val∋ v ≈ v' → V⟦ a ⟧ v → V⟦ a ⟧ v'
 substV⟦⟧ ★       p (n , q) = _ , subst≈⇓ q (readback-cong _ p) 
 substV⟦⟧ (a ⇒ b) p q       ρ u u⇓ =
