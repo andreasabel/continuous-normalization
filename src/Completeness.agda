@@ -18,12 +18,13 @@ mutual
   -- Values v and v' are related at type a.
 
   _V∋_≃_ : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
-  _V∋_≃_         ★       (ne n)    (ne n')    = {!!}
-  _V∋_≃_         ★       (ne n)    (later p') = {!!}
-  _V∋_≃_         ★       (later p) (ne n')    = {!!}  
-  _V∋_≃_         ★       (later p) (later p') = {!!}
-  _V∋_≃_ {Γ = Γ} (a ⇒ b) f     f'       = ∀{Δ}(η : Ren Δ Γ)(u u' : Val ∞ Δ a)
-    (u≃u' : a V∋ u ≃ u') → b V∋ (apply (renval η f) u) ≃ (apply (renval η f') u')
+  _V∋_≃_     ★        v v' = 
+    Delay_∋_~_ (λ x → _≅_ x) -- implicit argument trouble 
+               (readback v) 
+               (readback v')
+  _V∋_≃_ {Γ} (a ⇒ b) f f' = ∀{Δ}(η : Ren Δ Γ)(u u' : Val ∞ Δ a)
+    (u≃u' : a V∋ u ≃ u') → 
+    b V∋ (apply (renval η f) u) ≃ (apply (renval η f') u')
 
   VLR : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
   VLR a v v' = _V∋_≃_ a v v'
