@@ -29,13 +29,14 @@ mutual
   VLR : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
   VLR a v v' = _V∋_≃_ a v v'
 
+{- old
   -- Value computations v? and w? are related at type a.
 
---  _C∋_≃_ : ∀{Γ}(a : Ty) (v? w? : Delay ∞ (Val Γ a)) → Set
---  a C∋ v? ≃ w? = ? -- Delay (VLR a) ∋ v? ≃ w?
+  _C∋_≃_ : ∀{Γ}(a : Ty) (v? w? : Delay ∞ (Val Γ a)) → Set
+  a C∋ v? ≃ w? = ? -- Delay (VLR a) ∋ v? ≃ w?
 
 
-{-
+
 record Delay_∋_≃_ {A} (R : A → A → Set) (a? b? : Delay ∞ A) : Set where
   constructor delay≃
   field
@@ -177,7 +178,8 @@ C∋≃converg-r (delay≃ a₁ a⇓ b b⇓ rab) q = delay≃ a₁ a⇓ _ q rab
 _≃E_ : ∀{Γ Δ} (ρ ρ' : Env ∞ Δ Γ) → Set
 ε       ≃E ε         = ⊤
 (ρ , v) ≃E (ρ' , v') = (ρ ≃E ρ') × (VLR _ v v')
-{-
+
+{- old
 ≃Esym : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ≃E ρ' → ρ' ≃E ρ
 ≃Esym {ρ = ε}    {ε}       _        = _
 ≃Esym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Esym p  , V∋≃sym p'
@@ -189,8 +191,8 @@ _≃E_ : ∀{Γ Δ} (ρ ρ' : Env ∞ Δ Γ) → Set
 ≃Erefl : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ≃E ρ' → ρ ≃E ρ
 ≃Erefl p = ≃Etrans p (≃Esym p)
 
-
 -}
+
 -- subst by strong bisim for val
 substVLR-l : ∀{Γ} a {v v' v'' : Val ∞ Γ a} →
              VLR a v v' →  Val∋ v'' ≈⟨ ∞ ⟩≈ v → VLR a v'' v'
@@ -222,113 +224,54 @@ renV≃ (a ⇒ b) η {f}{f'} p ρ u u' q =
                          (apply-cong (renvalcomp ρ η f) (≈reflVal u)))
              (apply-cong (≈symVal (renvalcomp ρ η f')) (≈reflVal u'))
 
-renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env ∞ Δ Γ} (ρ≃ρ' : ρ ≃E ρ') → (renenv η ρ) ≃E (renenv η ρ')
+renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env ∞ Δ Γ}
+        (ρ≃ρ' : ρ ≃E ρ') → (renenv η ρ) ≃E (renenv η ρ')
 renE≃ η {ε} {ε} ρ≃ρ' = _
 renE≃ η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renE≃ η ρ≃ρ') , (renV≃ _ η v≃v')
 
-{-
--- Substitution lemma.
+-- closure under later
+laterV≃ : ∀{Γ} a {v v' : ∞Val ∞ Γ a} → VLR a (∞Val.force v) (∞Val.force v') →
+          VLR a (later v) (later v')
+laterV≃ ★       p = ~later (~delay p)
+laterV≃ (a ⇒ b) p η u u' u≃u' = laterV≃ b (p η u u' u≃u')
 
-infixr 4 _,_
+evalS : ∀{Γ Δ Δ′} → Sub Δ Γ → Env ∞ Δ′ Δ → Env ∞ Δ′ Γ
+evalS ε       ρ = ε
+evalS (σ , v) ρ = evalS σ ρ , eval v ρ
 
-data DEnv (Δ : Cxt) : (Γ : Cxt) → Set where
-  ε   : DEnv Δ ε
-  _,_ : ∀ {Γ a} (ρ : DEnv Δ Γ) (v : Delay ∞ (Val Δ a)) → DEnv Δ (Γ , a)
+id-ext-var : ∀{Γ Δ a}(x : Var Δ a){ρ ρ' : Env ∞ Γ Δ} → ρ ≃E ρ' →
+             a V∋ lookup x ρ ≃ lookup x ρ'
+id-ext-var zero    {ρ , v}{ρ' , v'} (p , p') = p'
+id-ext-var (suc x) {ρ , v}{ρ' , v'} (p , p') = id-ext-var x p
 
-sequence : ∀{Γ Δ} → DEnv Γ Δ → Delay ∞ (Env Γ Δ)
-sequence ε = now ε
-sequence (ρ , v?) = _,_ <$> sequence ρ <*> v?
+id-ext : ∀{Γ Δ a}(t : Tm Δ a){ρ ρ' : Env ∞ Γ Δ} → ρ ≃E ρ' →
+         a V∋ eval t ρ ≃ eval t ρ'
+id-ext (var x)   p = id-ext-var x p
+id-ext (abs t)  {ρ}{ρ'} p η u u' u≃u' =
+  laterV≃ _ (id-ext t {renenv η ρ , u}{renenv η ρ' , u'}(renE≃ η p , u≃u'))
+id-ext (app t u) p =
+  substVLR-r _
+             (substVLR-l _
+                         (id-ext t p renId _ _ (id-ext u p))
+                         (apply-cong (≈symVal (renvalid (eval t _)))
+                                     (eval-cong u (≈reflEnv _))))
+             ((apply-cong (renvalid (eval t _))
+                                     (eval-cong u (≈reflEnv _))))
+{- this needs an extra property on ρ - readback stuff terminates
 
-evalS₀ : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → DEnv Γ Δ′
-evalS₀ ε       ρ = ε
-evalS₀ (σ , t) ρ = evalS₀ σ ρ , eval t ρ
+substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
+  a V∋ (lookup x (evalS σ ρ)) ≃ eval (looks σ x) ρ
+substitution-var zero    (σ , t) ρ = {!!}
+substitution-var (suc x) (σ , t) ρ = substitution-var x σ ρ
 
-
-evalS : ∀{Γ Δ Δ′} (σ : Sub Δ Δ′) (ρ : Env Γ Δ) → Delay ∞ (Env Γ Δ′)
-evalS σ ρ = sequence (evalS₀ σ ρ)
-
-
-{-
-evalS-ε : ∀{Γ Δ} (σ : Sub Δ ε) (ρ : Env Γ Δ) → evalS σ ρ ≡ now ε
-evalS-ε σ ρ = refl
--}
-
--- Environments ρ and ρ' are related.
-
-_≃D_ : ∀{Γ Δ} (ρ ρ' : DEnv Δ Γ) → Set
-ε       ≃D ε           = ⊤
-(ρ , v?) ≃D (ρ' , v?') = (ρ ≃D ρ') × (_ C∋ v? ≃ v?')
-
-≃Dsym : ∀{Γ Δ}{ρ ρ' : DEnv Δ Γ} → ρ ≃D ρ' → ρ' ≃D ρ
-≃Dsym {ρ = ε}    {ε}       _        = _
-≃Dsym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Dsym p  , C∋≃sym p'
-
-≃Dtrans : ∀{Γ Δ}{ρ ρ' ρ'' : DEnv Δ Γ} → ρ ≃D ρ' → ρ' ≃D ρ'' → ρ ≃D ρ''
-≃Dtrans {ρ = ε}    {ε}       {ε}         _         _        = _
-≃Dtrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ≃Dtrans p p' ,  C∋≃trans q q'
-
-≃Drefl : ∀{Γ Δ}{ρ ρ' : DEnv Δ Γ} → ρ ≃D ρ' → ρ ≃D ρ
-≃Drefl p = ≃Dtrans p (≃Dsym p)
-
-rendenv : ∀{Γ Δ} → Ren Δ Γ → ∀ {B} → DEnv Γ B → DEnv Δ B
-rendenv η ε = ε
-rendenv η (ρ , v) = (rendenv η ρ) , (renval η <$> v)
-
-renC∋ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Delay ∞ (Val Δ a)} (v≃v' : a C∋ v ≃ v') →
-        a C∋ (renval η <$> v) ≃ (renval η <$> v')
-renC∋ a η (delay≃ a₁ a⇓ b b⇓ rab) = delay≃ _ (map⇓ (renval η) a⇓) _ (map⇓ (renval η) b⇓) (renV≃ _ η rab)
-
-renD≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : DEnv Δ Γ} (ρ≃ρ' : ρ ≃D ρ') → (rendenv η ρ) ≃D (rendenv η ρ')
-renD≃ η {ε} {ε} _ = _
-renD≃ η {ρ , v}{ρ' , v'} (p , p') = (renD≃ η p) , renC∋ _ η p'
-
-renD≃' : ∀{Γ₀ Γ₁ Γ' Δ Δ′} (η : Ren Δ′ Δ){σ : Sub Γ₀ Γ'}{σ' : Sub Γ₁ Γ'} {ρ : Env Δ Γ₀}{ρ' : Env Δ Γ₁} (ρ≃ρ' : evalS₀ σ ρ ≃D evalS₀ σ' ρ') →
-         evalS₀ σ (renenv η ρ) ≃D evalS₀ σ' (renenv η ρ')
-renD≃' η {ε} {ε} _ = _
-renD≃' η {σ , t} {σ' , t'} (p , p') = renD≃' η p , C∋≃bisim-r (C∋≃bisim-l (≈sym (reneval t _ η)) (renC∋ _ η p')) (reneval t' _ η)
-
-
-{-
--- Closure under renaming
-
-renV≃ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val Δ a} (v≃v' : VLR a v v') →
-        VLR a (renval η v) (renval η v')
-renV≃ ★       η {ne n}{ne n'} p    = ren≃ η p
-renV≃ (a ⇒ b) η {f}{f'} p ρ u u' q =
-  subst (λ X → b C∋ apply (renval ρ (renval η f)) u ≃ apply X u')
-        (sym $ renvalcomp ρ η f')
-        (subst (λ X → b C∋ apply X u ≃ apply (renval (renComp ρ η) f') u')
-               (sym $ renvalcomp ρ η f)
-               (p (renComp ρ η) u u' q))
-
-renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃D ρ') → (renenv η ρ) ≃D (renenv η ρ')
-renE≃ η {ε} {ε} ρ≃ρ' = _
-renE≃ η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renE≃ η ρ≃ρ') , (renV≃ _ η v≃v')
--}
-
-
-{-
-
-substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′ Δ) →
-  a C∋ (lookup x <$> evalS σ ρ) ≃ eval (looks σ x) ρ
-substitution-var zero    (σ , v) ρ = ≃trans (V∋≃trans _) {!!} {!bind-now!}
-substitution-var (suc x) (σ , v) ρ = ≃trans (V∋≃trans _) {!!} (substitution-var x σ ρ)
-
-{-
--- substitution-var {Δ′ = ε} x σ ρ = {!!}
--- substitution-var {Δ′ = Δ′ , a} x σ ρ = {!!}
-substitution-var {ε} () σ ρ
-substitution-var {Γ , a} zero σ ρ = {!!}
-  --  a C∋ lookup zero <$> evalS σ ρ ≃ eval (σ zero) ρ
-substitution-var {Γ , a} (suc x) σ ρ = {!!}
--}
-
-substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env Δ′ Δ) →
-  a C∋ (eval t =<< evalS σ ρ) ≃ eval (sub σ t) ρ
+substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
+  a V∋ (eval t (evalS σ ρ)) ≃ eval (sub σ t) ρ
 substitution (var x) σ ρ = {!eval t!}
-substitution (abs t) σ ρ = {!!}
-substitution (app t t₁) σ ρ = {!substitution t σ ρ !}
+substitution (abs t) σ ρ η u u' u≃u' = {!substitution t (lifts σ) (renenv η ρ , u)!}
+substitution (app t u) σ ρ = substVLR-r _ (substVLR-l _ (substitution t σ ρ renId _ _ (substitution u σ ρ)) {!!}) {!!} 
 -}
+
+{- old
 
 -- Extensional equality of typed terms (evaluate to bisimilar values).
 

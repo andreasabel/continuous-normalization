@@ -25,7 +25,7 @@ mutual
     field
       ~force : {j : Size< i} → Delay R ∋ force a∞ ~⟨ j ⟩~ force b∞
 
---open ∞Delay_∋_~⟨_⟩~_ public
+open ∞Delay_∋_~⟨_⟩~_ public
 ∞Delay_∋_~_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_~⟨_⟩~_ {A} R a∞ i b∞
 
 mutual
