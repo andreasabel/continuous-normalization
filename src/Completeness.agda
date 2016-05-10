@@ -171,13 +171,13 @@ C∋≃converg-r : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)} →
   (p : a C∋ v₀? ≃ v₁?) →
   v₂? ⇓ Delay_∋_≃_.b p → a C∋ v₀? ≃ v₂?
 C∋≃converg-r (delay≃ a₁ a⇓ b b⇓ rab) q = delay≃ a₁ a⇓ _ q rab
-
+-}
 -- Environments ρ and ρ' are related.
 
-_≃E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
+_≃E_ : ∀{Γ Δ} (ρ ρ' : Env ∞ Δ Γ) → Set
 ε       ≃E ε         = ⊤
 (ρ , v) ≃E (ρ' , v') = (ρ ≃E ρ') × (VLR _ v v')
-
+{-
 ≃Esym : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ≃E ρ' → ρ' ≃E ρ
 ≃Esym {ρ = ε}    {ε}       _        = _
 ≃Esym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Esym p  , V∋≃sym p'
@@ -190,24 +190,24 @@ _≃E_ : ∀{Γ Δ} (ρ ρ' : Env Δ Γ) → Set
 ≃Erefl p = ≃Etrans p (≃Esym p)
 
 
-
+-}
 -- Closure under renaming
 
-renV≃ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val Δ a} (v≃v' : VLR a v v') →
+renV≃ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val ∞ Δ a} (v≃v' : VLR a v v') →
         VLR a (renval η v) (renval η v')
-renV≃ ★       η {ne n}{ne n'} p    = ren≃ η p
-renV≃ (a ⇒ b) η {f}{f'} p ρ u u' q =
-  subst (λ X → b C∋ apply (renval ρ (renval η f)) u ≃ apply X u')
+renV≃ ★       η {n}{n'} p    = {!!} -- ren≃ η p
+renV≃ (a ⇒ b) η {f}{f'} p ρ u u' q = {!!}
+{-  subst (λ X → b C∋ apply (renval ρ (renval η f)) u ≃ apply X u')
         (sym $ renvalcomp ρ η f')
         (subst (λ X → b C∋ apply X u ≃ apply (renval (renComp ρ η) f') u')
                (sym $ renvalcomp ρ η f)
                (p (renComp ρ η) u u' q))
-
-renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env Δ Γ} (ρ≃ρ' : ρ ≃E ρ') → (renenv η ρ) ≃E (renenv η ρ')
+-}
+renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env ∞ Δ Γ} (ρ≃ρ' : ρ ≃E ρ') → (renenv η ρ) ≃E (renenv η ρ')
 renE≃ η {ε} {ε} ρ≃ρ' = _
 renE≃ η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renE≃ η ρ≃ρ') , (renV≃ _ η v≃v')
 
-
+{-
 -- Substitution lemma.
 
 infixr 4 _,_
