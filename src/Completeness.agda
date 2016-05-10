@@ -19,7 +19,7 @@ mutual
 
   _V∋_≃_ : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
   _V∋_≃_     ★        v v' = 
-    Delay_∋_~_ (λ x → _≅_ x) -- implicit argument trouble 
+    Delay_∋_~_ _≡_
                (readback v) 
                (readback v')
   _V∋_≃_ {Γ} (a ⇒ b) f f' = ∀{Δ}(η : Ren Δ Γ)(u u' : Val ∞ Δ a)
@@ -150,7 +150,7 @@ C∋≃refl (delay≃ v v⇓ v' v'⇓ r) = delay≃ v v⇓ v v⇓ (V∋≃refl r
 
 -- Strongly bisimilar values can be swapped out.
 
-C∋≃bisim-l : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)}
+V∋≃bisim-l : ∀{Γ a} {v₀? v₁? v₂? : Delay ∞ (Val Γ a)}
   → (p : v₀? ≈ v₁?)
   → (q : a C∋ v₁? ≃ v₂?)
   → a C∋ v₀? ≃ v₂?
@@ -191,18 +191,37 @@ _≃E_ : ∀{Γ Δ} (ρ ρ' : Env ∞ Δ Γ) → Set
 
 
 -}
+-- subst by strong bisim for val
+substVLR-l : ∀{Γ} a {v v' v'' : Val ∞ Γ a} →
+             VLR a v v' →  Val∋ v'' ≈⟨ ∞ ⟩≈ v → VLR a v'' v'
+substVLR-l ★       p q = ~trans trans (≈→~ $ readback-cong ★ q) p
+substVLR-l (a ⇒ b) p q η u u' u≃u' =
+  substVLR-l b (p η u u' u≃u') (apply-cong (renval-cong η q) (≈reflVal u))
+
+substVLR-r : ∀{Γ} a {v v' v'' : Val ∞ Γ a} →
+             VLR a v v' →  Val∋ v' ≈⟨ ∞ ⟩≈ v'' → VLR a v v''
+substVLR-r ★       p q = ~trans trans p (≈→~ $ readback-cong ★ q)
+substVLR-r (a ⇒ b) p q η u u' u≃u' = 
+   substVLR-r b (p η u u' u≃u') (apply-cong (renval-cong η q) (≈reflVal u'))
+
+
 -- Closure under renaming
 
 renV≃ : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val ∞ Δ a} (v≃v' : VLR a v v') →
         VLR a (renval η v) (renval η v')
-renV≃ ★       η {n}{n'} p    = {!!} -- ren≃ η p
-renV≃ (a ⇒ b) η {f}{f'} p ρ u u' q = {!!}
-{-  subst (λ X → b C∋ apply (renval ρ (renval η f)) u ≃ apply X u')
-        (sym $ renvalcomp ρ η f')
-        (subst (λ X → b C∋ apply X u ≃ apply (renval (renComp ρ η) f') u')
-               (sym $ renvalcomp ρ η f)
-               (p (renComp ρ η) u u' q))
--}
+renV≃ ★       η {n}{n'} p    = ~trans
+  trans
+  (≈→~ (≈sym $ renreadback ★ η n))
+  (~trans trans
+          (map~ (rennf η) (λ _ _ → cong (rennf η)) p)
+          (≈→~ $ renreadback ★ η n'))
+renV≃ (a ⇒ b) η {f}{f'} p ρ u u' q =
+  substVLR-r b
+             (substVLR-l b
+                         (p (renComp ρ η) u u' q)
+                         (apply-cong (renvalcomp ρ η f) (≈reflVal u)))
+             (apply-cong (≈symVal (renvalcomp ρ η f')) (≈reflVal u'))
+
 renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env ∞ Δ Γ} (ρ≃ρ' : ρ ≃E ρ') → (renenv η ρ) ≃E (renenv η ρ')
 renE≃ η {ε} {ε} ρ≃ρ' = _
 renE≃ η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renE≃ η ρ≃ρ') , (renV≃ _ η v≃v')
