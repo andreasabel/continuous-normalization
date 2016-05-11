@@ -29,6 +29,7 @@ mutual
   VLR : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
   VLR a v v' = _V∋_≃_ a v v'
 
+
 {- old
   -- Value computations v? and w? are related at type a.
 
@@ -179,20 +180,6 @@ _≃E_ : ∀{Γ Δ} (ρ ρ' : Env ∞ Δ Γ) → Set
 ε       ≃E ε         = ⊤
 (ρ , v) ≃E (ρ' , v') = (ρ ≃E ρ') × (VLR _ v v')
 
-{- old
-≃Esym : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ≃E ρ' → ρ' ≃E ρ
-≃Esym {ρ = ε}    {ε}       _        = _
-≃Esym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Esym p  , V∋≃sym p'
-
-≃Etrans : ∀{Γ Δ}{ρ ρ' ρ'' : Env Δ Γ} → ρ ≃E ρ' → ρ' ≃E ρ'' → ρ ≃E ρ''
-≃Etrans {ρ = ε}    {ε}       {ε}         _         _        = _
-≃Etrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') = ≃Etrans p p' , V∋≃trans q q'
-
-≃Erefl : ∀{Γ Δ}{ρ ρ' : Env Δ Γ} → ρ ≃E ρ' → ρ ≃E ρ
-≃Erefl p = ≃Etrans p (≃Esym p)
-
--}
-
 -- subst by strong bisim for val
 substVLR-l : ∀{Γ} a {v v' v'' : Val ∞ Γ a} →
              VLR a v v' →  Val∋ v'' ≈⟨ ∞ ⟩≈ v → VLR a v'' v'
@@ -206,6 +193,30 @@ substVLR-r ★       p q = ~trans trans p (≈→~ $ readback-cong ★ q)
 substVLR-r (a ⇒ b) p q η u u' u≃u' = 
    substVLR-r b (p η u u' u≃u') (apply-cong (renval-cong η q) (≈reflVal u'))
 
+VLR-sym : ∀{Γ} a {v v' : Val ∞ Γ a} → VLR a v v' → VLR a v' v
+VLR-sym ★       p = ~sym sym p
+VLR-sym (a ⇒ b) p η u u' u≃u' = VLR-sym b (p η u' u (VLR-sym a u≃u'))
+
+VLR-trans : ∀{Γ} a {v v' v'' : Val ∞ Γ a} →
+            VLR a v v' → VLR a v' v'' → VLR a v v''
+VLR-trans ★       p q = ~trans trans p q
+VLR-trans (a ⇒ b) p q η u u' u≃u' =
+  VLR-trans b (p η u u (VLR-trans a u≃u' (VLR-sym a u≃u'))) (q η u u' u≃u')
+
+VLR-refl : ∀{Γ} a {v v' : Val ∞ Γ a} → VLR a v v' → VLR a v v
+VLR-refl a p = VLR-trans a p (VLR-sym a p)
+
+≃Esym : ∀{Γ Δ}{ρ ρ' : Env ∞ Δ Γ} → ρ ≃E ρ' → ρ' ≃E ρ
+≃Esym {ρ = ε}    {ε}       _        = _
+≃Esym {ρ = ρ , v}{ρ' , v'} (p , p') = ≃Esym p  , VLR-sym _ p'
+
+≃Etrans : ∀{Γ Δ}{ρ ρ' ρ'' : Env ∞ Δ Γ} → ρ ≃E ρ' → ρ' ≃E ρ'' → ρ ≃E ρ''
+≃Etrans {ρ = ε}    {ε}       {ε}         _         _        = _
+≃Etrans {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') =
+  ≃Etrans p p' , VLR-trans _ q q'
+
+≃Erefl : ∀{Γ Δ}{ρ ρ' : Env ∞ Δ Γ} → ρ ≃E ρ' → ρ ≃E ρ
+≃Erefl p = ≃Etrans p (≃Esym p)
 
 -- Closure under renaming
 
@@ -229,15 +240,17 @@ renE≃ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env ∞ Δ Γ}
 renE≃ η {ε} {ε} ρ≃ρ' = _
 renE≃ η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renE≃ η ρ≃ρ') , (renV≃ _ η v≃v')
 
--- closure under later
+-- closure under 2 laters
 laterV≃ : ∀{Γ} a {v v' : ∞Val ∞ Γ a} → VLR a (∞Val.force v) (∞Val.force v') →
           VLR a (later v) (later v')
 laterV≃ ★       p = ~later (~delay p)
 laterV≃ (a ⇒ b) p η u u' u≃u' = laterV≃ b (p η u u' u≃u')
 
-evalS : ∀{Γ Δ Δ′} → Sub Δ Γ → Env ∞ Δ′ Δ → Env ∞ Δ′ Γ
-evalS ε       ρ = ε
-evalS (σ , v) ρ = evalS σ ρ , eval v ρ
+laterV≃-l : ∀{Γ} a {v : ∞Val ∞ Γ a}{v' : Val ∞ Γ a} →
+            VLR a (∞Val.force v) v' →
+            VLR a (later v) v'
+laterV≃-l ★ p = ~laterl p
+laterV≃-l (a ⇒ b) p η u u' u≃u' = laterV≃-l b (p η u u' u≃u')
 
 id-ext-var : ∀{Γ Δ a}(x : Var Δ a){ρ ρ' : Env ∞ Γ Δ} → ρ ≃E ρ' →
              a V∋ lookup x ρ ≃ lookup x ρ'
@@ -257,19 +270,30 @@ id-ext (app t u) p =
                                      (eval-cong u (≈reflEnv _))))
              ((apply-cong (renvalid (eval t _))
                                      (eval-cong u (≈reflEnv _))))
-{- this needs an extra property on ρ - readback stuff terminates
 
 substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
-  a V∋ (lookup x (evalS σ ρ)) ≃ eval (looks σ x) ρ
-substitution-var zero    (σ , t) ρ = {!!}
-substitution-var (suc x) (σ , t) ρ = substitution-var x σ ρ
+  ρ ≃E  ρ → a V∋ (lookup x (evalS σ ρ)) ≃ eval (looks σ x) ρ
+substitution-var zero    (σ , t) ρ p = id-ext t p
+substitution-var (suc x) (σ , t) ρ p = substitution-var x σ ρ p
 
 substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
-  a V∋ (eval t (evalS σ ρ)) ≃ eval (sub σ t) ρ
-substitution (var x) σ ρ = {!eval t!}
-substitution (abs t) σ ρ η u u' u≃u' = {!substitution t (lifts σ) (renenv η ρ , u)!}
-substitution (app t u) σ ρ = substVLR-r _ (substVLR-l _ (substitution t σ ρ renId _ _ (substitution u σ ρ)) {!!}) {!!} 
--}
+  ρ ≃E  ρ →  a V∋ (eval t (evalS σ ρ)) ≃ eval (sub σ t) ρ
+substitution (var x) σ ρ p = substitution-var x σ ρ p
+substitution (abs t) σ ρ p η u u' u≃u' = laterV≃ _ (VLR-trans _ (id-ext t ({!substVLR-l _ ? (renevalS σ ρ η)!} , u≃u')) (substitution t (lifts σ) (renenv η ρ , u') (renE≃ η p , VLR-refl _ (VLR-sym _ u≃u'))))
+substitution (app t u) σ ρ p = substVLR-r _ (substVLR-l _ (substitution t σ ρ p renId _ _ (substitution u σ ρ p)) (apply-cong (≈symVal (renvalid (eval t (evalS σ ρ)))) (≈reflVal (eval u (evalS σ ρ))))) ((apply-cong (renvalid (eval (sub σ t) ρ))) (≈reflVal (eval (sub σ u) ρ))) 
+
+
+
+fund : ∀{Γ Δ a}{t t' : Tm Δ a} → t ≡βη t' → {ρ ρ' : Env ∞ Γ Δ} → ρ ≃E ρ' →
+         a V∋ eval t ρ ≃ eval t' ρ'
+fund (var≡ x) q = {!!}
+fund (abs≡ p) q η u u' u≃u' = {!!}
+fund (app≡ p p₁) q = {!!}
+fund (beta≡ {t = t}{u = u}){ρ}{ρ'} q = laterV≃-l _ {! id-ext t {ρ , eval u ρ}{ρ' , eval u ρ'} (q , id-ext u q) !}
+fund (eta≡ t') q η u u' u≃u' = {!!}
+fund (refl≡ t') q = {!!}
+fund (sym≡ p) q = {!!}
+fund (trans≡ p p₁) q = {!!}
 
 {- old
 

@@ -232,3 +232,20 @@ mutual
 
 nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
 nf t = readback (eval t (ide _))
+
+--
+evalS : ∀{Γ Δ Δ′} → Sub Δ Γ → Env ∞ Δ′ Δ → Env ∞ Δ′ Γ
+evalS ε       ρ = ε
+evalS (σ , v) ρ = evalS σ ρ , eval v ρ
+
+renevalS : ∀ {i Γ Γ' Δ Δ′} (σ : Sub Γ Γ') (ρ : Env ∞ Δ Γ) (η : Ren Δ′ Δ) →
+    Env∋ (renenv η $ evalS σ ρ) ≈⟨ i ⟩≈ (evalS σ $ renenv η ρ)
+renevalS ε       ρ η = ≈ε
+renevalS (σ , t) ρ η = renevalS σ ρ η ≈, reneval t ρ η 
+
+
+evalSwks : ∀{Γ Δ Δ₁ Δ′ a}
+           (u' : Val ∞ Δ₁ a)(η : Ren Δ₁ Δ′)(ρ : Env ∞ Δ′ Δ)(σ : Sub Δ Γ) →
+           Env∋ renenv η (evalS σ ρ) ≈⟨ ∞ ⟩≈ evalS (wks σ) (renenv η ρ , u')
+evalSwks u η ρ ε = ≈ε
+evalSwks u η ρ (σ , v) = evalSwks u η ρ σ ≈, {!!}
