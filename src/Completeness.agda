@@ -193,6 +193,18 @@ substVLR-r ★       p q = ~trans trans p (≈→~ $ readback-cong ★ q)
 substVLR-r (a ⇒ b) p q η u u' u≃u' = 
    substVLR-r b (p η u u' u≃u') (apply-cong (renval-cong η q) (≈reflVal u'))
 
+subst≃E-l : ∀{Γ Δ}{ρ ρ' ρ'' : Env ∞ Γ Δ} →
+             ρ ≃E ρ' →  Env∋ ρ'' ≈⟨ ∞ ⟩≈ ρ → ρ'' ≃E ρ'
+subst≃E-l {Δ = ε}  {ρ' = ε}{ρ'' = ε} p q = _
+subst≃E-l {Δ = Δ , a} {ρ , v}{ ρ' , v'} {ρ'' , v''} (p , p') (q ≈, q') = 
+  subst≃E-l p q , substVLR-l _ p' q'
+
+subst≃E-r : ∀{Γ Δ}{ρ ρ' ρ'' : Env ∞ Γ Δ} →
+             ρ ≃E ρ' →  Env∋ ρ' ≈⟨ ∞ ⟩≈ ρ'' → ρ ≃E ρ''
+subst≃E-r {Δ = ε}  {ρ = ε}{ρ'' = ε} p q = _
+subst≃E-r {Δ = Δ , a} {ρ , v}{ ρ' , v'} {ρ'' , v''} (p , p') (q ≈, q') = 
+  subst≃E-r p q , substVLR-r _ p' q'
+
 VLR-sym : ∀{Γ} a {v v' : Val ∞ Γ a} → VLR a v v' → VLR a v' v
 VLR-sym ★       p = ~sym sym p
 VLR-sym (a ⇒ b) p η u u' u≃u' = VLR-sym b (p η u' u (VLR-sym a u≃u'))
@@ -257,6 +269,11 @@ id-ext-var : ∀{Γ Δ a}(x : Var Δ a){ρ ρ' : Env ∞ Γ Δ} → ρ ≃E ρ' 
 id-ext-var zero    {ρ , v}{ρ' , v'} (p , p') = p'
 id-ext-var (suc x) {ρ , v}{ρ' , v'} (p , p') = id-ext-var x p
 
+lookupR-cong : ∀{Γ Γ' Δ}(σ : Ren Γ Γ'){ρ ρ' : Env ∞ Δ Γ} → ρ ≃E ρ' → 
+               lookupR σ ρ ≃E lookupR σ ρ'
+lookupR-cong ε       p = _
+lookupR-cong (σ , x) p = lookupR-cong σ p , id-ext-var x p
+
 id-ext : ∀{Γ Δ a}(t : Tm Δ a){ρ ρ' : Env ∞ Γ Δ} → ρ ≃E ρ' →
          a V∋ eval t ρ ≃ eval t ρ'
 id-ext (var x)   p = id-ext-var x p
@@ -271,6 +288,20 @@ id-ext (app t u) p =
              ((apply-cong (renvalid (eval t _))
                                      (eval-cong u (≈reflEnv _))))
 
+reneval' : ∀ {Γ Γ' Δ a}(t : Tm Γ a)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → 
+           ρ ≃E ρ → 
+           VLR a (eval (ren σ t) ρ) (eval t (lookupR σ ρ))
+reneval' (var x)   σ ρ p = substVLR-l _ (id-ext-var x (lookupR-cong σ p)) (lookuplookr ρ σ x)
+reneval' (abs t)   σ ρ p η u u' q = laterV≃ _ (VLR-trans _ (reneval' t (liftr σ) (renenv η ρ , u) (renE≃ η p , VLR-refl _ q)) (id-ext t (subst≃E-l (subst≃E-l (renE≃ η (lookupR-cong σ p)) (≈symEnv (renlookupR η σ ρ)) ) (≈symEnv (lookupRwkr u σ (renenv η ρ)))  , q)) )
+reneval' (app t u) σ ρ p = substVLR-r _ (substVLR-l _ (reneval' t σ ρ p renId _ _ (reneval' u σ ρ p)) ( apply-cong (≈symVal (renvalid (eval (ren σ t) ρ))) (≈reflVal (eval (ren σ u) ρ)) )) (apply-cong (renvalid (eval t (lookupR σ ρ))) (≈reflVal (eval u (lookupR σ ρ))))
+
+
+evalSwks : ∀{Γ Δ Δ₁ Δ′ a}
+           (u : Val ∞ Δ₁ a)(η : Ren Δ₁ Δ′)(ρ : Env ∞ Δ′ Δ)(σ : Sub Δ Γ) →
+           ρ ≃E ρ → VLR a u u →  renenv η (evalS σ ρ) ≃E evalS (wks σ) (renenv η ρ , u)
+evalSwks u η ρ ε p q = _
+evalSwks u η ρ (σ , t) p q =  evalSwks u η ρ σ p q , VLR-trans _ (substVLR-l _ (id-ext t (subst≃E-r (subst≃E-r (renE≃ η p) (≈symEnv (lookupRrenId (renenv η ρ)))) (lookupRwkr u renId (renenv η ρ)))) (reneval t ρ η)) (VLR-sym _ (reneval' t (wkr renId) (renenv η ρ , u) (renE≃ η p , q)))   
+
 substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
   ρ ≃E  ρ → a V∋ (lookup x (evalS σ ρ)) ≃ eval (looks σ x) ρ
 substitution-var zero    (σ , t) ρ p = id-ext t p
@@ -279,7 +310,7 @@ substitution-var (suc x) (σ , t) ρ p = substitution-var x σ ρ p
 substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
   ρ ≃E  ρ →  a V∋ (eval t (evalS σ ρ)) ≃ eval (sub σ t) ρ
 substitution (var x) σ ρ p = substitution-var x σ ρ p
-substitution (abs t) σ ρ p η u u' u≃u' = laterV≃ _ (VLR-trans _ (id-ext t ({!substVLR-l _ ? (renevalS σ ρ η)!} , u≃u')) (substitution t (lifts σ) (renenv η ρ , u') (renE≃ η p , VLR-refl _ (VLR-sym _ u≃u'))))
+substitution (abs t) σ ρ p η u u' u≃u' = laterV≃ _ (VLR-trans _ (id-ext t (evalSwks u' η ρ σ p (VLR-refl _ (VLR-sym _ u≃u')) , u≃u')) (substitution t (lifts σ) (renenv η ρ , u') (renE≃ η p , VLR-refl _ (VLR-sym _ u≃u'))))
 substitution (app t u) σ ρ p = substVLR-r _ (substVLR-l _ (substitution t σ ρ p renId _ _ (substitution u σ ρ p)) (apply-cong (≈symVal (renvalid (eval t (evalS σ ρ)))) (≈reflVal (eval u (evalS σ ρ))))) ((apply-cong (renvalid (eval (sub σ t) ρ))) (≈reflVal (eval (sub σ u) ρ))) 
 
 
@@ -289,8 +320,8 @@ fund : ∀{Γ Δ a}{t t' : Tm Δ a} → t ≡βη t' → {ρ ρ' : Env ∞ Γ Δ
 fund (var≡ x) q = {!!}
 fund (abs≡ p) q η u u' u≃u' = {!!}
 fund (app≡ p p₁) q = {!!}
-fund (beta≡ {t = t}{u = u}){ρ}{ρ'} q = laterV≃-l _ {! id-ext t {ρ , eval u ρ}{ρ' , eval u ρ'} (q , id-ext u q) !}
-fund (eta≡ t') q η u u' u≃u' = {!!}
+fund (beta≡ {t = t}{u = u}){ρ}{ρ'} q = laterV≃-l _ (VLR-trans _ (id-ext t {ρ , eval u ρ}{ρ' , eval u ρ'} (q , id-ext u q)) (VLR-trans _ (id-ext t ({!!} , (id-ext u {!!}))) (substitution t (subId , u) ρ' {!!})))
+fund (eta≡ t') {ρ}{ρ'}q η u u' u≃u' = laterV≃-l _ (VLR-trans _ (substVLR-r _ (substVLR-l _ (reneval' t' renId ρ {!!} η u u' u≃u') {!!}) {!!} ) (id-ext t' q η u u' u≃u'))
 fund (refl≡ t') q = {!!}
 fund (sym≡ p) q = {!!}
 fund (trans≡ p p₁) q = {!!}

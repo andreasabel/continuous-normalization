@@ -233,7 +233,7 @@ mutual
 nf : ∀{Γ a}(t : Tm Γ a) → Delay ∞ (Nf Γ a)
 nf t = readback (eval t (ide _))
 
---
+-- this stuff is for the substitution lemma primarily
 evalS : ∀{Γ Δ Δ′} → Sub Δ Γ → Env ∞ Δ′ Δ → Env ∞ Δ′ Γ
 evalS ε       ρ = ε
 evalS (σ , v) ρ = evalS σ ρ , eval v ρ
@@ -243,9 +243,28 @@ renevalS : ∀ {i Γ Γ' Δ Δ′} (σ : Sub Γ Γ') (ρ : Env ∞ Δ Γ) (η : 
 renevalS ε       ρ η = ≈ε
 renevalS (σ , t) ρ η = renevalS σ ρ η ≈, reneval t ρ η 
 
+lookupR : ∀{Γ Γ' Δ}(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → Env ∞ Δ Γ
+lookupR ε       ρ = ε
+lookupR (σ , x) ρ = lookupR σ ρ , lookup x ρ
 
-evalSwks : ∀{Γ Δ Δ₁ Δ′ a}
-           (u' : Val ∞ Δ₁ a)(η : Ren Δ₁ Δ′)(ρ : Env ∞ Δ′ Δ)(σ : Sub Δ Γ) →
-           Env∋ renenv η (evalS σ ρ) ≈⟨ ∞ ⟩≈ evalS (wks σ) (renenv η ρ , u')
-evalSwks u η ρ ε = ≈ε
-evalSwks u η ρ (σ , v) = evalSwks u η ρ σ ≈, {!!}
+renlookupR : ∀{Γ Γ' Δ Δ'}(η : Ren Δ' Δ)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → 
+             Env∋ renenv η (lookupR σ ρ) ≈⟨ ∞ ⟩≈ lookupR σ (renenv η ρ)
+renlookupR η ε       ρ = ≈ε
+renlookupR η (σ , x) ρ = renlookupR η σ ρ ≈, lookup≤ x ρ η  
+
+lookupRwkr : ∀{Γ Γ' Δ a}(u : Val ∞ Δ a)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → 
+      Env∋  lookupR σ ρ ≈⟨ ∞ ⟩≈ lookupR (wkr σ) (ρ , u)
+lookupRwkr u ε       ρ = ≈ε
+lookupRwkr u (σ , x) ρ = (lookupRwkr u σ ρ) ≈, ≈reflVal (lookup x ρ)
+
+lookupRrenId : ∀{Γ Δ}(ρ : Env ∞ Δ Γ) → 
+      Env∋  lookupR renId ρ ≈⟨ ∞ ⟩≈ ρ
+lookupRrenId ε       = ≈ε
+lookupRrenId (ρ , v) = 
+  ≈transEnv (≈symEnv (lookupRwkr v renId ρ)) (lookupRrenId ρ) ≈, ≈reflVal v
+
+lookuplookr : ∀{Γ Γ' Δ a}(ρ : Env ∞ Δ Γ')(σ : Ren Γ' Γ)(x : Var Γ a) → 
+              Val∋ lookup (lookr σ x) ρ ≈⟨ ∞ ⟩≈ lookup x (lookupR σ ρ)
+lookuplookr ρ (σ , y) zero    = ≈reflVal (lookup y ρ)
+lookuplookr ρ (σ , y) (suc x) = lookuplookr ρ σ x
+
