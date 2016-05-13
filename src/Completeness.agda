@@ -319,6 +319,10 @@ substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env 
 substitution-var zero    (σ , t) ρ p = id-ext t p
 substitution-var (suc x) (σ , t) ρ p = substitution-var x σ ρ p
 
+-- the reflexive equation for ρ could be reduced to knowing that after
+-- infinite delay the reading back the values in ρ will converge, or
+-- perhaps the substitution lemma should take two different related
+-- environments.
 substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
   ρ ≃E  ρ →  a V∋ (eval t (evalS σ ρ)) ≃ eval (sub σ t) ρ
 substitution (var x) σ ρ p = substitution-var x σ ρ p
@@ -650,28 +654,20 @@ fund {a = a}{t}{t'} p {Δ}{ρ}{ρ'} q =
       (λ t → a C∋ eval t ρ ≃ eval (sub subId t') ρ')
       (subid t)
       (fund' p subId subId (≃Erefl q) (≃Erefl (≃Esym q)) (subevalS₀ q)))
-
+-}
 -- reify, reflect
 
 mutual
-  reify : ∀{Γ} a {v v' : Val Γ a} →
-          a V∋ v ≃ v' → Delay _≡_ ∋ readback v ≃ readback v'
-  reify ★ {ne n} {ne n'} (ne≃ n'' n⇓ n'⇓) =
-    delay≃ (ne n'') (map⇓ ne n⇓) (ne n'') (map⇓ ne n'⇓) refl
-  reify (a ⇒ b) p =
-    let delay≃ a1 a2 a3 a4 a5 = p (wkr renId)
-                                  (ne (var zero))
-                                  (ne (var zero))
-                                  (reflect a (delay≃ _ now⇓ _ now⇓ refl))
-        delay≃ b1 b2 b3 b4 b5 = reify b a5
-    in  ≃later $ delay≃ (abs b1)
-                        (map⇓ abs (bind⇓ readback a2 b2))
-                        (abs b3)
-                        (map⇓ abs (bind⇓ readback a4 b4))
-                        (cong abs b5)
+  reify : ∀{Γ} a {v v' : Val ∞ Γ a} →
+          a V∋ v ≃ v' →     Delay_∋_~_ _≡_ (readback v) (readback v')
+  reify ★       p = p
+  reify (a ⇒ b) p = ~later (~delay (map~ abs (λ _ _ → cong abs) (reify b (p (wkr renId) _ _ (reflect a {var zero}{var zero}(~now now⇓ now⇓ refl))))))
 
-  reflect : ∀{Γ} a {n n' : NeVal Γ a} →
-            Delay _≡_ ∋ nereadback n ≃ nereadback n' → a V∋ ne n ≃ ne n'
+  reflect : ∀{Γ} a {n n' : NeVal ∞ Γ a} →
+            Delay_∋_~_ _≡_ (nereadback n) (nereadback n') → a V∋ ne n ≃ ne n'
+  reflect ★                    p = map~ ne (λ _ _ → cong ne) p
+  reflect (a ⇒ b) p η u u' u≃u' = reflect b {!!}
+{-  
   reflect ★ (delay≃ n'' n⇓ .n'' n'⇓ refl) = ne≃ n'' n⇓ n'⇓
   reflect (a ⇒ b) {n}{n'} (delay≃ a1 a2 .a1 a4 refl) η u u' u≃u' =
     let delay≃ b1 b2 b3 b4 b5 = reify a u≃u'
@@ -685,7 +681,9 @@ mutual
                (bind⇓2 (λ m n₁ → now (app m n₁))
                   (subst≈⇓ (map⇓ (rennen η) a4) (rennereadback η n')) b4 now⇓)
                (cong (app (rennen η a1)) b5)))
+-}
 
+{- old
 varcomp : ∀{Γ a}(x : Var Γ a) → a V∋ ne (var x) ≃ ne (var x)
 varcomp {a = a} x = reflect a (delay≃ (var x) now⇓ (var x) now⇓ refl)
 
