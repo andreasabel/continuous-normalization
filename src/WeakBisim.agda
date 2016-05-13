@@ -43,6 +43,13 @@ mutual
   ∞Delay_∋_~⟨_⟩~_.~force (∞map~ f g p) = map~ f g (∞Delay_∋_~⟨_⟩~_.~force p)
 
 
+postulate
+  map2~ : ∀ {A B C R S T}{a a' : Delay ∞ A}{b b' : Delay ∞ B} 
+         (f : A → B → C)
+         (g : ∀ a a' → R a a' → ∀ b b' → S b b' → T (f a b) (f a' b')) →
+         Delay R ∋ a ~ a' → Delay S ∋ b ~ b' →
+         Delay T ∋ f <$> a <*> b ~ (f <$> a' <*> b')
+
 -- Delaying left only
 
 mutual

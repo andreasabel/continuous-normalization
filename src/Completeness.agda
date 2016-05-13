@@ -666,22 +666,10 @@ mutual
   reflect : ∀{Γ} a {n n' : NeVal ∞ Γ a} →
             Delay_∋_~_ _≡_ (nereadback n) (nereadback n') → a V∋ ne n ≃ ne n'
   reflect ★                    p = map~ ne (λ _ _ → cong ne) p
-  reflect (a ⇒ b) p η u u' u≃u' = reflect b {!!}
-{-  
-  reflect ★ (delay≃ n'' n⇓ .n'' n'⇓ refl) = ne≃ n'' n⇓ n'⇓
-  reflect (a ⇒ b) {n}{n'} (delay≃ a1 a2 .a1 a4 refl) η u u' u≃u' =
-    let delay≃ b1 b2 b3 b4 b5 = reify a u≃u'
-    in  delay≃ _ now⇓ _ now⇓ (reflect b (delay≃
-               (app (rennen η a1) b1)
-               (bind⇓2 (λ m n → now (app m n))
-                       (subst≈⇓ (map⇓ (rennen η) a2) (rennereadback η n))
-                       b2
-                       now⇓)
-               (app (rennen η a1) b3)
-               (bind⇓2 (λ m n₁ → now (app m n₁))
-                  (subst≈⇓ (map⇓ (rennen η) a4) (rennereadback η n')) b4 now⇓)
-               (cong (app (rennen η a1)) b5)))
--}
+  reflect (a ⇒ b) {n}{n'} p η u u' u≃u' = reflect b (map2~ app (λ _ _ p _ _ q → cong₂ app p q)
+                                               (~trans trans (≈→~ (≈sym (rennereadback η n)))
+                                                (~trans trans (map~ (rennen η) (λ _ _ → cong (rennen η)) p) (≈→~ (rennereadback η n'))))
+                                               (reify a u≃u'))
 
 {- old
 varcomp : ∀{Γ a}(x : Var Γ a) → a V∋ ne (var x) ≃ ne (var x)
