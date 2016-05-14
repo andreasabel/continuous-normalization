@@ -91,7 +91,7 @@ renV≃ ★       η {n}{n'} p    = ~trans
   trans
   (≈→~ (≈sym $ renreadback ★ η n))
   (~trans trans
-          (map~ (rennf η) (λ _ _ → cong (rennf η)) p)
+          (map~ (rennf η) (rennf η) (λ _ _ → cong (rennf η)) p)
           (≈→~ $ renreadback ★ η n'))
 renV≃ (a ⇒ b) η {f}{f'} p ρ u u' q =
   substVLR-r b
@@ -198,14 +198,14 @@ mutual
   reify : ∀{Γ} a {v v' : Val ∞ Γ a} →
           a V∋ v ≃ v' →     Delay_∋_~_ _≡_ (readback v) (readback v')
   reify ★       p = p
-  reify (a ⇒ b) p = ~later (~delay (map~ abs (λ _ _ → cong abs) (reify b (p (wkr renId) _ _ (reflect a {var zero}{var zero}(~now now⇓ now⇓ refl))))))
+  reify (a ⇒ b) p = ~later (~delay (map~ abs abs (λ _ _ → cong abs) (reify b (p (wkr renId) _ _ (reflect a {var zero}{var zero}(~now now⇓ now⇓ refl))))))
 
   reflect : ∀{Γ} a {n n' : NeVal ∞ Γ a} →
             Delay_∋_~_ _≡_ (nereadback n) (nereadback n') → a V∋ ne n ≃ ne n'
-  reflect ★                    p = map~ ne (λ _ _ → cong ne) p
-  reflect (a ⇒ b) {n}{n'} p η u u' u≃u' = reflect b (map2~ app (λ _ _ p _ _ q → cong₂ app p q)
+  reflect ★                    p = map~ ne ne (λ _ _ → cong ne) p
+  reflect (a ⇒ b) {n}{n'} p η u u' u≃u' = reflect b (map2~ app (λ _ _ p _ _ q → cong₂ app p q) (λ _ → refl) sym trans
                                                (~trans trans (≈→~ (≈sym (rennereadback η n)))
-                                                (~trans trans (map~ (rennen η) (λ _ _ → cong (rennen η)) p) (≈→~ (rennereadback η n'))))
+                                                (~trans trans (map~ (rennen η) (rennen η) (λ _ _ → cong (rennen η)) p) (≈→~ (rennereadback η n'))))
                                                (reify a u≃u'))
 idecomp : ∀ Γ → ide Γ ≃E ide Γ
 idecomp ε       = _

@@ -28,27 +28,21 @@ mutual
 open ∞Delay_∋_~⟨_⟩~_ public
 ∞Delay_∋_~_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_~⟨_⟩~_ {A} R a∞ i b∞
 
+
+
 mutual
   map~ : ∀ {A B R S}{a a' : Delay ∞ A}
-         (f : A → B)
-         (g : ∀ a a' → R a a' → S (f a) (f a')) →
-         Delay R ∋ a ~ a' → Delay S ∋ f <$> a ~ (f <$> a')
-  map~ f g (~now a⇓ a'⇓ aRa') = ~now (map⇓ f a⇓) (map⇓ f a'⇓) (g _ _ aRa')
-  map~ f g (~later ∞p)      = ~later (∞map~ f g ∞p)
+         (f : A → B)(g : A → B)
+         (h : ∀ a a' → R a a' → S (f a) (g a')) →
+         Delay R ∋ a ~ a' → Delay S ∋ f <$> a ~ (g <$> a')
+  map~ f g h (~now a⇓ a'⇓ aRa') = ~now (map⇓ f a⇓) (map⇓ g a'⇓) (h _ _ aRa')
+  map~ f g h (~later ∞p)      = ~later (∞map~ f g h ∞p)
 
   ∞map~ : ∀ {A B R S}{a a' : ∞Delay ∞ A}
-         (f : A → B)
-         (g : ∀ a a' → R a a' → S (f a) (f a')) →
-         ∞Delay R ∋ a ~ a' → ∞Delay S ∋ f ∞<$> a ~ (f ∞<$> a')
-  ∞Delay_∋_~⟨_⟩~_.~force (∞map~ f g p) = map~ f g (∞Delay_∋_~⟨_⟩~_.~force p)
-
-
-postulate
-  map2~ : ∀ {A B C R S T}{a a' : Delay ∞ A}{b b' : Delay ∞ B} 
-         (f : A → B → C)
-         (g : ∀ a a' → R a a' → ∀ b b' → S b b' → T (f a b) (f a' b')) →
-         Delay R ∋ a ~ a' → Delay S ∋ b ~ b' →
-         Delay T ∋ f <$> a <*> b ~ (f <$> a' <*> b')
+         (f : A → B)(g : A → B)
+         (h : ∀ a a' → R a a' → S (f a) (g a')) →
+         ∞Delay R ∋ a ~ a' → ∞Delay S ∋ f ∞<$> a ~ (g ∞<$> a')
+  ∞Delay_∋_~⟨_⟩~_.~force (∞map~ f g h p) = map~ f g h (∞Delay_∋_~⟨_⟩~_.~force p)
 
 -- Delaying left only
 
@@ -202,6 +196,30 @@ bindlem : ∀{A B R i}{v : A} {f : A → Delay ∞ B} → Delay R ∋ f v ~ f v 
 bindlem X now⇓       = X
 bindlem X (later⇓ p) = ~laterl (bindlem X p)
 
+mutual
+  map2~ : ∀ {A B C R S T}{a a' : Delay ∞ A}{b b' : Delay ∞ B}
+         (f : A → B → C)
+         (g : ∀ a a' → R a a' → ∀ b b' → S b b' → T (f a b) (f a' b')) →
+         (∀ c → T c c) →
+         (∀{c c'} → T c c' → T c' c) →
+         (∀ {c c' c''} → T c c' → T c' c'' → T c c'') → 
+         Delay R ∋ a ~ a' → Delay S ∋ b ~ b' →
+         Delay T ∋ f <$> a <*> b ~ (f <$> a' <*> b')
+  map2~ f g p q r (~now a⇓ a'⇓ aRa') (~now b⇓ b'⇓ bRb') =
+    ~now (map2⇓ f a⇓ b⇓) (map2⇓ f a'⇓ b'⇓) (g _ _ aRa' _ _ bRb')
+  map2~ {a = a}{a'} f g p q r (~now a⇓ b⇓ aRb) (~later ∞p) = ~trans r (≈→~ (bind-assoc' a (p _))) (~trans r (~bind (p _) _ a⇓) (~trans r (~trans r (~later (∞map~ (f _)(f _)(g _ _ aRb) ∞p )) (~sym q (~bind (p _) _ b⇓))) (≈→~ (≈sym' q (bind-assoc' a' (p _))))))
+  map2~ f g p q r (~later ∞p) s = ~later (∞map2~ f g p q r ∞p s)
+
+  ∞map2~ : ∀ {A B C R S T}{a a' : ∞Delay ∞ A}{b b' : Delay ∞ B} 
+           (f : A → B → C)
+           (g : ∀ a a' → R a a' → ∀ b b' → S b b' → T (f a b) (f a' b')) →
+           (∀ c → T c c) →
+           (∀{c c'} → T c c' → T c' c) →
+           (∀ {c c' c''} → T c c' → T c' c'' → T c c'') → 
+           ∞Delay R ∋ a ~ a' → Delay S ∋ b ~ b' →
+           ∞Delay T ∋ ((f ∞<$> a) ∞<*> b) ~ ((f ∞<$> a') ∞<*> b')
+  ~force (∞map2~ f g p q r s t) = map2~ f g p q r (~force s) t
+
 {-
 mutual
   ~reflPER  : ∀ {i A}{R : A → A → Set}(X : ∀ {a a'} → R a a' → R a a)
@@ -217,6 +235,7 @@ mutual
   ~force (∞~reflPER X a? p) = ~reflPER X (force a?) (~force p)
 -}
 
+-- this stuff should go
 open import Syntax
 
 mutual
@@ -273,32 +292,3 @@ mutual
             Env∋ ρ ~⟨ i ⟩~ ρ' → Env∋ ρ' ~⟨ i ⟩~ ρ
   ~symEnv ~ε       = ~ε
   ~symEnv (p ~, q) = ~symEnv p ~, ~symVal q            
-{-           
-mutual
-  ~transVal : ∀{i Δ a}{v v' v'' : Val ∞ Δ a} →
-            Val∋ v ~⟨ ∞ ⟩~ v' → Val∋ v' ~⟨ ∞ ⟩~ v'' → Val∋ v ~⟨ i ⟩~ v''
-  ~transVal (~lam p)    (~lam q)    = ~lam (~transEnv p q)
-  ~transVal (~lam p)    (~rlater q) = ~rlater (∞~transVal (∞~val (~lam p)) q)
-  ~transVal (~ne p)     (~ne q)     = ~ne (~transNeVal p q)
-  ~transVal (~ne p)     (~rlater q) = ~rlater (∞~transVal (∞~val (~ne p)) q)
-  ~transVal (~llater p) (~lam q)    = ~llater (∞~transVal p (∞~val (~lam q)))
-  ~transVal (~llater p) (~ne q)     = ~llater (∞~transVal p (∞~val (~ne q)))
-  ~transVal (~llater p) (~llater q) = {!!}
-  ~transVal (~llater p) (~rlater q) = {!!}
-  ~transVal (~rlater p) (~llater q) = {!!}
-  ~transVal (~rlater p) (~rlater q) = {!!}            
-
-  ~transNeVal : ∀{i Δ a}{n n' n'' : NeVal ∞ Δ a} →
-    NeVal∋ n ~⟨ ∞ ⟩~ n' → NeVal∋ n' ~⟨ ∞ ⟩~ n'' → NeVal∋ n ~⟨ i ⟩~ n''
-  ~transNeVal ~var       ~var         = ~var
-  ~transNeVal (~app p q) (~app p' q') = ~app (~transNeVal p p') (~transVal q q')
-
-  ~transEnv : ∀{i Δ Γ}{ρ ρ' ρ'' : Env ∞ Δ Γ} →
-              Env∋ ρ ~⟨ ∞ ⟩~ ρ' → Env∋ ρ' ~⟨ ∞ ⟩~ ρ'' → Env∋ ρ ~⟨ i ⟩~ ρ''
-  ~transEnv ~ε       ~ε         = ~ε
-  ~transEnv (p ~, q) (p' ~, q') = ~transEnv p p' ~, ~transVal q q'
-
-  ∞~transVal : ∀{i Δ a}{v v' v'' : ∞Val ∞ Δ a} →
-            ∞Val∋ v ~⟨ ∞ ⟩~ v' → ∞Val∋ v' ~⟨ ∞ ⟩~ v'' → ∞Val∋ v ~⟨ i ⟩~ v''
-  ~forceVal (∞~transVal p q) = ~transVal (~forceVal p) (~forceVal q)
--}

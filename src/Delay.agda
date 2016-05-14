@@ -38,7 +38,7 @@ force never = later never
 module Bind where
 
   infixl 10 _>>=_  _∞>>=_
-
+  
   mutual
     _>>=_ : ∀ {i A B} → Delay i A → (A → Delay i B) → Delay i B
     now   x >>= f = f x
@@ -101,7 +101,7 @@ mutual
       ≈force : {j : Size< i} → Delay R ∋ force a∞ ≈⟨ j ⟩≈ force b∞
 
 
-∞Delay_R_≈_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_≈⟨_⟩≈_ {A} R a∞ i b∞
+∞Delay_∋_≈_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_≈⟨_⟩≈_ {A} R a∞ i b∞
 open ∞Delay_∋_≈⟨_⟩≈_ public
 
 _≈⟨_⟩≈_ = λ {A} a i b → Delay_∋_≈⟨_⟩≈_ {A} _≡_ a i b
@@ -129,12 +129,22 @@ mutual
 
 
 mutual
-  ≈sym : ∀ {i A} {a? b? : Delay ∞ A} → a? ≈⟨ i ⟩≈ b? → b? ≈⟨ i ⟩≈ a?
-  ≈sym (≈now a a' p)    = ≈now a' a (sym p)
-  ≈sym (≈later eq) = ≈later (∞≈sym eq)
+  ≈sym' : ∀ {i A} {a? b? : Delay ∞ A}{R : A → A → Set} →
+          (∀ {a a'} → R a a' → R a' a) → 
+          Delay R ∋ a? ≈⟨ i ⟩≈ b? → Delay R ∋ b? ≈⟨ i ⟩≈ a?
+  ≈sym' p (≈now a a' q) = ≈now a' a (p q)
+  ≈sym' p (≈later q) = ≈later (∞≈sym' p q)
 
-  ∞≈sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → a? ∞≈⟨ i ⟩≈ b? → b? ∞≈⟨ i ⟩≈ a?
-  ≈force (∞≈sym eq) = ≈sym (≈force eq)
+  ∞≈sym' : ∀ {i A} {a? b? : ∞Delay ∞ A}{R : A → A → Set} →
+           (∀ {a a'} → R a a' → R a' a) → 
+           ∞Delay R ∋ a? ≈⟨ i ⟩≈ b? → ∞Delay R ∋ b? ≈⟨ i ⟩≈ a?
+  ≈force (∞≈sym' p q) = ≈sym' p (≈force q)
+
+≈sym : ∀ {i A} {a? b? : Delay ∞ A} → a? ≈⟨ i ⟩≈ b? → b? ≈⟨ i ⟩≈ a?
+≈sym = ≈sym' sym
+
+∞≈sym : ∀ {i A} {a? b? : ∞Delay ∞ A} → a? ∞≈⟨ i ⟩≈ b? → b? ∞≈⟨ i ⟩≈ a?
+∞≈sym = ∞≈sym' sym
 
 -- Transitivity
 
@@ -187,7 +197,7 @@ module ∞≈-Reasoning {i : Size} {A : Set} where
 
 mutual
   bind-cong-l : ∀ {i A B} {a? b? : Delay ∞ A} (eq : a? ≈⟨ i ⟩≈ b?)
-    (k : A → Delay ∞ B) → (a? >>= k) ≈⟨ i ⟩≈ (b? >>= k)
+   (k : A → Delay ∞ B) → (a? >>= k) ≈⟨ i ⟩≈ (b? >>= k)
   bind-cong-l (≈now a .a refl) k = ≈refl refl (k a)
   bind-cong-l (≈later eq) k = ≈later (∞bind-cong-l eq k)
 
@@ -235,16 +245,26 @@ mutual -- why don't I need size i here?
   ≈force (∞bind-now m) = bind-now (force m)
 
 mutual
-  bind-assoc : ∀{i A B C}(m : Delay ∞ A)
+  bind-assoc' : ∀{i A B C}(m : Delay ∞ A){R : C → C → Set} → (∀ {c} → R c c) → 
                {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
-               ((m >>= k) >>= l) ≈⟨ i ⟩≈ (m >>= λ a → k a >>= l)
-  bind-assoc (now a)    = ≈refl refl _
-  bind-assoc (later a∞) = ≈later (∞bind-assoc a∞)
+               Delay R ∋ ((m >>= k) >>= l) ≈⟨ i ⟩≈ (m >>= λ a → k a >>= l)
+  bind-assoc' (now a)    p = ≈refl p _
+  bind-assoc' (later a∞) p = ≈later (∞bind-assoc' a∞ p)
 
-  ∞bind-assoc : ∀{i A B C}(a∞ : ∞Delay ∞ A)
+  ∞bind-assoc' : ∀{i A B C}(a∞ : ∞Delay ∞ A){R : C → C → Set} → (∀ {c} → R c c) → 
                 {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
-                ((a∞ ∞>>= λ a → k a) ∞>>= l) ∞≈⟨ i ⟩≈ (a∞ ∞>>= λ a → k a >>= l)
-  ≈force (∞bind-assoc a∞) = bind-assoc (force a∞)
+                ∞Delay R ∋ ((a∞ ∞>>= λ a → k a) ∞>>= l) ≈⟨ i ⟩≈ (a∞ ∞>>= λ a → k a >>= l)
+  ≈force (∞bind-assoc' a∞ p) = bind-assoc' (force a∞) p
+
+bind-assoc : ∀{i A B C}(m : Delay ∞ A)
+               {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
+               Delay _≡_ ∋ ((m >>= k) >>= l) ≈⟨ i ⟩≈ (m >>= λ a → k a >>= l)
+bind-assoc m = bind-assoc' m {R = _≡_} refl
+
+∞bind-assoc : ∀{i A B C}(a∞ : ∞Delay ∞ A) → 
+               {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
+               ((a∞ ∞>>= λ a → k a) ∞>>= l) ∞≈⟨ i ⟩≈ (a∞ ∞>>= λ a → k a >>= l)
+∞bind-assoc a∞ = ∞bind-assoc' a∞ refl
 
 map-compose : ∀{i A B C} (a? : Delay ∞ A) {f : A → B} {g : B → C} →
   (g <$> (f <$> a?)) ≈⟨ i ⟩≈ ((g ∘ f) <$> a?)
