@@ -16,7 +16,7 @@ substV⟦⟧ ★       p (n , q) = _ , subst≈⇓ q (readback-cong _ p)
 substV⟦⟧ (a ⇒ b) p q       ρ u u⇓ =
   substV⟦⟧ b (apply-cong (renval-cong ρ p) (≈reflVal u)) (q ρ u u⇓)
 
-stepV⟦⟧ : ∀{Γ} b (v : ∞Val ∞ Γ b) → V⟦ b ⟧ (∞Val.force v) → V⟦ b ⟧ (later v)
+stepV⟦⟧ : ∀{Γ} b (v : ∞Val ∞ Γ b) → V⟦ b ⟧ (force v) → V⟦ b ⟧ (later v)
 stepV⟦⟧ ★       v (n , p)  = n , later⇓ p
 stepV⟦⟧ (a ⇒ b) v p ρ u u⇓ = stepV⟦⟧ b _ (p ρ u u⇓)
 

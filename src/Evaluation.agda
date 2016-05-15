@@ -39,11 +39,11 @@ mutual
   apply (later w) v = later (∞apply w v)
 
   ∞apply : ∀ {i Δ a b} → ∞Val i Δ (a ⇒ b) → Val i Δ a → ∞Val i Δ b
-  ∞Val.force (∞apply w v) = apply (∞Val.force w) v
+  force (∞apply w v) = apply (force w) v
 
   beta : ∀ {i Γ a b} (t : Tm (Γ , a) b)
     {Δ : Cxt} (ρ : Env i Δ Γ) (v : Val i Δ a) → ∞Val i Δ b
-  ∞Val.force (beta t ρ v) = eval t (ρ , v)
+  force (beta t ρ v) = eval t (ρ , v)
 
 -- apply-cong
 mutual 
@@ -64,14 +64,13 @@ mutual
   ∞apply-cong : ∀ {i Δ a b}{f f' : ∞Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
                ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' → 
                ∞Val∋ ∞apply f v ≈⟨ i ⟩≈ ∞apply f' v'
-  ∞Val∋_≈⟨_⟩≈_.≈force (∞apply-cong p q) =
-    apply-cong (∞Val∋_≈⟨_⟩≈_.≈force p) q
+  ≈force (∞apply-cong p q) = apply-cong (≈force p) q
 
   beta-cong : ∀ {i Γ a b} (t : Tm (Γ , a) b)
     {Δ : Cxt}{ρ ρ' : Env ∞ Δ Γ}{v v' : Val ∞ Δ a} → 
     Env∋ ρ ≈⟨ i ⟩≈ ρ' → Val∋ v ≈⟨ i ⟩≈ v' →
     ∞Val∋ beta t ρ v ≈⟨ i ⟩≈ beta t ρ' v'
-  ∞Val∋_≈⟨_⟩≈_.≈force (beta-cong t p q) = eval-cong t (p ≈, q) 
+  ≈force (beta-cong t p q) = eval-cong t (p ≈, q) 
 
 mutual
   reneval : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env ∞ Δ Γ) (η : Ren Δ′ Δ) →
@@ -94,12 +93,12 @@ mutual
 
   ∞renapply  : ∀{i Γ Δ a b}(f : ∞Val ∞ Γ (a ⇒ b))(v : Val ∞ Γ a)(η : Ren Δ Γ) →
      ∞Val∋ (∞renval η $ ∞apply f v) ≈⟨ i ⟩≈ (∞apply (∞renval η f) (renval η v))
-  ∞Val∋_≈⟨_⟩≈_.≈force (∞renapply f v η) = renapply (∞Val.force f) v η
+  ≈force (∞renapply f v η) = renapply (force f) v η
 
   renbeta : ∀ {i Γ Δ E a b} (t : Tm (Γ , a) b)(ρ : Env ∞ Δ Γ) (v : Val ∞ Δ a) →
     (η : Ren E Δ) →
      ∞Val∋ ∞renval η $ (beta t ρ v) ≈⟨ i ⟩≈ (beta t (renenv η ρ) (renval η v))
-  ∞Val∋_≈⟨_⟩≈_.≈force (renbeta t ρ v η) = reneval t (ρ , v) η
+  ≈force (renbeta t ρ v η) = reneval t (ρ , v) η
 
 mutual
   readback : ∀{i Γ a} → Val i Γ a → Delay i (Nf Γ a)
@@ -108,7 +107,7 @@ mutual
   readback {a = _ ⇒ _} v = later (abs ∞<$> eta v)
 
   ∞readback : ∀{i Γ a} → ∞Val i Γ a → ∞Delay i (Nf Γ a)
-  ∞Delay.force (∞readback w) = readback (∞Val.force w)
+  force (∞readback w) = readback (force w)
 
   eta : ∀{i Γ a b} → Val i Γ (a ⇒ b) → ∞Delay i (Nf (Γ , a) b)
   force (eta v) = readback (apply (weakVal v) (ne (var zero)))
@@ -130,7 +129,7 @@ mutual
 
   ∞readback-cong : ∀{i Γ} a {v v' : ∞Val ∞ Γ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' →
                   ∞readback v ∞≈⟨ i ⟩≈ ∞readback v'
-  ≈force (∞readback-cong a p) = readback-cong a (∞Val∋_≈⟨_⟩≈_.≈force p)
+  ≈force (∞readback-cong a p) = readback-cong a (≈force p)
   
   nereadback-cong : ∀{i Γ} a {n n' : NeVal ∞ Γ a} → NeVal∋ n ≈⟨ i ⟩≈ n' →
                   nereadback n ≈⟨ i ⟩≈ nereadback n'
@@ -195,7 +194,7 @@ mutual
 
   ∞renreadback   : ∀{i Γ Δ} a (η : Ren Δ Γ)(v : ∞Val ∞ Γ a) →
                 (rennf η ∞<$> ∞readback v) ∞≈⟨ i ⟩≈ (∞readback (∞renval η v))
-  ≈force (∞renreadback a η v) = renreadback a η (∞Val.force v)
+  ≈force (∞renreadback a η v) = renreadback a η (force v)
   
   reneta  : ∀{i Γ Δ a b} (η : Ren Δ Γ)(v : Val ∞ Γ (a ⇒ b)) →
           (rennf (liftr η) ∞<$> eta v) ∞≈⟨ i ⟩≈ (eta (renval η v))

@@ -7,7 +7,7 @@ open import RenamingAndSubstitution
 open import Evaluation
 open import EquationalTheory
 
-infix 8 _V∋_~_ -- _C∋_~_ _~E_
+infix 8 _V∋_~_
 
 ≡to≡βη : ∀{Γ a}{t t' : Tm Γ a} → t ≡ t' → t ≡βη t'
 ≡to≡βη refl = refl≡ _
@@ -66,7 +66,7 @@ mutual
   ∞Dsubstβη : ∀{Γ a} {t t' : Tm Γ a}{v : ∞Delay ∞ (Nf Γ a)} →
              ∞Delay₁ ∞ (λ n → t ≡βη embNf n) v → t ≡βη t' →
              ∞Delay₁ ∞ (λ n → t' ≡βη embNf n) v
-  ∞Delay₁.force₁ (∞Dsubstβη p q) = Dsubstβη (∞Delay₁.force₁ p) q
+  force₁ (∞Dsubstβη p q) = Dsubstβη (force₁ p) q
 
 V∋substβη : ∀{Γ} a {t t' : Tm Γ a}{v : Val ∞ Γ a} → a V∋ t ~ v → t ≡βη t' →
           a V∋ t' ~ v
@@ -82,7 +82,7 @@ V∋subst' (a ⇒ b) p q ρ s u s~u =
   V∋subst' b (apply-cong (renval-cong ρ p) (≈reflVal u)) (q ρ s u s~u)
 
 V∋step : ∀{Γ} a {t  : Tm Γ a}{v : ∞Val ∞ Γ a} →
-         a V∋ t ~ ∞Val.force v → a V∋ t ~ later v
+         a V∋ t ~ force v → a V∋ t ~ later v
 V∋step ★ p = later₁ (delay₁ p)
 V∋step (a ⇒ b) p ρ s u s~u = V∋step b (p ρ s u s~u)
 
@@ -156,7 +156,7 @@ fund (app t u) p =
                       (fund t p renId _ _ (fund u p)))
             (cong (λ f → app f (sub _ u)) (renid _))
 
-lemma : ∀{Γ a b}
+reflect-app : ∀{Γ a b}
         {t : Tm Γ (a ⇒ b)}
         {s : Tm Γ a}
         {f : NeVal ∞ Γ (a ⇒ b)}
@@ -164,7 +164,7 @@ lemma : ∀{Γ a b}
         Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback f) →
         Delay₁ ∞ (λ n → s ≡βη embNf n) (readback u) →
         Delay₁ ∞ (λ n → app t s ≡βη embNe n) (nereadback (app f u))
-lemma {t = t}{s}{f}{u} p q = mapD2
+reflect-app {t = t}{s}{f}{u} p q = mapD2
   (λ n → t ≡βη embNe n)
   (λ n → s ≡βη embNf n)
   (λ n → app t s ≡βη embNe n)
@@ -201,7 +201,7 @@ mutual
             Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback u) → a V∋ t ~ (ne u)
   reflect ★       p         =
     mapD (λ n → _ ≡βη embNe n) (λ n → _ ≡βη embNf n) ne id p
-  reflect (a ⇒ b){t}{f} p ρ s u q = reflect b  $ lemma
+  reflect (a ⇒ b){t}{f} p ρ s u q = reflect b  $ reflect-app
     {t = ren ρ t}
     {s}
     {rennev ρ f}
@@ -215,7 +215,6 @@ mutual
         (λ {n} p → trans≡ (ren≡βη p ρ) (≡to≡βη (renembNe n ρ)))
         p) )
     (reify a {s}{u} q) 
-
 
 ~var : ∀{Γ a}(x : Var Γ a) → a V∋ var x ~ ne (var x)
 ~var x = reflect _ (now₁ (var≡ x))

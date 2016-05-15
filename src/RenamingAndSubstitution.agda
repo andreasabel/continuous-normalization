@@ -119,7 +119,7 @@ mutual
   renval f (later v) = later (∞renval f v)
 
   ∞renval : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → ∞Val i Γ σ → ∞Val i Δ σ
-  ∞Val.force (∞renval f v) = renval f (∞Val.force v)
+  force (∞renval f v) = renval f (force v)
 
   renenv : ∀{i Γ Δ} → Ren Δ Γ → ∀ {B} → Env i Γ B → Env i Δ B
   renenv f ε       = ε
@@ -138,14 +138,12 @@ mutual
 
   ∞renval-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {σ} → {v v' : ∞Val ∞ Γ σ} →
                 ∞Val∋ v ≈⟨ i ⟩≈ v' → ∞Val∋ ∞renval η v ≈⟨ i ⟩≈ ∞renval η v'
-  ∞Val∋_≈⟨_⟩≈_.≈force (∞renval-cong η p) =
-    renval-cong η ( ∞Val∋_≈⟨_⟩≈_.≈force p)
+  ≈force (∞renval-cong η p) = renval-cong η (≈force p)
 
   rennev-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {σ} → {n n' : NeVal ∞ Γ σ} →
                 NeVal∋ n ≈⟨ i ⟩≈ n' → NeVal∋ rennev η n ≈⟨ i ⟩≈ rennev η n'
   rennev-cong η ≈var       = ≈var
-  rennev-cong η (≈app p q) = ≈app (rennev-cong η p) (renval-cong η q)                
-
+  rennev-cong η (≈app p q) = ≈app (rennev-cong η p) (renval-cong η q)
   renenv-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {B} → {ρ ρ' : Env ∞ Γ B} → 
                 Env∋ ρ ≈⟨ i ⟩≈ ρ' → Env∋ renenv η ρ ≈⟨ i ⟩≈ renenv η ρ'
   renenv-cong η ≈ε       = ≈ε
@@ -162,7 +160,7 @@ mutual
   
   ∞renvalid : ∀{i}{Γ : Cxt} {σ : Ty} (v : ∞Val ∞ Γ σ) →
              ∞Val∋ ∞renval renId v ≈⟨ i ⟩≈ v
-  ∞Val∋_≈⟨_⟩≈_.≈force (∞renvalid v) = renvalid (∞Val.force v)
+  ≈force (∞renvalid v) = renvalid (force v)
   
   renenvid : ∀{i}{Γ Δ : Cxt}(e : Env ∞ Γ Δ) →
              Env∋ renenv renId e ≈⟨ i ⟩≈ e
@@ -189,8 +187,7 @@ mutual
   ∞renvalcomp : ∀{i Δ₁ Δ₂ Δ₃ a}
                 (η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(v : ∞Val ∞ Δ₃ a) →
                 ∞Val∋ ∞renval η (∞renval η' v) ≈⟨ i ⟩≈ ∞renval (renComp η η') v
-  ∞Val∋_≈⟨_⟩≈_.≈force (∞renvalcomp η η' v) =
-    renvalcomp η η' (∞Val.force v)
+  ≈force (∞renvalcomp η η' v) = renvalcomp η η' (force v)
   
   rennevcomp : ∀{i Δ₁ Δ₂ Δ₃ a}
     (η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(t : NeVal ∞ Δ₃ a) →

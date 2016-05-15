@@ -33,7 +33,7 @@ data GNe (Arg : Cxt → Ty → Set) (Γ : Cxt) : Ty → Set where
   var : ∀{a}    (x : Var Γ a)                         → GNe Arg Γ a
   app : ∀{a b}  (n : GNe Arg Γ (a ⇒ b)) (o : Arg Γ a) → GNe Arg Γ b
 
--- β-normal forms.
+-- βη-normal forms.
 
 mutual
 
@@ -74,6 +74,7 @@ mutual
     field
       force : {j : Size< i} → Val j Δ a
 
+open ∞Val public
 
   -- Note: this is not the same thing as Delay i (Val i Δ a)
   -- because now the sizes are not uniform, but the size is
@@ -85,6 +86,8 @@ mutual
   --   ...
   -- but we would need to tell Agda that A is antitone
   -- otherwise Delay i A is not antitone in i
+
+-- strong bisimilarity for values, neutral values and environments
 
 mutual
   Val∋_≈⟨_⟩≈_ = λ {Δ}{a} a? i b? → Val∋_≈_ {i}{Δ}{a} a? b?
@@ -111,9 +114,11 @@ mutual
   record ∞Val∋_≈⟨_⟩≈_ {Δ a} (a∞ : ∞Val ∞ Δ a) i (b∞ : ∞Val ∞ Δ a) : Set where
     coinductive
     field
-      ≈force : {j : Size< i} → Val∋ ∞Val.force a∞ ≈⟨ j ⟩≈ ∞Val.force b∞
+      ≈force : {j : Size< i} → Val∋ force a∞ ≈⟨ j ⟩≈ force b∞
 
   ∞Val∋_≈_ = λ {i}{Δ}{a} a? b? → ∞Val∋_≈⟨_⟩≈_ {Δ}{a} a? i b?
+
+open ∞Val∋_≈⟨_⟩≈_ public
 
 mutual
   ≈reflVal : ∀{i}{Δ}{a}(v : Val ∞ Δ a) → Val∋ v ≈⟨ i ⟩≈ v
@@ -122,7 +127,7 @@ mutual
   ≈reflVal (later v∞) = ≈later (∞≈reflVal v∞)
 
   ∞≈reflVal : ∀{i}{Δ}{a}(v : ∞Val ∞ Δ a) → ∞Val∋ v ≈⟨ i ⟩≈ v
-  ∞Val∋_≈⟨_⟩≈_.≈force (∞≈reflVal v) = ≈reflVal (∞Val.force v) 
+  ≈force (∞≈reflVal v) = ≈reflVal (force v) 
 
   ≈reflNeVal : ∀{i}{Δ}{a}(v : NeVal ∞ Δ a) → NeVal∋ v ≈⟨ i ⟩≈ v
   ≈reflNeVal (var x) = ≈var
@@ -141,7 +146,7 @@ mutual
 
   ∞≈symVal : ∀{i}{Δ}{a}{v v' : ∞Val ∞ Δ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' → 
              ∞Val∋ v' ≈⟨ i ⟩≈ v
-  ∞Val∋_≈⟨_⟩≈_.≈force (∞≈symVal p) = ≈symVal (∞Val∋_≈⟨_⟩≈_.≈force p)
+  ≈force (∞≈symVal p) = ≈symVal (≈force p)
 
   ≈symNeVal : ∀{i}{Δ}{a}{v v' : NeVal ∞ Δ a} →
               NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v
@@ -161,9 +166,8 @@ mutual
   ≈transVal (≈later p) (≈later p') = ≈later (∞≈transVal p p')            
 
   ∞≈transVal : ∀{i}{Δ}{a}{v v' v'' : ∞Val ∞ Δ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' → 
-    ∞Val∋ v' ≈⟨ i ⟩≈ v'' → ∞Val∋ v ≈⟨ i ⟩≈ v''
-  ∞Val∋_≈⟨_⟩≈_.≈force (∞≈transVal p q) =
-    ≈transVal (∞Val∋_≈⟨_⟩≈_.≈force p) (∞Val∋_≈⟨_⟩≈_.≈force q)
+              ∞Val∋ v' ≈⟨ i ⟩≈ v'' → ∞Val∋ v ≈⟨ i ⟩≈ v''
+  ≈force (∞≈transVal p q) = ≈transVal (≈force p) (≈force q)
 
   ≈transNeVal : ∀{i}{Δ}{a}{v v' v'' : NeVal ∞ Δ a} →
               NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v'' → 
@@ -177,13 +181,6 @@ mutual
   ≈transEnv ≈ε       ≈ε         = ≈ε
   ≈transEnv (p ≈, q) (p' ≈, q') = (≈transEnv p p') ≈, ≈transVal q q'
 
-{-
-  ≈congVal : ∀{i Δ Γ a b}(f : Val ∞ Δ a → Val ∞ Γ b){v v' : Val ∞ Δ a} →
-             Val∋ v ≈⟨ i ⟩≈ v' → Val∋ f v ≈⟨ i ⟩≈ f v'
-  ≈congVal f (≈lam x) = {!!}
-  ≈congVal f (≈ne x) = {!!}
-  ≈congVal f (≈later eq) = {!!}
--}
 ≈Valsetoid : (i : Size)(Δ : Cxt)(a : Ty) → Setoid lzero lzero
 ≈Valsetoid i Δ a = record
   { Carrier       = Val ∞ Δ a
@@ -197,7 +194,7 @@ mutual
 
 module ≈Val-Reasoning {i : Size}{Δ : Cxt}{a : Ty} where
   open Pre (Setoid.preorder (≈Valsetoid i Δ a)) public
---    using (begin_; _∎) (_≈⟨⟩_ to _≈⟨⟩_; _≈⟨_⟩_ to _≈⟨_⟩_)
-    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_; begin_ to proof_)
+    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_;
+              begin_ to proof_)
 
 
