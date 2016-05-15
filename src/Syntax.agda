@@ -1,5 +1,4 @@
 -- Syntax: Types, terms and contexts.
-{-# OPTIONS --copatterns --sized-types #-}
 module Syntax where
 
 open import Library

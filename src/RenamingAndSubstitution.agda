@@ -1,5 +1,3 @@
-{-# OPTIONS --copatterns #-}
-
 module RenamingAndSubstitution where
 
 open import Library

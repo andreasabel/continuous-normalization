@@ -1,5 +1,3 @@
-{-# OPTIONS --copatterns --sized-types #-}
-
 module Evaluation where
 
 open import Library

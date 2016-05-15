@@ -1,5 +1,3 @@
-{-# OPTIONS --copatterns #-}
-
 module Soundness where
 
 open import Library
@@ -42,13 +40,12 @@ ren≡βη (refl≡ t)        σ = refl≡ _
 ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
 ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
 
-mutual
-  _V∋_~_ : ∀{Γ}(a : Ty) (t : Tm Γ a) (v : Val ∞ Γ a) → Set
-  _V∋_~_         ★       t u  =
-    Delay₁ ∞ (λ n → t ≡βη (embNf n)) (readback u)
-  _V∋_~_ {Γ = Γ} (a ⇒ b) t f       =
-    ∀{Δ}(ρ : Ren Δ Γ)(s : Tm Δ a)(u : Val ∞ Δ a)
-     (s~u : a V∋ s ~ u) → b V∋ (app (ren ρ t) s) ~ (apply (renval ρ f) u)
+_V∋_~_ : ∀{Γ}(a : Ty) (t : Tm Γ a) (v : Val ∞ Γ a) → Set
+_V∋_~_         ★       t u  =
+  Delay₁ ∞ (λ n → t ≡βη (embNf n)) (readback u)
+_V∋_~_ {Γ = Γ} (a ⇒ b) t f       =
+  ∀{Δ}(ρ : Ren Δ Γ)(s : Tm Δ a)(u : Val ∞ Δ a)
+   (s~u : a V∋ s ~ u) → b V∋ (app (ren ρ t) s) ~ (apply (renval ρ f) u)
 
 _~E_ : ∀{Γ Δ} (σ : Sub Γ Δ) (ρ : Env ∞ Γ Δ) → Set
 ε       ~E ε       = ⊤
