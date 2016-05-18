@@ -28,20 +28,21 @@ mutual
 open ∞Delay_∋_~⟨_⟩~_ public
 ∞Delay_∋_~_ = λ {i} {A} R a∞ b∞ → ∞Delay_∋_~⟨_⟩~_ {A} R a∞ i b∞
 
+
+
 mutual
   map~ : ∀ {A B R S}{a a' : Delay ∞ A}
-         (f : A → B)
-         (g : ∀ a a' → R a a' → S (f a) (f a')) →
-         Delay R ∋ a ~ a' → Delay S ∋ f <$> a ~ (f <$> a')
-  map~ f g (~now a⇓ a'⇓ aRa') = ~now (map⇓ f a⇓) (map⇓ f a'⇓) (g _ _ aRa')
-  map~ f g (~later ∞p)      = ~later (∞map~ f g ∞p)
+         (f : A → B)(g : A → B)
+         (h : ∀ a a' → R a a' → S (f a) (g a')) →
+         Delay R ∋ a ~ a' → Delay S ∋ f <$> a ~ (g <$> a')
+  map~ f g h (~now a⇓ a'⇓ aRa') = ~now (map⇓ f a⇓) (map⇓ g a'⇓) (h _ _ aRa')
+  map~ f g h (~later ∞p)      = ~later (∞map~ f g h ∞p)
 
   ∞map~ : ∀ {A B R S}{a a' : ∞Delay ∞ A}
-         (f : A → B)
-         (g : ∀ a a' → R a a' → S (f a) (f a')) →
-         ∞Delay R ∋ a ~ a' → ∞Delay S ∋ f ∞<$> a ~ (f ∞<$> a')
-  ~force (∞map~ f g p) = map~ f g (~force p)
-
+         (f : A → B)(g : A → B)
+         (h : ∀ a a' → R a a' → S (f a) (g a')) →
+         ∞Delay R ∋ a ~ a' → ∞Delay S ∋ f ∞<$> a ~ (g ∞<$> a')
+  ∞Delay_∋_~⟨_⟩~_.~force (∞map~ f g h p) = map~ f g h (∞Delay_∋_~⟨_⟩~_.~force p)
 
 -- Delaying left only
 
@@ -83,7 +84,7 @@ _~_ = λ {i} {A} a b → _~⟨_⟩~_ {A} a i b
 _∞~⟨_⟩~_ = λ {A} a∞ i b∞ → ∞Delay_∋_~⟨_⟩~_ {A} _≡_ a∞ i b∞
 _∞~_ = λ {i} {A} a∞ b∞ → _∞~⟨_⟩~_ {A} a∞ i b∞
 
-open ∞Delay_∋_~⟨_⟩~_ public
+--open ∞Delay_∋_~⟨_⟩~_ public
 
 -- Strong bisimilarity implies weak bisimilarity.
 
@@ -96,7 +97,7 @@ mutual
   ∞≈→~ : ∀{i A R}{a∞ b∞ : ∞Delay ∞ A} →
          ∞Delay R ∋ a∞ ≈⟨ i ⟩≈ b∞ →
          ∞Delay R ∋ a∞ ~⟨ i ⟩~ b∞
-  ~force (∞≈→~ eq) = ≈→~ (≈force eq)
+  ∞Delay_∋_~⟨_⟩~_.~force (∞≈→~ eq) = ≈→~ (≈force eq)
 
 {-
 bindlem : ∀{A B R i}{f f' : A → Delay ∞ B}{v v' : A}{v? v?' : Delay ∞ A} →
@@ -117,7 +118,7 @@ subst~⇓        now⇓       (~now a⇓ b⇓ aRb)          = _ , b⇓
 subst~⇓ {R = R}(later⇓ p) (~now (later⇓ a⇓) b⇓ aRb) =
   subst~⇓ {R = R} p (~now a⇓ b⇓ aRb)
 subst~⇓        (later⇓ p) (~later ∞p)               =
-  let n' , p = subst~⇓ p (~force ∞p) in n' , later⇓ p
+  let n' , p = subst~⇓ p (∞Delay_∋_~⟨_⟩~_.~force ∞p) in n' , later⇓ p
 
 -- don't want to assume symmetry of R in ~trans, so...
 subst~⇓' : ∀{A R}{t t' : Delay ∞ A}{n : A} → t' ⇓ n → Delay R ∋ t ~ t' → t ⇓
@@ -125,14 +126,14 @@ subst~⇓'         now⇓       (~now a⇓ b⇓ aRb)          = _  , a⇓
 subst~⇓' {R = R} (later⇓ p) (~now a⇓ (later⇓ b⇓) aRb) =
   subst~⇓' {R = R} p (~now a⇓ b⇓ aRb)
 subst~⇓'         (later⇓ p) (~later ∞p)               =
-  let n' , p = subst~⇓' p (~force ∞p) in n' , later⇓ p
+  let n' , p = subst~⇓' p (∞Delay_∋_~⟨_⟩~_.~force ∞p) in n' , later⇓ p
 
 
 det~⇓ : ∀{A R}{t t' : Delay ∞ A}{n n' : A} →
         t ⇓ n → Delay R ∋ t ~ t' → t' ⇓ n' → R n n'
 det~⇓ p (~now a⇓ b⇓ aRb) r with uniq⇓ p a⇓ | uniq⇓ b⇓ r
 ... | refl | refl = aRb
-det~⇓ (later⇓ p) (~later ∞p) (later⇓ r) = det~⇓ p (~force ∞p) r
+det~⇓ (later⇓ p) (~later ∞p) (later⇓ r) = det~⇓ p (∞Delay_∋_~⟨_⟩~_.~force ∞p) r
 
 
 
@@ -164,7 +165,7 @@ mutual
   ∞~sym : ∀ {i A R} {a? b? : ∞Delay ∞ A} →
           (∀ {a b} → R a b → R b a) →
           ∞Delay R ∋ a? ~⟨ i ⟩~ b? → ∞Delay R ∋ b? ~⟨ i ⟩~ a?
-  ~force (∞~sym X p) = ~sym X (~force p)
+  ∞Delay_∋_~⟨_⟩~_.~force (∞~sym X p) = ~sym X (∞Delay_∋_~⟨_⟩~_.~force p)
 
 -- Transitivity
 
@@ -187,13 +188,37 @@ mutual
     (∀ {a b c} → R a b → R b c → R a c) →
     (eq : ∞Delay R ∋ a∞ ~⟨ ∞ ⟩~ b∞) (eq' : ∞Delay R ∋ b∞ ~⟨ ∞ ⟩~ c∞) →
     ∞Delay R ∋ a∞ ~⟨ i ⟩~ c∞
-  ~force (∞~trans X p p') = ~trans X (~force p) (~force p')
+  ∞Delay_∋_~⟨_⟩~_.~force (∞~trans X p p') = ~trans X (∞Delay_∋_~⟨_⟩~_.~force p) (∞Delay_∋_~⟨_⟩~_.~force p')
 
 bindlem : ∀{A B R i}{v : A} {f : A → Delay ∞ B} → Delay R ∋ f v ~ f v  →
          {v? : Delay ∞ A} →
           v? ⇓ v → Delay R ∋ v? >>= f ~⟨ i ⟩~ f v
 bindlem X now⇓       = X
 bindlem X (later⇓ p) = ~laterl (bindlem X p)
+
+mutual
+  map2~ : ∀ {A B C R S T}{a a' : Delay ∞ A}{b b' : Delay ∞ B}
+         (f : A → B → C)
+         (g : ∀ a a' → R a a' → ∀ b b' → S b b' → T (f a b) (f a' b')) →
+         (∀ c → T c c) →
+         (∀{c c'} → T c c' → T c' c) →
+         (∀ {c c' c''} → T c c' → T c' c'' → T c c'') → 
+         Delay R ∋ a ~ a' → Delay S ∋ b ~ b' →
+         Delay T ∋ f <$> a <*> b ~ (f <$> a' <*> b')
+  map2~ f g p q r (~now a⇓ a'⇓ aRa') (~now b⇓ b'⇓ bRb') =
+    ~now (map2⇓ f a⇓ b⇓) (map2⇓ f a'⇓ b'⇓) (g _ _ aRa' _ _ bRb')
+  map2~ {a = a}{a'} f g p q r (~now a⇓ b⇓ aRb) (~later ∞p) = ~trans r (≈→~ (bind-assoc' a (p _))) (~trans r (~bind (p _) _ a⇓) (~trans r (~trans r (~later (∞map~ (f _)(f _)(g _ _ aRb) ∞p )) (~sym q (~bind (p _) _ b⇓))) (≈→~ (≈sym' q (bind-assoc' a' (p _))))))
+  map2~ f g p q r (~later ∞p) s = ~later (∞map2~ f g p q r ∞p s)
+
+  ∞map2~ : ∀ {A B C R S T}{a a' : ∞Delay ∞ A}{b b' : Delay ∞ B} 
+           (f : A → B → C)
+           (g : ∀ a a' → R a a' → ∀ b b' → S b b' → T (f a b) (f a' b')) →
+           (∀ c → T c c) →
+           (∀{c c'} → T c c' → T c' c) →
+           (∀ {c c' c''} → T c c' → T c' c'' → T c c'') → 
+           ∞Delay R ∋ a ~ a' → Delay S ∋ b ~ b' →
+           ∞Delay T ∋ ((f ∞<$> a) ∞<*> b) ~ ((f ∞<$> a') ∞<*> b')
+  ~force (∞map2~ f g p q r s t) = map2~ f g p q r (~force s) t
 
 {-
 mutual

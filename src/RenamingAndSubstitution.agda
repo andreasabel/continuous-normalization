@@ -6,66 +6,91 @@ open ≡-Reasoning
 
 infixr 4 _,_
 
--- ren
+------------------------------------------------------------------------
+-- Renaming
+------------------------------------------------------------------------
+
+-- Renamings from Γ to Δ are snoc-lists of variables living in Δ,
+-- one for each entry in Γ.
 
 data Ren (Δ : Cxt) : (Γ : Cxt) → Set where
   ε   : Ren Δ ε
   _,_ : ∀ {Γ a} (ρ : Ren Δ Γ) (x : Var Δ a) → Ren Δ (Γ , a)
 
+-- A renaming in  Ren Δ Γ  is a code for a
+-- renaming function in  Var Γ ∙→ Var Δ.
+
 lookr : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → Var Γ σ → Var Δ σ
 lookr (xs , x) zero    = x
 lookr (xs , x) (suc i) = lookr xs i
+
+-- Weaking a renaming by increasing all variables by 1.
+-- This lets them live in the extended context Γ , σ.
 
 wkr : ∀{Γ Δ σ} → Ren Γ Δ → Ren (Γ , σ) Δ
 wkr ε        = ε
 wkr (xs , x) = wkr xs , suc x
 
+-- Lifting a renaming to go under a binder.
+
 liftr : ∀{Γ Δ σ} → Ren Γ Δ → Ren (Γ , σ) (Δ , σ)
 liftr xs = wkr xs , zero
 
-ren : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → Tm Γ σ → Tm Δ σ
-ren xs (var x)   = var (lookr xs x)
-ren xs (abs t)   = abs (ren (liftr xs) t)
-ren xs (app t u) = app (ren xs t) (ren xs u)
+-- The category of renamings (operations only).
+------------------------------------------------------------------------
+
+-- The identity renaming.
 
 renId : ∀{Γ} → Ren Γ Γ
 renId {ε}     = ε
 renId {Γ , _} = liftr (renId {Γ})
 
-renComp : ∀{B Γ Δ} → Ren Δ Γ → Ren Γ B → Ren Δ B
+-- Forward composition of renamings.
+
+renComp : ∀{Φ Γ Δ} → Ren Δ Γ → Ren Γ Φ → Ren Δ Φ
 renComp xs ε        = ε
 renComp xs (ys , y) = renComp xs ys , lookr xs y
 
-weak : ∀{Γ b} a → Tm Γ b → Tm (Γ , a) b
-weak a = ren (wkr renId)
+-- Various combinations of renamings.
+------------------------------------------------------------------------
 
-lookrcomp : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Ren Γ B){σ}(i : Var B σ) →
-            lookr (renComp f g) i ≡ (lookr f ∘ lookr g) i
-lookrcomp f (g , v) zero = refl
-lookrcomp f (g , v) (suc i) = lookrcomp f g i
+-- Weakening a renaming acts behaves like
+-- post-composing the renaming function with successor.
 
 lookrwkr : ∀{Γ Δ σ τ}(xs : Ren Δ Γ)(i : Var Γ σ) →
            lookr (wkr {σ = τ} xs) i ≡ suc (lookr xs i)
 lookrwkr (xs , _) zero    = refl
 lookrwkr (xs , _) (suc i) = lookrwkr xs i
 
-lemrr : ∀{B Γ Δ σ}(xs : Ren B Γ)(x : Var B σ)(ys : Ren Γ Δ) →
+-- A weakning cancels a renaming extension.
+
+lemrr : ∀{Φ Γ Δ σ}(xs : Ren Φ Γ)(x : Var Φ σ)(ys : Ren Γ Δ) →
        renComp (xs , x) (wkr ys) ≡ renComp xs ys
 lemrr xs x ε        = refl
 lemrr xs x (ys , y) = cong (_, lookr xs y) (lemrr xs x ys)
 
+-- Associativity of renaming composition in case the first
+-- renaming is a weakening.
 
-wkrcomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Ren Γ Δ) →
-       renComp (wkr {σ = σ} xs) ys ≡ wkr {σ = σ} (renComp xs ys)
+wkrcomp : ∀{Φ Γ Δ σ}(xs : Ren Φ Γ)(ys : Ren Γ Δ) →
+  renComp (wkr {σ = σ} xs) ys ≡ wkr {σ = σ} (renComp xs ys)
 wkrcomp xs ε        = refl
 wkrcomp xs (ys , y) = cong₂ _,_ (wkrcomp xs ys) (lookrwkr xs y)
 
-liftrcomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Ren Γ Δ) →
-       renComp (liftr {σ = σ} xs) (liftr {σ = σ} ys) ≡ liftr {σ = σ} (renComp xs ys)
+-- Composition of liftings is a lifting.
+
+liftrcomp : ∀{Φ Γ Δ σ}(xs : Ren Φ Γ)(ys : Ren Γ Δ) →
+  renComp (liftr {σ = σ} xs) (liftr {σ = σ} ys) ≡ liftr {σ = σ} (renComp xs ys)
 liftrcomp xs ys = begin
   renComp (wkr xs , zero) (wkr ys) , zero  ≡⟨ cong (_, zero) (lemrr (wkr xs) zero ys) ⟩
   renComp (wkr xs) ys              , zero  ≡⟨ cong (_, zero) (wkrcomp xs ys) ⟩
   wkr (renComp xs ys)              , zero  ∎
+
+-- lookr is a morphism from the category  Ren
+-- to the category of the corresponding renaming functions on variables.
+------------------------------------------------------------------------
+
+-- The identity renaming corresponds to the identity function.
 
 lookrid : ∀{Γ σ}(x : Var Γ σ) → lookr renId x ≡ x
 lookrid zero    = refl
@@ -74,23 +99,52 @@ lookrid (suc x) = begin
   suc (lookr renId x)  ≡⟨ cong suc (lookrid x) ⟩
   suc x                ∎
 
-renid : ∀{Γ σ}(t : Tm Γ σ) → ren renId t ≡ t
-renid (var x)   = cong var (lookrid x)
-renid (abs t)   = cong abs (renid t)
-renid (app t u) = cong₂ app (renid t) (renid u)
+-- A composition of renamings corresponds to the composition
+-- of the corresponding renaming functions.
 
-lidr : ∀{B Γ}(xs : Ren B Γ) → renComp renId xs ≡ xs
+lookrcomp : ∀{Φ Γ Δ}(f : Ren Δ Γ)(g : Ren Γ Φ){σ}(i : Var Φ σ) →
+            lookr (renComp f g) i ≡ (lookr f ∘ lookr g) i
+lookrcomp f (g , v) zero = refl
+lookrcomp f (g , v) (suc i) = lookrcomp f g i
+
+-- Laws for the category of renamings.
+------------------------------------------------------------------------
+
+-- Left identity of forward composition
+
+lidr : ∀{Φ Γ}(xs : Ren Φ Γ) → renComp renId xs ≡ xs
 lidr ε        = refl
 lidr (xs , x) = cong₂ _,_ (lidr xs) (lookrid x)
 
-ridr : ∀{B Γ}(xs : Ren B Γ) → renComp xs renId ≡ xs
+-- Right identity of forward composition
+
+ridr : ∀{Φ Γ}(xs : Ren Φ Γ) → renComp xs renId ≡ xs
 ridr {Γ = ε}     ε  = refl
 ridr {Γ = Γ , σ} (xs , x) = begin
   renComp (xs , x) (wkr renId) , x  ≡⟨ cong (_, x) (lemrr xs x renId) ⟩
   renComp xs renId             , x  ≡⟨ cong (_, x) (ridr xs) ⟩
   xs                           , x  ∎
 
-rencomp : ∀ {B Γ Δ}(f : Ren Δ Γ)(g : Ren Γ B){σ}(t : Tm B σ) →
+
+-- Renaming of terms.
+------------------------------------------------------------------------
+
+-- Renaming in a term.
+
+ren : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → Tm Γ σ → Tm Δ σ
+ren xs (var x)   = var (lookr xs x)
+ren xs (abs t)   = abs (ren (liftr xs) t)
+ren xs (app t u) = app (ren xs t) (ren xs u)
+
+-- ren is a morphism from Ren
+-- to the corresponding category of renaming functions on terms.
+
+renid : ∀{Γ σ}(t : Tm Γ σ) → ren renId t ≡ t
+renid (var x)   = cong var (lookrid x)
+renid (abs t)   = cong abs (renid t)
+renid (app t u) = cong₂ app (renid t) (renid u)
+
+rencomp : ∀ {Φ Γ Δ}(f : Ren Δ Γ)(g : Ren Γ Φ){σ}(t : Tm Φ σ) →
             ren (renComp f g) t ≡ (ren f ∘ ren g) t
 rencomp f g (var x)   = cong var (lookrcomp f g x)
 rencomp f g (abs t)   = begin
@@ -99,7 +153,14 @@ rencomp f g (abs t)   = begin
   abs (ren (liftr f) (ren (liftr g) t))       ∎
 rencomp f g (app t u) = cong₂ app (rencomp f g t) (rencomp f g u)
 
+-- Weakening a term.
+
+weak : ∀{Γ b} a → Tm Γ b → Tm (Γ , a) b
+weak a = ren (wkr renId)
+
+
 -- Renaming of normal forms.
+------------------------------------------------------------------------
 
 mutual
   rennf : ∀{Γ Δ} → Ren Γ Δ → ∀{a} → Nf Δ a → Nf Γ a
@@ -111,53 +172,94 @@ mutual
   rennen α (app n x) = app (rennen α n) (rennf α x)
 
 -- Renaming of values.
+------------------------------------------------------------------------
 
 mutual
-  renval : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → Val Γ σ → Val Δ σ
+  renval : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → Val i Γ σ → Val i Δ σ
   renval f (ne x)    = ne (rennev f x)
   renval f (lam t ρ) = lam t (renenv f ρ)
+  renval f (later v) = later (∞renval f v)
 
-  renenv : ∀{Γ Δ} → Ren Δ Γ → ∀ {B} → Env Γ B → Env Δ B
+  ∞renval : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → ∞Val i Γ σ → ∞Val i Δ σ
+  force (∞renval f v) = renval f (force v)
+
+  renenv : ∀{i Γ Δ} → Ren Δ Γ → ∀ {Φ} → Env i Γ Φ → Env i Δ Φ
   renenv f ε       = ε
   renenv f (e , v) = renenv f e , renval f v
 
-  rennev : ∀{Γ Δ} → Ren Δ Γ → ∀ {σ} → NeVal Γ σ → NeVal Δ σ
+  rennev : ∀{i Γ Δ} → Ren Δ Γ → ∀ {σ} → NeVal i Γ σ → NeVal i Δ σ
   rennev f (var x)   = var (lookr f x)
   rennev f (app t u) = app (rennev f t) (renval f u)
 
+mutual
+  renval-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {σ} → {v v' : Val ∞ Γ σ} →
+                Val∋ v ≈⟨ i ⟩≈ v' → Val∋ renval η v ≈⟨ i ⟩≈ renval η v'
+  renval-cong η (≈lam p)   = ≈lam   (renenv-cong η p)
+  renval-cong η (≈ne p)    = ≈ne    (rennev-cong η p)
+  renval-cong η (≈later p) = ≈later (∞renval-cong η p)
+
+  ∞renval-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {σ} → {v v' : ∞Val ∞ Γ σ} →
+                ∞Val∋ v ≈⟨ i ⟩≈ v' → ∞Val∋ ∞renval η v ≈⟨ i ⟩≈ ∞renval η v'
+  ≈force (∞renval-cong η p) = renval-cong η (≈force p)
+
+  rennev-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {σ} → {n n' : NeVal ∞ Γ σ} →
+                NeVal∋ n ≈⟨ i ⟩≈ n' → NeVal∋ rennev η n ≈⟨ i ⟩≈ rennev η n'
+  rennev-cong η ≈var       = ≈var
+  rennev-cong η (≈app p q) = ≈app (rennev-cong η p) (renval-cong η q)
+  renenv-cong : ∀{i Γ Δ}(η : Ren Δ Γ) → ∀ {Φ} → {ρ ρ' : Env ∞ Γ Φ} →
+                Env∋ ρ ≈⟨ i ⟩≈ ρ' → Env∋ renenv η ρ ≈⟨ i ⟩≈ renenv η ρ'
+  renenv-cong η ≈ε       = ≈ε
+  renenv-cong η (p ≈, q) = renenv-cong η p ≈, renval-cong η q
+
 
 -- Functoriality of the renaming action on values.
+mutual
+  renvalid : ∀{i}{Γ : Cxt} {σ : Ty} (v : Val ∞ Γ σ) →
+             Val∋ renval renId v ≈⟨ i ⟩≈ v
+  renvalid (ne n)    = ≈ne (rennevid n)
+  renvalid (lam t ρ) = ≈lam (renenvid ρ)
+  renvalid (later p) = ≈later (∞renvalid p)
+
+  ∞renvalid : ∀{i}{Γ : Cxt} {σ : Ty} (v : ∞Val ∞ Γ σ) →
+             ∞Val∋ ∞renval renId v ≈⟨ i ⟩≈ v
+  ≈force (∞renvalid v) = renvalid (force v)
+
+  renenvid : ∀{i}{Γ Δ : Cxt}(e : Env ∞ Γ Δ) →
+             Env∋ renenv renId e ≈⟨ i ⟩≈ e
+  renenvid ε       = ≈ε
+  renenvid (e , v) = renenvid e ≈, renvalid v
+
+  rennevid : ∀{i}{Γ : Cxt} {σ : Ty} (n : NeVal ∞ Γ σ) →
+             NeVal∋ rennev renId n ≈⟨ i ⟩≈ n
+  rennevid (var x) rewrite lookrid x = ≈var
+  rennevid (app n v) = ≈app (rennevid n) (renvalid v)
 
 mutual
-  renvalid : {Γ : Cxt} {σ : Ty} (v : Val Γ σ) → renval renId v ≡ v
-  renvalid (ne x)    = cong ne (rennevid x)
-  renvalid (lam t ρ) = cong (lam t) (renenvid ρ)
+  renenvcomp : ∀{i Γ Δ₁ Δ₂ Δ₃}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(ρ : Env ∞ Δ₃ Γ) →
+    Env∋ renenv η (renenv η' ρ) ≈⟨ i ⟩≈ renenv (renComp η η') ρ
+  renenvcomp η η' ε       = ≈ε
+  renenvcomp η η' (ρ , v) = renenvcomp η η' ρ ≈, renvalcomp η η' v
 
-  renenvid : {Γ Δ : Cxt}(e : Env Γ Δ) → renenv renId e ≡ e
-  renenvid ε       = refl
-  renenvid (e , v) = cong₂ _,_ (renenvid e) (renvalid v)
+  renvalcomp : ∀{i Δ₁ Δ₂ Δ₃ a}(η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(v : Val ∞ Δ₃ a) →
+    Val∋ renval η (renval η' v) ≈⟨ i ⟩≈ renval (renComp η η') v
+  renvalcomp η η' (ne n)    = ≈ne (rennevcomp η η' n)
+  renvalcomp η η' (lam t ρ) = ≈lam (renenvcomp η η' ρ)
+  renvalcomp η η' (later p) = ≈later (∞renvalcomp η η' p)
 
-  rennevid : {Γ : Cxt} {σ : Ty} (n : NeVal Γ σ) → rennev renId n ≡ n
-  rennevid (var x)   = cong var (lookrid x)
-  rennevid (app n v) = cong₂ app (rennevid n) (renvalid v)
+  ∞renvalcomp : ∀{i Δ₁ Δ₂ Δ₃ a}
+                (η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(v : ∞Val ∞ Δ₃ a) →
+                ∞Val∋ ∞renval η (∞renval η' v) ≈⟨ i ⟩≈ ∞renval (renComp η η') v
+  ≈force (∞renvalcomp η η' v) = renvalcomp η η' (force v)
 
-mutual
-  renenvcomp : ∀ {Γ Δ₁ Δ₂ Δ₃} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (ρ : Env Δ₃ Γ) →
-           renenv η (renenv η' ρ) ≡ renenv (renComp η η') ρ
-  renenvcomp η η' ε       = refl
-  renenvcomp η η' (ρ , v) = cong₂ _,_ (renenvcomp η η' ρ) (renvalcomp η η' v)
+  rennevcomp : ∀{i Δ₁ Δ₂ Δ₃ a}
+    (η : Ren Δ₁ Δ₂)(η' : Ren Δ₂ Δ₃)(t : NeVal ∞ Δ₃ a) →
+    NeVal∋ rennev η (rennev η' t) ≈⟨ i ⟩≈ rennev (renComp η η') t
+  rennevcomp η η' (var x) rewrite lookrcomp η η' x = ≈var
+  rennevcomp η η' (app t u) = ≈app (rennevcomp η η' t) (renvalcomp η η' u)
 
-  renvalcomp : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (v : Val Δ₃ a) →
-           renval η (renval η' v) ≡ renval (renComp η η') v
-  renvalcomp η η' (ne t) = cong ne (rennevcomp η η' t)
-  renvalcomp η η' (lam t ρ) = cong (lam t) (renenvcomp η η' ρ)
-
-  rennevcomp : ∀ {Δ₁ Δ₂ Δ₃ a} (η : Ren Δ₁ Δ₂) (η' : Ren Δ₂ Δ₃) (t : NeVal Δ₃ a) →
-           rennev η (rennev η' t) ≡ rennev (renComp η η') t
-  rennevcomp η η' (var x)   = cong var (sym $ lookrcomp η η' x)
-  rennevcomp η η' (app t u) = cong₂ app (rennevcomp η η' t) (renvalcomp η η' u)
-
--- sub
+------------------------------------------------------------------------
+-- Substitution
+------------------------------------------------------------------------
 
 data Sub (Δ : Cxt) : (Γ : Cxt) → Set where
   ε   : Sub Δ ε
@@ -187,7 +289,7 @@ subId : ∀{Γ} → Sub Γ Γ
 subId {ε}     = ε
 subId {Γ , _} = lifts (subId {Γ})
 
-subComp : ∀{B Γ Δ} → Sub Δ Γ → Sub Γ B → Sub Δ B
+subComp : ∀{Φ Γ Δ} → Sub Δ Γ → Sub Γ Φ → Sub Δ Φ
 subComp xs ε        = ε
 subComp xs (ys , y) = subComp xs ys , sub xs y
 
@@ -196,29 +298,29 @@ lookswks : ∀{Γ Δ σ τ}(i : Var Γ σ)(xs : Sub Δ Γ) →
 lookswks zero    (xs , _) = refl
 lookswks (suc i) (xs , _) = lookswks i xs
 
-lemsr : ∀{B Γ Δ σ}(xs : Sub B Γ)(x : Tm B σ)(ys : Ren Γ Δ) →
+lemsr : ∀{Φ Γ Δ σ}(xs : Sub Φ Γ)(x : Tm Φ σ)(ys : Ren Γ Δ) →
         subComp (xs , x) (ren2sub (wkr ys)) ≡ subComp xs (ren2sub ys)
 lemsr xs x ε        = refl
 lemsr xs x (ys , y) = cong (λ zs → zs , looks xs y) (lemsr xs x ys)
 
-lookslookr : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Ren Γ B){σ}(x : Var B σ) →
+lookslookr : ∀{Φ Γ Δ}(f : Sub Δ Γ)(g : Ren Γ Φ){σ}(x : Var Φ σ) →
             looks (subComp f (ren2sub g)) x ≡ looks f (lookr g x)
 lookslookr f (g , _) zero    = refl
 lookslookr f (g , _) (suc x) = lookslookr f g x
 
-wksrcomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Ren Γ Δ) →
+wksrcomp : ∀{Φ Γ Δ σ}(xs : Sub Φ Γ)(ys : Ren Γ Δ) →
   subComp (wks {σ = σ} xs) (ren2sub ys) ≡ wks {σ = σ} (subComp xs (ren2sub ys))
 wksrcomp xs ε        = refl
 wksrcomp xs (ys , y) = cong₂ Sub._,_ (wksrcomp xs ys) (lookswks y xs)
 
-liftsrcomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Ren Γ Δ) →
+liftsrcomp : ∀{Φ Γ Δ σ}(xs : Sub Φ Γ)(ys : Ren Γ Δ) →
              subComp (lifts {σ = σ} xs) (ren2sub (liftr ys)) ≡ lifts {σ = σ} (subComp xs (ren2sub ys))
 liftsrcomp xs ys = begin
   subComp (wks xs , var zero) (ren2sub (wkr ys)) , var zero ≡⟨ cong (_, var zero) (lemsr (wks xs) (var zero) ys) ⟩
   subComp (wks xs) (ren2sub ys)                  , var zero ≡⟨ cong (_, var zero) (wksrcomp xs ys) ⟩
   wks (subComp xs (ren2sub ys))                  , var zero ∎
 
-subren : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Ren Γ B){σ}(t : Tm B σ) →
+subren : ∀{Φ Γ Δ}(f : Sub Δ Γ)(g : Ren Γ Φ){σ}(t : Tm Φ σ) →
          (sub f ∘ ren g) t ≡ sub (subComp f (ren2sub g)) t
 subren f g (var x)   = sym $ lookslookr f g x
 subren f g (abs t)   = begin
@@ -242,11 +344,11 @@ subid (var x)   = looksid x
 subid (abs t)   = cong abs (subid t)
 subid (app t u) = cong₂ app (subid t) (subid u)
 
-sidl : ∀{B Γ}(xs : Sub B Γ) → subComp subId xs ≡ xs
+sidl : ∀{Φ Γ}(xs : Sub Φ Γ) → subComp subId xs ≡ xs
 sidl ε        = refl
 sidl (xs , t) = cong₂ _,_ (sidl xs) (subid t)
 
-sidr2 : ∀{B Γ}(xs : Sub B Γ) → subComp xs (ren2sub renId) ≡ xs
+sidr2 : ∀{Φ Γ}(xs : Sub Φ Γ) → subComp xs (ren2sub renId) ≡ xs
 sidr2 {Γ = ε} ε            = refl
 sidr2 {Γ = Γ , a} (xs , x) = begin
   subComp (xs , x) (ren2sub (wkr renId)) , x ≡⟨ cong (_, x) (lemsr xs x renId) ⟩
@@ -261,7 +363,7 @@ liftSubRen {a = a} f t = begin
   sub (subComp (wks f) (ren2sub renId)) t ≡⟨ cong (λ f' → sub f' t) (sidr2 (wks f)) ⟩
   sub (wks f) t ∎
 
-lemss : ∀{B Γ Δ σ}(xs : Sub B Γ)(x : Tm B σ)(ys : Sub Γ Δ) →
+lemss : ∀{Φ Γ Δ σ}(xs : Sub Φ Γ)(x : Tm Φ σ)(ys : Sub Γ Δ) →
         subComp (xs , x) (wks ys) ≡ subComp xs ys
 lemss xs x ε        = refl
 lemss xs x (ys , y) = begin
@@ -295,7 +397,7 @@ ren2subren f (abs t)   = begin
   abs (sub (lifts (ren2sub f)) t) ∎
 ren2subren f (app t u) = cong₂ app (ren2subren f t) (ren2subren f u)
 
-wkrscomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Sub Γ Δ) →
+wkrscomp : ∀{Φ Γ Δ σ}(xs : Ren Φ Γ)(ys : Sub Γ Δ) →
   subComp (ren2sub (wkr {σ = σ} xs)) ys ≡ wks {σ = σ} (subComp (ren2sub xs) ys)
 wkrscomp xs ε        = refl
 wkrscomp xs (ys , y) = begin
@@ -306,19 +408,19 @@ wkrscomp xs (ys , y) = begin
   wks (subComp (ren2sub xs) ys) , ren (wkr renId) (ren xs y)               ≡⟨ cong (λ t → wks (subComp (ren2sub xs) ys) , ren (wkr renId) t) (ren2subren xs y)  ⟩
   wks (subComp (ren2sub xs) ys) , ren (wkr renId) (sub (ren2sub xs) y)     ∎
 
-liftrscomp : ∀{B Γ Δ σ}(xs : Ren B Γ)(ys : Sub Γ Δ) →
+liftrscomp : ∀{Φ Γ Δ σ}(xs : Ren Φ Γ)(ys : Sub Γ Δ) →
   subComp (ren2sub (liftr {σ = σ} xs)) (lifts ys) ≡ lifts {σ = σ} (subComp (ren2sub xs) ys)
 liftrscomp xs ys = begin
   (subComp (ren2sub (wkr xs) , var zero) (wks ys) , var zero) ≡⟨ cong (_, var zero) (lemss (ren2sub (wkr xs)) (var zero) ys) ⟩
   (subComp (ren2sub (wkr xs)) ys                  , var zero) ≡⟨ cong (_, var zero) (wkrscomp xs ys) ⟩
   (wks (subComp (ren2sub xs) ys)                  , var zero) ∎
 
-renlooks : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Sub Γ B){σ}(x : Var B σ) →
+renlooks : ∀{Φ Γ Δ}(f : Ren Δ Γ)(g : Sub Γ Φ){σ}(x : Var Φ σ) →
          (ren f ∘ looks g) x ≡ looks (subComp (ren2sub f) g) x
 renlooks f (_ , v) zero    = ren2subren f v
 renlooks f (g , _) (suc x) = renlooks f g x
 
-rensub : ∀{B Γ Δ}(f : Ren Δ Γ)(g : Sub Γ B){σ}(t : Tm B σ) →
+rensub : ∀{Φ Γ Δ}(f : Ren Δ Γ)(g : Sub Γ Φ){σ}(t : Tm Φ σ) →
          (ren f ∘ sub g) t ≡ sub (subComp (ren2sub f) g) t
 rensub f g (var x) = renlooks f g x
 rensub f g (abs t) = begin
@@ -327,7 +429,7 @@ rensub f g (abs t) = begin
   abs (sub (lifts (subComp (ren2sub f) g)) t)         ∎
 rensub f g (app t u) = cong₂ app (rensub f g t) (rensub f g u)
 
-lookscomp : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Sub Γ B){σ}(x : Var B σ) →
+lookscomp : ∀{Φ Γ Δ}(f : Sub Δ Γ)(g : Sub Γ Φ){σ}(x : Var Φ σ) →
             looks (subComp f g) x ≡ sub f (looks g x)
 lookscomp f (g , _) zero    = refl
 lookscomp f (g , _) (suc x) = lookscomp f g x
@@ -339,7 +441,7 @@ ren2subid {Γ , a} = begin
   (wks (ren2sub renId) , var zero) ≡⟨ cong (_, var zero) (sym $ ren2subwk renId) ⟩
   (ren2sub (wkr renId) , var zero) ∎
 
-wksscomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Sub Γ Δ) →
+wksscomp : ∀{Φ Γ Δ σ}(xs : Sub Φ Γ)(ys : Sub Γ Δ) →
   subComp (wks {σ = σ} xs) ys ≡ wks {σ = σ} (subComp xs ys)
 wksscomp xs ε        = refl
 wksscomp xs (ys , y) = begin
@@ -349,20 +451,20 @@ wksscomp xs (ys , y) = begin
   wks (subComp xs ys) , sub (subComp (ren2sub (wkr renId)) xs) y ≡⟨ cong (wks (subComp xs ys) ,_) (sym $ rensub (wkr renId) xs y) ⟩
   wks (subComp xs ys) , ren (wkr renId) (sub xs y)               ∎
 
-sidr : ∀{B Γ}(xs : Sub B Γ) → subComp xs subId ≡ xs
+sidr : ∀{Φ Γ}(xs : Sub Φ Γ) → subComp xs subId ≡ xs
 sidr xs = begin
   subComp xs subId           ≡⟨ cong (subComp xs) ren2subid ⟩
   subComp xs (ren2sub renId) ≡⟨ sidr2 xs ⟩
   xs                         ∎
 
-liftscomp : ∀{B Γ Δ σ}(xs : Sub B Γ)(ys : Sub Γ Δ) →
+liftscomp : ∀{Φ Γ Δ σ}(xs : Sub Φ Γ)(ys : Sub Γ Δ) →
   subComp (lifts {σ = σ} xs) (lifts ys) ≡ lifts {σ = σ} (subComp xs ys)
 liftscomp xs ys = begin
   subComp (wks xs , var zero) (wks ys) , var zero ≡⟨ cong (_, var zero) (lemss (wks xs) (var zero) ys) ⟩
   subComp (wks xs) ys                  , var zero ≡⟨ cong (_, var zero) (wksscomp xs ys) ⟩
   wks (subComp xs ys)                  , var zero ∎
 
-subcomp : ∀{B Γ Δ}(f : Sub Δ Γ)(g : Sub Γ B){σ}(t : Tm B σ) →
+subcomp : ∀{Φ Γ Δ}(f : Sub Δ Γ)(g : Sub Γ Φ){σ}(t : Tm Φ σ) →
           sub (subComp f g) t ≡ (sub f ∘ sub g) t
 subcomp f g (var x)   = lookscomp f g x
 subcomp f g (abs t)   = begin
@@ -383,3 +485,4 @@ mutual
              ren σ (embNf n) ≡ embNf (rennf σ n)
   renembNf (abs n) σ = cong abs (renembNf n (liftr σ))
   renembNf (ne n)  σ = renembNe n σ
+-- -}
