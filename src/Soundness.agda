@@ -9,41 +9,12 @@ open import EquationalTheory
 
 infix 8 _V∋_~_
 
-≡to≡βη : ∀{Γ a}{t t' : Tm Γ a} → t ≡ t' → t ≡βη t'
-≡to≡βη refl = refl≡ _
-
-ren≡βη : ∀{Γ a} {t : Tm Γ a}{t' : Tm Γ a} → t ≡βη t' → ∀{Δ}(σ : Ren Δ Γ) →
-        ren σ t ≡βη ren σ t'
-ren≡βη (var≡ x)     σ = var≡ (lookr σ x)
-ren≡βη (abs≡ p)     σ = abs≡ (ren≡βη p (liftr σ))
-ren≡βη (app≡ p q)   σ = app≡ (ren≡βη p σ) (ren≡βη q σ)
-ren≡βη (beta≡ {t = t}{u = u})        σ = trans≡ beta≡ $ ≡to≡βη $
-  trans (subren (subId , ren σ u) (liftr σ) t)
-        (trans (cong (λ xs → sub xs t)
-                     (cong₂ Sub._,_
-                            (trans (lemsr subId (ren σ u) σ)
-                            (trans (sidl (ren2sub σ)) (sym $ sidr (ren2sub σ))))
-                            (ren2subren σ u)))
-               (sym $ rensub σ (subId , u) t))
-ren≡βη (eta≡ t) σ = trans≡
-  (abs≡ (app≡ (≡to≡βη 
-    (trans (sym $ rencomp (liftr σ) (wkr renId) t)
-           (trans (cong (λ xs → ren xs t) 
-                        (trans (lemrr (wkr σ) zero renId) 
-                               (trans (ridr (wkr σ)) 
-                                      (trans (cong wkr (sym (lidr σ)))
-                                             (sym (wkrcomp renId σ))))))
-                  (rencomp (wkr renId) σ t))))
-    (refl≡ _)))
-  (eta≡ _)
-ren≡βη (refl≡ t)        σ = refl≡ _
-ren≡βη (sym≡ p)     σ = sym≡ (ren≡βη p σ)
-ren≡βη (trans≡ p q) σ = trans≡ (ren≡βη p σ) (ren≡βη q σ)
+-- Logical relation t ~ v  for  t ≡βη readback v
 
 _V∋_~_ : ∀{Γ}(a : Ty) (t : Tm Γ a) (v : Val ∞ Γ a) → Set
 _V∋_~_         ★       t u  =
   Delay₁ ∞ (λ n → t ≡βη (embNf n)) (readback u)
-_V∋_~_ {Γ = Γ} (a ⇒ b) t f       =
+_V∋_~_ {Γ = Γ} (a ⇒ b) t f =
   ∀{Δ}(ρ : Ren Δ Γ)(s : Tm Δ a)(u : Val ∞ Δ a)
    (s~u : a V∋ s ~ u) → b V∋ (app (ren ρ t) s) ~ (apply (renval ρ f) u)
 
@@ -60,7 +31,7 @@ mutual
   Dsubstβη : ∀{Γ a}{t t' : Tm Γ a}{v : Delay ∞ (Nf Γ a)} →
              Delay₁ ∞ (λ n → t ≡βη embNf n) v → t ≡βη t' →
              Delay₁ ∞ (λ n → t' ≡βη embNf n) v
-  Dsubstβη (now₁ p)   q = now₁ $ trans≡ (sym≡ q) p 
+  Dsubstβη (now₁ p)   q = now₁ $ trans≡ (sym≡ q) p
   Dsubstβη (later₁ x) q = later₁ (∞Dsubstβη x q)
 
   ∞Dsubstβη : ∀{Γ a} {t t' : Tm Γ a}{v : ∞Delay ∞ (Nf Γ a)} →
@@ -70,11 +41,11 @@ mutual
 
 V∋substβη : ∀{Γ} a {t t' : Tm Γ a}{v : Val ∞ Γ a} → a V∋ t ~ v → t ≡βη t' →
           a V∋ t' ~ v
-V∋substβη ★       p q = Dsubstβη p q  
+V∋substβη ★       p q = Dsubstβη p q
 V∋substβη (a ⇒ b) p q ρ s u s~u =
   V∋substβη b (p ρ s u s~u) (app≡ (ren≡βη q ρ) (refl≡ s))
 
-  
+
 V∋subst' : ∀{Γ} a {t  : Tm Γ a}{v v' :  Val ∞ Γ a} →
             Val∋ v ≈ v' → a V∋ t ~ v → a V∋ t ~ v'
 V∋subst' ★       p q = transD (λ n → _ ≡βη embNf n) (readback-cong _ p) q
@@ -100,7 +71,7 @@ renV∋ ★       {t}{u} p σ =
 renV∋ (a ⇒ b){t}{v} p σ ρ s u s~u = V∋subst'
   b
   (apply-cong (≈symVal (renvalcomp ρ σ v)) (≈reflVal u))
-  (V∋subst (p (renComp ρ σ) s u s~u) (cong (λ f → app f s) (rencomp ρ σ t)))  
+  (V∋subst (p (renComp ρ σ) s u s~u) (cong (λ f → app f s) (rencomp ρ σ t)))
 
 ren~E : ∀{Γ Δ}{σ : Sub Δ Γ}{ρ : Env ∞ Δ Γ} (σ~ρ : σ ~E ρ) →
         ∀{Δ'}(σ' : Ren Δ' Δ) → subComp (ren2sub σ') σ ~E renenv σ' ρ
@@ -130,24 +101,24 @@ fund : ∀{Γ a} (t : Tm Γ a) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env ∞ Δ Γ} (σ~ρ : σ ~E ρ) →
     a V∋ sub σ t ~ eval t ρ
 fund (var x)   p = fundvar x p
-fund {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p ρ' s u s~u = V∋substβη 
-  b 
-  (V∋step b (fund 
+fund {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p ρ' s u s~u = V∋substβη
+  b
+  (V∋step b (fund
     t
     {σ = subComp (ren2sub ρ') σ , s}
     {ρ = renenv ρ' ρ , u}
     (ren~E p ρ' , s~u)))
-  (trans≡ (≡to≡βη (trans 
-    (trans 
-      (cong 
-        (λ f → sub f t) 
-        (cong (_, s) 
+  (trans≡ (≡to≡βη (trans
+    (trans
+      (cong
+        (λ f → sub f t)
+        (cong (_, s)
               (trans (sym $ sidl (subComp (ren2sub ρ') σ))
                      (sym $ lemss subId s (subComp (ren2sub ρ') σ)))))
       (subcomp (subId , s) (lifts (subComp (ren2sub ρ') σ)) t))
     (cong (sub (subId , s))
-          (trans (cong (λ f → sub f t) (sym $ liftrscomp ρ' σ)) 
-                 (sym (rensub (liftr ρ') (lifts σ) t)))))) 
+          (trans (cong (λ f → sub f t) (sym $ liftrscomp ρ' σ))
+                 (sym (rensub (liftr ρ') (lifts σ) t))))))
           (sym≡ beta≡))
 
 fund (app t u) p =
@@ -214,7 +185,7 @@ mutual
         (rennen ρ)
         (λ {n} p → trans≡ (ren≡βη p ρ) (≡to≡βη (renembNe n ρ)))
         p) )
-    (reify a {s}{u} q) 
+    (reify a {s}{u} q)
 
 ~var : ∀{Γ a}(x : Var Γ a) → a V∋ var x ~ ne (var x)
 ~var x = reflect _ (now₁ (var≡ x))
