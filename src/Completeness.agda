@@ -1,3 +1,11 @@
+-- This module proves that normalization is complete for βη-equality.
+
+-- This means, if normalization for two βη-equal terms terminates,
+-- the normal forms are identical.
+
+-- Furthermore, normalization for one term terminates
+-- iff it terminates for the other term.
+
 module Completeness where
 
 open import Library
@@ -8,21 +16,31 @@ open import RenamingAndSubstitution
 open import Evaluation
 open import EquationalTheory
 
--- Values v and v' are related at type a.
+-- Logical relation: Values v and v' are related at type a.
+
 _V∋_≃_ : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
+
+-- Base type: readback for values are weakly bisimilar.
+
 ★       V∋ v ≃ v' = Delay _≡_ ∋ readback v ~ readback v'
+
+-- Function type: the usual Kripke function space.
+
 (a ⇒ b) V∋ f ≃ f' = ∀{Δ}(η : Ren Δ _)(u u' : Val ∞ Δ a)(u≃u' : a V∋ u ≃ u') →
   b V∋ (apply (renval η f) u) ≃ (apply (renval η f') u')
 
 VLR : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
 VLR a v v' = _V∋_≃_ a v v'
 
--- Environments ρ and ρ' are related.
+
+-- Environments ρ and ρ' are related if corresponding entries are related.
+
 ELR : ∀{Γ Δ} (ρ ρ' : Env ∞ Δ Γ) → Set
 ELR ε ε         = ⊤
 ELR (ρ , v) (ρ' , v') = ELR ρ ρ' × VLR _ v v'
 
--- subst by strong bisim
+-- The LRs are substitutive for strong bisimilarity on both sides.
+
 substVLR-l : ∀{Γ} a {v v' v'' : Val ∞ Γ a} →
              VLR a v v' →  Val∋ v'' ≈⟨ ∞ ⟩≈ v → VLR a v'' v'
 substVLR-l ★       p q = ~trans trans (≈→~ $ readback-cong ★ q) p
@@ -47,7 +65,8 @@ substELR-r {Δ = ε}  {ρ = ε}{ρ'' = ε} p q = _
 substELR-r {Δ = Δ , a} {ρ , v}{ ρ' , v'} {ρ'' , v''} (p , p') (q ≈, q') =
   substELR-r p q , substVLR-r _ p' q'
 
--- sym, trans and refl
+-- The logical relations are partial equivalence relations.
+
 symVLR : ∀{Γ} a {v v' : Val ∞ Γ a} → VLR a v v' → VLR a v' v
 symVLR ★       p = ~sym sym p
 symVLR (a ⇒ b) p η u u' u≃u' = symVLR b (p η u' u (symVLR a u≃u'))
@@ -73,7 +92,8 @@ transELR {ρ = ρ , v}{ρ' , v'} {ρ'' , v''} (p , q)  (p' , q') =
 reflELR : ∀{Γ Δ}{ρ ρ' : Env ∞ Δ Γ} → ELR ρ ρ' → ELR ρ ρ
 reflELR p = transELR p (symELR p)
 
--- Closure under renaming
+-- Closure under renaming.
+
 renVLR : ∀{Δ Δ′} a (η : Ren Δ′ Δ) {v v' : Val ∞ Δ a} (v≃v' : VLR a v v') →
          VLR a (renval η v) (renval η v')
 renVLR ★       η {n}{n'} p    = ~trans
@@ -94,13 +114,13 @@ renELR : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) {ρ ρ' : Env ∞ Δ Γ}
 renELR η {ε} {ε} ρ≃ρ' = _
 renELR η {ρ , v} {ρ' , v'} (ρ≃ρ' , v≃v') = (renELR η ρ≃ρ') , (renVLR _ η v≃v')
 
--- later-cong
+-- Congruent for later.
+
 laterVLR : ∀{Γ} a {v v' : ∞Val ∞ Γ a} → VLR a (∞Val.force v) (∞Val.force v') →
            VLR a (later v) (later v')
 laterVLR ★       p = ~later (~delay p)
 laterVLR (a ⇒ b) p η u u' u≃u' = laterVLR b (p η u u' u≃u')
 
--- later on the left cong
 laterVLR-l : ∀{Γ} a {v : ∞Val ∞ Γ a}{v' : Val ∞ Γ a} →
              VLR a (∞Val.force v) v' →
              VLR a (later v) v'
@@ -108,20 +128,25 @@ laterVLR-l ★ p = ~laterl p
 laterVLR-l (a ⇒ b) p η u u' u≃u' = laterVLR-l b (p η u u' u≃u')
 
 -- id extension for variables
+
 id-ext-var : ∀{Γ Δ a}(x : Var Δ a){ρ ρ' : Env ∞ Γ Δ} → ELR ρ ρ' →
              a V∋ lookup x ρ ≃ lookup x ρ'
 id-ext-var zero    {ρ , v}{ρ' , v'} (p , p') = p'
 id-ext-var (suc x) {ρ , v}{ρ' , v'} (p , p') = id-ext-var x p
 
 -- lookupR cong
+
 lookupR-cong : ∀{Γ Γ' Δ}(σ : Ren Γ Γ'){ρ ρ' : Env ∞ Δ Γ} → ELR ρ ρ' →
                ELR (lookupR σ ρ) (lookupR σ ρ')
 lookupR-cong ε       p = _
 lookupR-cong (σ , x) p = lookupR-cong σ p , id-ext-var x p
 
--- identity extension lemma
+-- Fundamental theorem for typing (identity extension lemma).
+
 id-ext : ∀{Γ Δ a}(t : Tm Δ a){ρ ρ' : Env ∞ Γ Δ} → ELR ρ ρ' →
+
          a V∋ eval t ρ ≃ eval t ρ'
+
 id-ext (var x)   p = id-ext-var x p
 id-ext (abs t)  {ρ}{ρ'} p η u u' u≃u' =
   laterVLR _ (id-ext t {renenv η ρ , u}{renenv η ρ' , u'}(renELR η p , u≃u'))
@@ -135,13 +160,19 @@ id-ext (app t u) p =
                                      (eval-cong u (≈reflEnv _))))
 
 -- pre-renaming lemma
+
 reneval' : ∀ {Γ Γ' Δ a}(t : Tm Γ a)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → ELR ρ ρ →
+
            VLR a (eval (ren σ t) ρ) (eval t (lookupR σ ρ))
+
 reneval' (var x)   σ ρ p = substVLR-l _ (id-ext-var x (lookupR-cong σ p)) (lookuplookr ρ σ x)
+
 reneval' (abs t)   σ ρ p η u u' q = laterVLR _ (transVLR _ (reneval' t (liftr σ) (renenv η ρ , u) (renELR η p , reflVLR _ q)) (id-ext t (substELR-l (substELR-l (renELR η (lookupR-cong σ p)) (≈symEnv (renlookupR η σ ρ)) ) (≈symEnv (lookupRwkr u σ (renenv η ρ)))  , q)) )
+
 reneval' (app t u) σ ρ p = substVLR-r _ (substVLR-l _ (reneval' t σ ρ p renId _ _ (reneval' u σ ρ p)) ( apply-cong (≈symVal (renvalid (eval (ren σ t) ρ))) (≈reflVal (eval (ren σ u) ρ)) )) (apply-cong (renvalid (eval t (lookupR σ ρ))) (≈reflVal (eval u (lookupR σ ρ))))
 
--- evaluationg a weakened sub
+-- Evaluating a weakened substitution.
+
 evalSwks : ∀{Γ Δ Δ′ a}(u : Val ∞ Δ′ a)(ρ : Env ∞ Δ′ Δ)(σ : Sub Δ Γ) →
            ELR ρ ρ → VLR a u u → ELR (evalS σ ρ) (evalS (wks σ) (ρ , u))
 evalSwks u ρ ε       p q = _
@@ -156,44 +187,57 @@ evalSwks' : ∀{Γ Δ Δ₁ Δ′ a}
 evalSwks' u η ρ ε p q = _
 evalSwks' u η ρ (σ , t) p q =  evalSwks' u η ρ σ p q , transVLR _ (substVLR-l _ (id-ext t (substELR-r (substELR-r (renELR η p) (≈symEnv (lookupRrenId (renenv η ρ)))) (lookupRwkr u renId (renenv η ρ)))) (reneval t ρ η)) (symVLR _ (reneval' t (wkr renId) (renenv η ρ , u) (renELR η p , q)))
 
--- evaluating the identity sub
+-- Evaluating the identity substitution.
+
 evalSsubId : ∀{Γ Δ}(ρ : Env ∞ Γ Δ) → ELR ρ ρ → ELR ρ (evalS subId ρ)
 evalSsubId ε       _       = _
 evalSsubId (ρ , v) (p , q) =
   transELR (evalSsubId ρ p) (evalSwks v ρ subId p q) , q
 
--- lookup and then eval is the same as eval and then lookup
+-- Lookup and then eval is the same as eval and then lookup.
+
 substitution-var : ∀{Γ Δ Δ′ a} (x : Var Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
   ELR ρ ρ → a V∋ (lookup x (evalS σ ρ)) ≃ eval (looks σ x) ρ
 substitution-var zero    (σ , t) ρ p = id-ext t p
 substitution-var (suc x) (σ , t) ρ p = substitution-var x σ ρ p
 
 
--- substitution lemma
+-- Substitution lemma
 
--- the reflexive equation for ρ could be reduced to knowing that after
+-- The reflexive equation for ρ could be reduced to knowing that after
 -- infinite delay the reading back the values in ρ will converge, or
 -- perhaps the substitution lemma should take two different related
 -- environments.
+
 substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ Δ′ Δ) →
+
   ELR ρ ρ →  a V∋ (eval t (evalS σ ρ)) ≃ eval (sub σ t) ρ
+
 substitution (var x) σ ρ p = substitution-var x σ ρ p
+
 substitution (abs t) σ ρ p η u u' u≃u' = laterVLR _ (transVLR _ (id-ext t (evalSwks' u' η ρ σ p (reflVLR _ (symVLR _ u≃u')) , u≃u')) (substitution t (lifts σ) (renenv η ρ , u') (renELR η p , reflVLR _ (symVLR _ u≃u'))))
+
 substitution (app t u) σ ρ p = substVLR-r _ (substVLR-l _ (substitution t σ ρ p renId _ _ (substitution u σ ρ p)) (apply-cong (≈symVal (renvalid (eval t (evalS σ ρ)))) (≈reflVal (eval u (evalS σ ρ))))) ((apply-cong (renvalid (eval (sub σ t) ρ))) (≈reflVal (eval (sub σ u) ρ)))
 
--- fundamental theorem of logical relations
+-- Fundamental theorem of logical relations for equality.
+
 fund : ∀{Γ Δ a}{t t' : Tm Δ a} → t ≡βη t' → {ρ ρ' : Env ∞ Γ Δ} → ELR ρ ρ' →
        a V∋ eval t ρ ≃ eval t' ρ'
+
 fund (var≡ x) q = id-ext-var x q
 fund (abs≡ p) q η u u' u≃u' = laterVLR _ (fund p (renELR η q , u≃u'))
 fund (app≡ {t = t}{t'}{u}{u'} p p') q = substVLR-r _ (substVLR-l _ (fund p q renId _ _ (fund p' q)) (apply-cong (≈symVal (renvalid (eval t _))) (≈reflVal (eval u _)))) (apply-cong (renvalid (eval t' _)) (≈reflVal (eval u' _)))
+
 fund (beta≡ {t = t}{u = u}){ρ}{ρ'} q = laterVLR-l _ (transVLR _ (id-ext t {ρ , eval u ρ}{ρ' , eval u ρ'} (q , id-ext u q)) (transVLR _ (id-ext t (evalSsubId ρ' (reflELR (symELR q)) , (id-ext u (reflELR (symELR q))))) (substitution t (subId , u) ρ' (reflELR (symELR q)))))
+
 fund (eta≡ t') {ρ}{ρ'} q η u u' u≃u' = laterVLR-l _ (substVLR-l _ (transVLR _ (reneval' t' (wkr renId) (renenv η ρ , u) ((renELR η (reflELR q)) , (reflVLR _ u≃u')) renId u u' u≃u') (substVLR-l _ (substVLR-l _ (substVLR-l _ (id-ext t' q η u' u' (reflVLR _ (symVLR _ u≃u'))) (apply-cong (≈symVal (reneval t' ρ η)) (≈reflVal u'))) (≈symVal (apply-cong (eval-cong t' (≈transEnv (≈symEnv (lookupRrenId (renenv η ρ))) (lookupRwkr u renId (renenv η ρ)))) (≈reflVal u')))) (apply-cong (renvalid (eval t' (lookupR (wkr renId) (renenv η ρ , u)))) (≈reflVal u')))) (≈symVal (apply-cong (renvalid (eval (ren (wkr renId) t') (renenv η ρ , u))) (≈reflVal u))) )
+
 fund (refl≡ t' refl) q = id-ext t' q
 fund (sym≡ p) q = symVLR _ (fund p (symELR q))
 fund (trans≡ p p') q = transVLR _ (fund p (reflELR q)) (fund p' q)
 
--- reify, reflect
+-- Reification and reflection.
+
 mutual
   reify : ∀{Γ} a {v v' : Val ∞ Γ a} →
           a V∋ v ≃ v' → Delay _≡_ ∋ readback v ~ readback v'
@@ -208,12 +252,14 @@ mutual
                                                 (~trans trans (map~ (rennen η) (rennen η) (λ _ _ → cong (rennen η)) p) (≈→~ (rennereadback η n'))))
                                                (reify a u≃u'))
 
--- the identity environment is related to itself
+-- The identity environment is related to itself.
+
 idecomp : ∀ Γ → ELR (ide Γ) (ide Γ)
 idecomp ε       = _
 idecomp (Γ , a) =
   renELR (wkr renId) (idecomp Γ) , reflect a (~now now⇓ now⇓ refl)
 
--- completeness theorem
+-- Completeness theorem.
+
 completeness : ∀ Γ a {t t' : Tm Γ a} → t ≡βη t' → Delay _≡_ ∋ nf t ~ nf t'
 completeness Γ a p = reify a (fund p (idecomp Γ))
