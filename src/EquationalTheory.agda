@@ -46,10 +46,11 @@ data _≡βη_ {Γ : Cxt} : ∀{σ} → Tm Γ σ → Tm Γ σ → Set where
 
   -- Equivalence rules.
 
-  refl≡  : ∀{a} (t : Tm Γ a) →
+  refl≡  : ∀{a} (t {t'} : Tm Γ a) →
 
+           t ≡ t' →
            -------
-           t ≡βη t
+           t ≡βη t'
 
   sym≡   : ∀{a}{t t' : Tm Γ a}
 
@@ -62,10 +63,6 @@ data _≡βη_ {Γ : Cxt} : ∀{σ} → Tm Γ σ → Tm Γ σ → Set where
            (t₁≡t₂ : t₁ ≡βη t₂) (t₂≡t₃ : t₂ ≡βη t₃) →
            ----------------------------------
            t₁ ≡βη t₃
-
-
-≡to≡βη : ∀{Γ a}{t t' : Tm Γ a} → t ≡ t' → t ≡βη t'
-≡to≡βη refl = refl≡ _
 
 --
 
@@ -87,7 +84,7 @@ ren≡βη : ∀{Γ a} {t : Tm Γ a}{t' : Tm Γ a} → t ≡βη t' → ∀{Δ}(
 ren≡βη (var≡ x)     ρ = var≡ (lookr ρ x)
 ren≡βη (abs≡ p)     ρ = abs≡ (ren≡βη p (liftr ρ))
 ren≡βη (app≡ p q)   ρ = app≡ (ren≡βη p ρ) (ren≡βη q ρ)
-ren≡βη (beta≡ {t = t}{u = u})        ρ = trans≡ beta≡ $ ≡to≡βη $
+ren≡βη (beta≡ {t = t}{u = u})        ρ = trans≡ beta≡ $ refl≡ _ $
   trans (subren (subId , ren ρ u) (liftr ρ) t)
         (trans (cong (λ xs → sub xs t)
                      (cong₂ Sub._,_
@@ -97,7 +94,7 @@ ren≡βη (beta≡ {t = t}{u = u})        ρ = trans≡ beta≡ $ ≡to≡βη 
                (sym $ rensub ρ (subId , u) t))
 ren≡βη (eta≡ {a} t) ρ rewrite ren-eta≡ t ρ =  eta≡ (ren ρ t)
 -- ren≡βη (eta≡ t) ρ = trans≡
---   (abs≡ (app≡ (≡to≡βη
+--   (abs≡ (app≡ (refl≡ _
 --     (trans (sym $ rencomp (liftr ρ) (wkr renId) t)
 --            (trans (cong (λ xs → ren xs t)
 --                         (trans (lemrr (wkr ρ) zero renId)
@@ -107,6 +104,6 @@ ren≡βη (eta≡ {a} t) ρ rewrite ren-eta≡ t ρ =  eta≡ (ren ρ t)
 --                   (rencomp (wkr renId) ρ t))))
 --     (refl≡ _)))
 --   (eta≡ _)
-ren≡βη (refl≡ t)        ρ = refl≡ _
+ren≡βη (refl≡ _ refl) ρ = refl≡ _ refl
 ren≡βη (sym≡ p)     ρ = sym≡ (ren≡βη p ρ)
 ren≡βη (trans≡ p q) ρ = trans≡ (ren≡βη p ρ) (ren≡βη q ρ)

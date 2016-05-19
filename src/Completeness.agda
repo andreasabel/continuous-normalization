@@ -11,7 +11,7 @@ open import EquationalTheory
 -- Values v and v' are related at type a.
 _V∋_≃_ : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
 ★       V∋ v ≃ v' = Delay _≡_ ∋ readback v ~ readback v'
-(a ⇒ b) V∋ f ≃ f' = ∀{Δ}(η : Ren Δ _)(u u' : Val ∞ Δ a)(u≃u' : a V∋ u ≃ u') → 
+(a ⇒ b) V∋ f ≃ f' = ∀{Δ}(η : Ren Δ _)(u u' : Val ∞ Δ a)(u≃u' : a V∋ u ≃ u') →
   b V∋ (apply (renval η f) u) ≃ (apply (renval η f') u')
 
 VLR : ∀{Γ}(a : Ty) (v v' : Val ∞ Γ a) → Set
@@ -32,19 +32,19 @@ substVLR-l (a ⇒ b) p q η u u' u≃u' =
 substVLR-r : ∀{Γ} a {v v' v'' : Val ∞ Γ a} →
              VLR a v v' →  Val∋ v' ≈⟨ ∞ ⟩≈ v'' → VLR a v v''
 substVLR-r ★       p q = ~trans trans p (≈→~ $ readback-cong ★ q)
-substVLR-r (a ⇒ b) p q η u u' u≃u' = 
+substVLR-r (a ⇒ b) p q η u u' u≃u' =
    substVLR-r b (p η u u' u≃u') (apply-cong (renval-cong η q) (≈reflVal u'))
 
 substELR-l : ∀{Γ Δ}{ρ ρ' ρ'' : Env ∞ Γ Δ} →
              ELR ρ ρ' →  Env∋ ρ'' ≈⟨ ∞ ⟩≈ ρ → ELR ρ'' ρ'
 substELR-l {Δ = ε}  {ρ' = ε}{ρ'' = ε} p q = _
-substELR-l {Δ = Δ , a} {ρ , v}{ ρ' , v'} {ρ'' , v''} (p , p') (q ≈, q') = 
+substELR-l {Δ = Δ , a} {ρ , v}{ ρ' , v'} {ρ'' , v''} (p , p') (q ≈, q') =
   substELR-l p q , substVLR-l _ p' q'
 
 substELR-r : ∀{Γ Δ}{ρ ρ' ρ'' : Env ∞ Γ Δ} →
              ELR ρ ρ' →  Env∋ ρ' ≈⟨ ∞ ⟩≈ ρ'' → ELR ρ ρ''
 substELR-r {Δ = ε}  {ρ = ε}{ρ'' = ε} p q = _
-substELR-r {Δ = Δ , a} {ρ , v}{ ρ' , v'} {ρ'' , v''} (p , p') (q ≈, q') = 
+substELR-r {Δ = Δ , a} {ρ , v}{ ρ' , v'} {ρ'' , v''} (p , p') (q ≈, q') =
   substELR-r p q , substVLR-r _ p' q'
 
 -- sym, trans and refl
@@ -114,7 +114,7 @@ id-ext-var zero    {ρ , v}{ρ' , v'} (p , p') = p'
 id-ext-var (suc x) {ρ , v}{ρ' , v'} (p , p') = id-ext-var x p
 
 -- lookupR cong
-lookupR-cong : ∀{Γ Γ' Δ}(σ : Ren Γ Γ'){ρ ρ' : Env ∞ Δ Γ} → ELR ρ ρ' → 
+lookupR-cong : ∀{Γ Γ' Δ}(σ : Ren Γ Γ'){ρ ρ' : Env ∞ Δ Γ} → ELR ρ ρ' →
                ELR (lookupR σ ρ) (lookupR σ ρ')
 lookupR-cong ε       p = _
 lookupR-cong (σ , x) p = lookupR-cong σ p , id-ext-var x p
@@ -135,7 +135,7 @@ id-ext (app t u) p =
                                      (eval-cong u (≈reflEnv _))))
 
 -- pre-renaming lemma
-reneval' : ∀ {Γ Γ' Δ a}(t : Tm Γ a)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → ELR ρ ρ → 
+reneval' : ∀ {Γ Γ' Δ a}(t : Tm Γ a)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → ELR ρ ρ →
            VLR a (eval (ren σ t) ρ) (eval t (lookupR σ ρ))
 reneval' (var x)   σ ρ p = substVLR-l _ (id-ext-var x (lookupR-cong σ p)) (lookuplookr ρ σ x)
 reneval' (abs t)   σ ρ p η u u' q = laterVLR _ (transVLR _ (reneval' t (liftr σ) (renenv η ρ , u) (renELR η p , reflVLR _ q)) (id-ext t (substELR-l (substELR-l (renELR η (lookupR-cong σ p)) (≈symEnv (renlookupR η σ ρ)) ) (≈symEnv (lookupRwkr u σ (renenv η ρ)))  , q)) )
@@ -154,7 +154,7 @@ evalSwks' : ∀{Γ Δ Δ₁ Δ′ a}
             ELR ρ ρ → VLR a u u →
             ELR (renenv η (evalS σ ρ)) (evalS (wks σ) (renenv η ρ , u))
 evalSwks' u η ρ ε p q = _
-evalSwks' u η ρ (σ , t) p q =  evalSwks' u η ρ σ p q , transVLR _ (substVLR-l _ (id-ext t (substELR-r (substELR-r (renELR η p) (≈symEnv (lookupRrenId (renenv η ρ)))) (lookupRwkr u renId (renenv η ρ)))) (reneval t ρ η)) (symVLR _ (reneval' t (wkr renId) (renenv η ρ , u) (renELR η p , q)))   
+evalSwks' u η ρ (σ , t) p q =  evalSwks' u η ρ σ p q , transVLR _ (substVLR-l _ (id-ext t (substELR-r (substELR-r (renELR η p) (≈symEnv (lookupRrenId (renenv η ρ)))) (lookupRwkr u renId (renenv η ρ)))) (reneval t ρ η)) (symVLR _ (reneval' t (wkr renId) (renenv η ρ , u) (renELR η p , q)))
 
 -- evaluating the identity sub
 evalSsubId : ∀{Γ Δ}(ρ : Env ∞ Γ Δ) → ELR ρ ρ → ELR ρ (evalS subId ρ)
@@ -179,7 +179,7 @@ substitution : ∀{Γ Δ Δ′ a} (t : Tm Γ a) (σ : Sub Δ Γ) (ρ : Env ∞ �
   ELR ρ ρ →  a V∋ (eval t (evalS σ ρ)) ≃ eval (sub σ t) ρ
 substitution (var x) σ ρ p = substitution-var x σ ρ p
 substitution (abs t) σ ρ p η u u' u≃u' = laterVLR _ (transVLR _ (id-ext t (evalSwks' u' η ρ σ p (reflVLR _ (symVLR _ u≃u')) , u≃u')) (substitution t (lifts σ) (renenv η ρ , u') (renELR η p , reflVLR _ (symVLR _ u≃u'))))
-substitution (app t u) σ ρ p = substVLR-r _ (substVLR-l _ (substitution t σ ρ p renId _ _ (substitution u σ ρ p)) (apply-cong (≈symVal (renvalid (eval t (evalS σ ρ)))) (≈reflVal (eval u (evalS σ ρ))))) ((apply-cong (renvalid (eval (sub σ t) ρ))) (≈reflVal (eval (sub σ u) ρ))) 
+substitution (app t u) σ ρ p = substVLR-r _ (substVLR-l _ (substitution t σ ρ p renId _ _ (substitution u σ ρ p)) (apply-cong (≈symVal (renvalid (eval t (evalS σ ρ)))) (≈reflVal (eval u (evalS σ ρ))))) ((apply-cong (renvalid (eval (sub σ t) ρ))) (≈reflVal (eval (sub σ u) ρ)))
 
 -- fundamental theorem of logical relations
 fund : ∀{Γ Δ a}{t t' : Tm Δ a} → t ≡βη t' → {ρ ρ' : Env ∞ Γ Δ} → ELR ρ ρ' →
@@ -189,7 +189,7 @@ fund (abs≡ p) q η u u' u≃u' = laterVLR _ (fund p (renELR η q , u≃u'))
 fund (app≡ {t = t}{t'}{u}{u'} p p') q = substVLR-r _ (substVLR-l _ (fund p q renId _ _ (fund p' q)) (apply-cong (≈symVal (renvalid (eval t _))) (≈reflVal (eval u _)))) (apply-cong (renvalid (eval t' _)) (≈reflVal (eval u' _)))
 fund (beta≡ {t = t}{u = u}){ρ}{ρ'} q = laterVLR-l _ (transVLR _ (id-ext t {ρ , eval u ρ}{ρ' , eval u ρ'} (q , id-ext u q)) (transVLR _ (id-ext t (evalSsubId ρ' (reflELR (symELR q)) , (id-ext u (reflELR (symELR q))))) (substitution t (subId , u) ρ' (reflELR (symELR q)))))
 fund (eta≡ t') {ρ}{ρ'} q η u u' u≃u' = laterVLR-l _ (substVLR-l _ (transVLR _ (reneval' t' (wkr renId) (renenv η ρ , u) ((renELR η (reflELR q)) , (reflVLR _ u≃u')) renId u u' u≃u') (substVLR-l _ (substVLR-l _ (substVLR-l _ (id-ext t' q η u' u' (reflVLR _ (symVLR _ u≃u'))) (apply-cong (≈symVal (reneval t' ρ η)) (≈reflVal u'))) (≈symVal (apply-cong (eval-cong t' (≈transEnv (≈symEnv (lookupRrenId (renenv η ρ))) (lookupRwkr u renId (renenv η ρ)))) (≈reflVal u')))) (apply-cong (renvalid (eval t' (lookupR (wkr renId) (renenv η ρ , u)))) (≈reflVal u')))) (≈symVal (apply-cong (renvalid (eval (ren (wkr renId) t') (renenv η ρ , u))) (≈reflVal u))) )
-fund (refl≡ t') q = id-ext t' q
+fund (refl≡ t' refl) q = id-ext t' q
 fund (sym≡ p) q = symVLR _ (fund p (symELR q))
 fund (trans≡ p p') q = transVLR _ (fund p (reflELR q)) (fund p' q)
 

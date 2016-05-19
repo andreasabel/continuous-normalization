@@ -43,7 +43,7 @@ V∋substβη : ∀{Γ} a {t t' : Tm Γ a}{v : Val ∞ Γ a} → a V∋ t ~ v �
           a V∋ t' ~ v
 V∋substβη ★       p q = Dsubstβη p q
 V∋substβη (a ⇒ b) p q ρ s u s~u =
-  V∋substβη b (p ρ s u s~u) (app≡ (ren≡βη q ρ) (refl≡ s))
+  V∋substβη b (p ρ s u s~u) (app≡ (ren≡βη q ρ) (refl≡ s refl))
 
 
 V∋subst' : ∀{Γ} a {t  : Tm Γ a}{v v' :  Val ∞ Γ a} →
@@ -66,7 +66,7 @@ renV∋ ★       {t}{u} p σ =
   (mapD    (λ n → t ≡βη embNf n)
            (λ n → ren σ t ≡βη embNf n)
            (rennf σ)
-           (λ {n} p -> trans≡ (ren≡βη p σ) (≡to≡βη (renembNf n σ)))
+           (λ {n} p -> trans≡ (ren≡βη p σ) (refl≡ _ (renembNf n σ)))
            p)
 renV∋ (a ⇒ b){t}{v} p σ ρ s u s~u = V∋subst'
   b
@@ -108,7 +108,7 @@ fund {a = a ⇒ b} (abs t){Δ} {σ}{ρ}   p ρ' s u s~u = V∋substβη
     {σ = subComp (ren2sub ρ') σ , s}
     {ρ = renenv ρ' ρ , u}
     (ren~E p ρ' , s~u)))
-  (trans≡ (≡to≡βη (trans
+  (trans≡ (refl≡ _ (trans
     (trans
       (cong
         (λ f → sub f t)
@@ -183,7 +183,7 @@ mutual
         (λ n → t ≡βη embNe n)
         (λ n → ren ρ t ≡βη embNe n)
         (rennen ρ)
-        (λ {n} p → trans≡ (ren≡βη p ρ) (≡to≡βη (renembNe n ρ)))
+        (λ {n} p → trans≡ (ren≡βη p ρ) (refl≡ _ (renembNe n ρ)))
         p) )
     (reify a {s}{u} q)
 
