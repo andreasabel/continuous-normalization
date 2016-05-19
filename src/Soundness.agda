@@ -1,3 +1,9 @@
+-- This module shows soundness of the evaluator without relying on
+-- Termination.
+
+-- We show that readback after evaluation gives, if it terminates, a
+-- normal form that is βη-equal to the term we started with.
+
 module Soundness where
 
 open import Library
@@ -9,34 +15,56 @@ open import EquationalTheory
 
 infix 8 _V∋_~_
 
+-- Conditional βη-equality between a term and a delayed normal form.
+-- Classically: If the nf terminates, it is equal to the term.
+
+_≡βη?_ : ∀{Γ a} (t : Tm Γ a) (n? : Delay ∞ (Nf Γ a)) → Set
+t ≡βη? n? = Delay₁ ∞ (λ n → t ≡βη (embNf n)) n?
+
+_≡βη?∞_ : ∀{Γ a} (t : Tm Γ a) (n∞ : ∞Delay ∞ (Nf Γ a)) → Set
+t ≡βη?∞ n∞ = ∞Delay₁ ∞ (λ n → t ≡βη (embNf n)) n∞
+
+_≡βη?ne_ : ∀{Γ a} (t : Tm Γ a) (n? : Delay ∞ (Ne Γ a)) → Set
+t ≡βη?ne n? = Delay₁ ∞ (λ n → t ≡βη (embNe n)) n?
+
 -- Logical relation t ~ v  for  t ≡βη readback v
 
 _V∋_~_ : ∀{Γ}(a : Ty) (t : Tm Γ a) (v : Val ∞ Γ a) → Set
+
+-- At base type: put it what we want to harvest.
 _V∋_~_         ★       t u  =
-  Delay₁ ∞ (λ n → t ≡βη (embNf n)) (readback u)
+
+  t ≡βη?  (readback u)
+
+-- Function type: the usual Krikpe function space.
 _V∋_~_ {Γ = Γ} (a ⇒ b) t f =
-  ∀{Δ}(ρ : Ren Δ Γ)(s : Tm Δ a)(u : Val ∞ Δ a)
+
+  ∀{Δ} (ρ : Ren Δ Γ) (s : Tm Δ a) (u : Val ∞ Δ a)
    (s~u : a V∋ s ~ u) → b V∋ (app (ren ρ t) s) ~ (apply (renval ρ f) u)
+
+-- Pointwise lifting of logical relation to substitutions and environments.
 
 _~E_ : ∀{Γ Δ} (σ : Sub Γ Δ) (ρ : Env ∞ Γ Δ) → Set
 ε       ~E ε       = ⊤
 (σ , t) ~E (ρ , v) = σ ~E ρ × _ V∋ t ~ v
 
+-- Trivial lemma: LR is closed under propositional equality of terms.
 
 V∋subst : ∀{Γ}{a : Ty}{t t' : Tm Γ a}{v : Val ∞ Γ a} → a V∋ t ~ v → t ≡ t' →
           a V∋ t' ~ v
 V∋subst p refl = p
 
+
 mutual
   Dsubstβη : ∀{Γ a}{t t' : Tm Γ a}{v : Delay ∞ (Nf Γ a)} →
-             Delay₁ ∞ (λ n → t ≡βη embNf n) v → t ≡βη t' →
-             Delay₁ ∞ (λ n → t' ≡βη embNf n) v
+             t ≡βη? v → t ≡βη t' →
+             t' ≡βη? v
   Dsubstβη (now₁ p)   q = now₁ $ trans≡ (sym≡ q) p
   Dsubstβη (later₁ x) q = later₁ (∞Dsubstβη x q)
 
   ∞Dsubstβη : ∀{Γ a} {t t' : Tm Γ a}{v : ∞Delay ∞ (Nf Γ a)} →
-             ∞Delay₁ ∞ (λ n → t ≡βη embNf n) v → t ≡βη t' →
-             ∞Delay₁ ∞ (λ n → t' ≡βη embNf n) v
+             t ≡βη?∞ v → t ≡βη t' →
+             t' ≡βη?∞ v
   force₁ (∞Dsubstβη p q) = Dsubstβη (force₁ p) q
 
 V∋substβη : ∀{Γ} a {t t' : Tm Γ a}{v : Val ∞ Γ a} → a V∋ t ~ v → t ≡βη t' →
@@ -79,7 +107,8 @@ ren~E {σ = ε}    {ε}     p σ' = _
 ren~E {σ = σ , s}{ρ , v} (p , p') σ' =
   ren~E p σ' , V∋subst (renV∋ _ p' σ') (ren2subren σ' s)
 
--- Fundamental theorem
+-- Lemmata for fundamental theorem
+
 fundvar : ∀{Γ a} (x : Var Γ a) →
   ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env ∞ Δ Γ} (σ~ρ : σ ~E ρ) →
   a V∋ looks σ x ~ lookup x ρ
@@ -96,6 +125,8 @@ fundapp {Γ}{a}{b}{t}{f} p {u}{v} q =
                     (apply-cong (renvalid f) (≈reflVal v))
                     (p renId u v q))
           (cong (λ t → app t u) (renid t))
+
+-- Fundamental theorem, proving soundness of evaluation.
 
 fund : ∀{Γ a} (t : Tm Γ a) →
     ∀ {Δ} {σ : Sub Δ Γ} {ρ : Env ∞ Δ Γ} (σ~ρ : σ ~E ρ) →
@@ -132,9 +163,9 @@ reflect-app : ∀{Γ a b}
         {s : Tm Γ a}
         {f : NeVal ∞ Γ (a ⇒ b)}
         {u : Val ∞ Γ a} →
-        Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback f) →
-        Delay₁ ∞ (λ n → s ≡βη embNf n) (readback u) →
-        Delay₁ ∞ (λ n → app t s ≡βη embNe n) (nereadback (app f u))
+        t ≡βη?ne (nereadback f) →
+        s ≡βη? (readback u) →
+        app t s ≡βη?ne (nereadback (app f u))
 reflect-app {t = t}{s}{f}{u} p q = mapD2
   (λ n → t ≡βη embNe n)
   (λ n → s ≡βη embNf n)
@@ -146,7 +177,7 @@ reflect-app {t = t}{s}{f}{u} p q = mapD2
 
 mutual
   reify : ∀{Γ} a {t : Tm Γ a}{v : Val ∞ Γ a} →
-          a V∋ t ~ v → Delay₁ ∞ (λ n → t ≡βη embNf n) (readback v)
+          a V∋ t ~ v → t ≡βη? (readback v)
   reify ★      {t}{u} p = p
   reify (a ⇒ b){t}       p = later₁
     (reify-eta
@@ -156,11 +187,9 @@ mutual
                 (ne (var zero))
                 (reflect a (now₁ (var≡ zero))))))
   reify-eta : ∀{Γ a b}{t : Tm Γ (a ⇒ b)}{v : Val ∞ Γ (a ⇒ b)} →
-             Delay₁
-               ∞
-               (λ n → app (ren (wkr renId) t) (var zero) ≡βη embNf n)
+             app (ren (wkr renId) t) (var zero) ≡βη?
                (readback (apply (renval (wkr renId) v) (ne (var zero)))) →
-             ∞Delay₁ ∞ (λ n → t ≡βη embNf n) (eta v ∞>>= (λ x' → now (abs x')))
+             t ≡βη?∞ (eta v ∞>>= (λ x' → now (abs x')))
   force₁ (reify-eta {a = a}{b}{t}{v} p) =
     mapD (λ n → app (ren (wkr renId) t) (var zero) ≡βη embNf n)
          (λ n → t ≡βη embNf n)
@@ -169,7 +198,7 @@ mutual
          p
 
   reflect : ∀{Γ} a {t : Tm Γ a}{u : NeVal ∞ Γ a} →
-            Delay₁ ∞ (λ n → t ≡βη embNe n) (nereadback u) → a V∋ t ~ (ne u)
+            t ≡βη?ne (nereadback u) → a V∋ t ~ (ne u)
   reflect ★       p         =
     mapD (λ n → _ ≡βη embNe n) (λ n → _ ≡βη embNf n) ne id p
   reflect (a ⇒ b){t}{f} p ρ s u q = reflect b  $ reflect-app
@@ -200,5 +229,5 @@ ide~E (Γ , a) =
   ,
   ~var zero
 
-soundness : ∀ Γ a (t : Tm Γ a) → Delay₁ ∞ (λ n → t ≡βη embNf n) (nf t)
+soundness : ∀ Γ a (t : Tm Γ a) → t ≡βη? nf t
 soundness Γ a t = reify a (V∋subst (fund t (ide~E Γ)) (subid t))
