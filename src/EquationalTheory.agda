@@ -64,7 +64,7 @@ data _≡βη_ {Γ : Cxt} : ∀{σ} → Tm Γ σ → Tm Γ σ → Set where
            ----------------------------------
            t₁ ≡βη t₃
 
---
+-- A calculation on renamings needed for renaming of eta≡.
 
 ren-eta≡ : ∀ {Γ Δ a b} (t : Tm Γ (a ⇒ b)) (ρ : Ren Δ Γ) →
         ren (wkr ρ , zero) (ren (wkr renId) t) ≡ ren (wkr {σ = a} renId) (ren ρ t)
@@ -81,10 +81,8 @@ ren-eta≡ t ρ = begin
 
 ren≡βη : ∀{Γ a} {t : Tm Γ a}{t' : Tm Γ a} → t ≡βη t' → ∀{Δ}(ρ : Ren Δ Γ) →
         ren ρ t ≡βη ren ρ t'
-ren≡βη (var≡ x)     ρ = var≡ (lookr ρ x)
-ren≡βη (abs≡ p)     ρ = abs≡ (ren≡βη p (liftr ρ))
-ren≡βη (app≡ p q)   ρ = app≡ (ren≡βη p ρ) (ren≡βη q ρ)
-ren≡βη (beta≡ {t = t}{u = u})        ρ = trans≡ beta≡ $ refl≡ _ $
+
+ren≡βη (beta≡ {t = t}{u = u}) ρ = trans≡ beta≡ $ refl≡ _ $
   trans (subren (subId , ren ρ u) (liftr ρ) t)
         (trans (cong (λ xs → sub xs t)
                      (cong₂ Sub._,_
@@ -92,7 +90,11 @@ ren≡βη (beta≡ {t = t}{u = u})        ρ = trans≡ beta≡ $ refl≡ _ $
                             (trans (sidl (ren2sub ρ)) (sym $ sidr (ren2sub ρ))))
                             (ren2subren ρ u)))
                (sym $ rensub ρ (subId , u) t))
-ren≡βη (eta≡ {a} t) ρ rewrite ren-eta≡ t ρ =  eta≡ (ren ρ t)
+  -- TODO: factor out reasoning about renamings and substitutions
+
+ren≡βη (eta≡ {a} t) ρ rewrite ren-eta≡ t ρ = eta≡ (ren ρ t)
+
+-- OLD:
 -- ren≡βη (eta≡ t) ρ = trans≡
 --   (abs≡ (app≡ (refl≡ _
 --     (trans (sym $ rencomp (liftr ρ) (wkr renId) t)
@@ -104,6 +106,11 @@ ren≡βη (eta≡ {a} t) ρ rewrite ren-eta≡ t ρ =  eta≡ (ren ρ t)
 --                   (rencomp (wkr renId) ρ t))))
 --     (refl≡ _)))
 --   (eta≡ _)
+
+ren≡βη (var≡ x)       ρ = var≡ (lookr ρ x)
+ren≡βη (abs≡ p)       ρ = abs≡ (ren≡βη p (liftr ρ))
+ren≡βη (app≡ p q)     ρ = app≡ (ren≡βη p ρ) (ren≡βη q ρ)
+
 ren≡βη (refl≡ _ refl) ρ = refl≡ _ refl
-ren≡βη (sym≡ p)     ρ = sym≡ (ren≡βη p ρ)
-ren≡βη (trans≡ p q) ρ = trans≡ (ren≡βη p ρ) (ren≡βη q ρ)
+ren≡βη (sym≡ p)       ρ = sym≡ (ren≡βη p ρ)
+ren≡βη (trans≡ p q)   ρ = trans≡ (ren≡βη p ρ) (ren≡βη q ρ)
