@@ -98,12 +98,12 @@ mutual
     ≈var : ∀{a}{x : Var Δ a} → NeVal∋ var x ≈ var x
     ≈app : ∀{a b}{n n' : NeVal ∞ Δ (a ⇒ b)} → NeVal∋ n ≈⟨ i ⟩≈ n' →
            {v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → NeVal∋ app n v ≈ app n' v'
- 
+
   data Env∋_≈_ {i}{Δ} : ∀{Γ} → Env ∞ Δ Γ → Env ∞ Δ Γ → Set where
     ≈ε : Env∋ ε ≈ ε
     _≈,_ : ∀{Γ a}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
            {v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → Env∋ (ρ , v) ≈ (ρ' , v')
-    
+
   data Val∋_≈_ {i}{Δ} : {a : Ty}(a? b? : Val ∞ Δ a) → Set where
     ≈lam : ∀{Γ a b}{t : Tm (Γ , a) b}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
            Val∋ lam t ρ ≈ lam t ρ'
@@ -127,7 +127,7 @@ mutual
   ≈reflVal (later v∞) = ≈later (∞≈reflVal v∞)
 
   ∞≈reflVal : ∀{i}{Δ}{a}(v : ∞Val ∞ Δ a) → ∞Val∋ v ≈⟨ i ⟩≈ v
-  ≈force (∞≈reflVal v) = ≈reflVal (force v) 
+  ≈force (∞≈reflVal v) = ≈reflVal (force v)
 
   ≈reflNeVal : ∀{i}{Δ}{a}(v : NeVal ∞ Δ a) → NeVal∋ v ≈⟨ i ⟩≈ v
   ≈reflNeVal (var x) = ≈var
@@ -138,13 +138,13 @@ mutual
   ≈reflEnv (e , v) = ≈reflEnv e ≈, ≈reflVal v
 
 mutual
-  ≈symVal : ∀{i}{Δ}{a}{v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → 
+  ≈symVal : ∀{i}{Δ}{a}{v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' →
             Val∋ v' ≈⟨ i ⟩≈ v
   ≈symVal (≈lam p) = ≈lam (≈symEnv p )
   ≈symVal (≈ne p)  = ≈ne (≈symNeVal p)
   ≈symVal (≈later p) = ≈later (∞≈symVal p)
 
-  ∞≈symVal : ∀{i}{Δ}{a}{v v' : ∞Val ∞ Δ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' → 
+  ∞≈symVal : ∀{i}{Δ}{a}{v v' : ∞Val ∞ Δ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' →
              ∞Val∋ v' ≈⟨ i ⟩≈ v
   ≈force (∞≈symVal p) = ≈symVal (≈force p)
 
@@ -152,31 +152,31 @@ mutual
               NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v
   ≈symNeVal ≈var       = ≈var
   ≈symNeVal (≈app p q) = ≈app (≈symNeVal p) (≈symVal q)
-  
+
   ≈symEnv : ∀{i}{Δ}{Γ}{e e' : Env ∞ Δ Γ} →
              Env∋ e ≈⟨ i ⟩≈ e' → Env∋ e' ≈⟨ i ⟩≈ e
   ≈symEnv ≈ε       = ≈ε
   ≈symEnv (p ≈, q) = ≈symEnv p ≈, ≈symVal q
 
 mutual
-  ≈transVal : ∀{i}{Δ}{a}{v v' v'' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → 
+  ≈transVal : ∀{i}{Δ}{a}{v v' v'' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' →
             Val∋ v' ≈⟨ i ⟩≈ v'' → Val∋ v ≈⟨ i ⟩≈ v''
   ≈transVal (≈lam p)   (≈lam p')   = ≈lam (≈transEnv p p')
   ≈transVal (≈ne p)    (≈ne p')    = ≈ne (≈transNeVal p p')
-  ≈transVal (≈later p) (≈later p') = ≈later (∞≈transVal p p')            
+  ≈transVal (≈later p) (≈later p') = ≈later (∞≈transVal p p')
 
-  ∞≈transVal : ∀{i}{Δ}{a}{v v' v'' : ∞Val ∞ Δ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' → 
+  ∞≈transVal : ∀{i}{Δ}{a}{v v' v'' : ∞Val ∞ Δ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' →
               ∞Val∋ v' ≈⟨ i ⟩≈ v'' → ∞Val∋ v ≈⟨ i ⟩≈ v''
   ≈force (∞≈transVal p q) = ≈transVal (≈force p) (≈force q)
 
   ≈transNeVal : ∀{i}{Δ}{a}{v v' v'' : NeVal ∞ Δ a} →
-              NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v'' → 
+              NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v'' →
               NeVal∋ v ≈⟨ i ⟩≈ v''
   ≈transNeVal ≈var       ≈var        = ≈var
   ≈transNeVal (≈app p q) (≈app p' q') =
     ≈app (≈transNeVal p p' ) (≈transVal q q')
-  
-  ≈transEnv : ∀{i}{Δ}{a}{v v' v'' : Env ∞ Δ a} → Env∋ v ≈⟨ i ⟩≈ v' → 
+
+  ≈transEnv : ∀{i}{Δ}{a}{v v' v'' : Env ∞ Δ a} → Env∋ v ≈⟨ i ⟩≈ v' →
     Env∋ v' ≈⟨ i ⟩≈ v'' → Env∋ v ≈⟨ i ⟩≈ v''
   ≈transEnv ≈ε       ≈ε         = ≈ε
   ≈transEnv (p ≈, q) (p' ≈, q') = (≈transEnv p p') ≈, ≈transVal q q'
@@ -196,5 +196,3 @@ module ≈Val-Reasoning {i : Size}{Δ : Cxt}{a : Ty} where
   open Pre (Setoid.preorder (≈Valsetoid i Δ a)) public
     renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_;
               begin_ to proof_)
-
-

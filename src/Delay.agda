@@ -35,7 +35,7 @@ force never = later never
 module Bind where
 
   infixl 10 _>>=_  _∞>>=_
-  
+
   mutual
     _>>=_ : ∀ {i A B} → Delay i A → (A → Delay i B) → Delay i B
     now   x >>= f = f x
@@ -127,13 +127,13 @@ mutual
 
 mutual
   ≈sym' : ∀ {i A} {a? b? : Delay ∞ A}{R : A → A → Set} →
-          (∀ {a a'} → R a a' → R a' a) → 
+          (∀ {a a'} → R a a' → R a' a) →
           Delay R ∋ a? ≈⟨ i ⟩≈ b? → Delay R ∋ b? ≈⟨ i ⟩≈ a?
   ≈sym' p (≈now a a' q) = ≈now a' a (p q)
   ≈sym' p (≈later q) = ≈later (∞≈sym' p q)
 
   ∞≈sym' : ∀ {i A} {a? b? : ∞Delay ∞ A}{R : A → A → Set} →
-           (∀ {a a'} → R a a' → R a' a) → 
+           (∀ {a a'} → R a a' → R a' a) →
            ∞Delay R ∋ a? ≈⟨ i ⟩≈ b? → ∞Delay R ∋ b? ≈⟨ i ⟩≈ a?
   ≈force (∞≈sym' p q) = ≈sym' p (≈force q)
 
@@ -242,13 +242,13 @@ mutual -- why don't I need size i here?
   ≈force (∞bind-now m) = bind-now (force m)
 
 mutual
-  bind-assoc' : ∀{i A B C}(m : Delay ∞ A){R : C → C → Set} → (∀ {c} → R c c) → 
+  bind-assoc' : ∀{i A B C}(m : Delay ∞ A){R : C → C → Set} → (∀ {c} → R c c) →
                {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
                Delay R ∋ ((m >>= k) >>= l) ≈⟨ i ⟩≈ (m >>= λ a → k a >>= l)
   bind-assoc' (now a)    p = ≈refl p _
   bind-assoc' (later a∞) p = ≈later (∞bind-assoc' a∞ p)
 
-  ∞bind-assoc' : ∀{i A B C}(a∞ : ∞Delay ∞ A){R : C → C → Set} → (∀ {c} → R c c) → 
+  ∞bind-assoc' : ∀{i A B C}(a∞ : ∞Delay ∞ A){R : C → C → Set} → (∀ {c} → R c c) →
                 {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
                 ∞Delay R ∋ ((a∞ ∞>>= λ a → k a) ∞>>= l) ≈⟨ i ⟩≈ (a∞ ∞>>= λ a → k a >>= l)
   ≈force (∞bind-assoc' a∞ p) = bind-assoc' (force a∞) p
@@ -258,7 +258,7 @@ bind-assoc : ∀{i A B C}(m : Delay ∞ A)
                Delay _≡_ ∋ ((m >>= k) >>= l) ≈⟨ i ⟩≈ (m >>= λ a → k a >>= l)
 bind-assoc m = bind-assoc' m {R = _≡_} refl
 
-∞bind-assoc : ∀{i A B C}(a∞ : ∞Delay ∞ A) → 
+∞bind-assoc : ∀{i A B C}(a∞ : ∞Delay ∞ A) →
                {k : A → Delay ∞ B}{l : B → Delay ∞ C} →
                ((a∞ ∞>>= λ a → k a) ∞>>= l) ∞≈⟨ i ⟩≈ (a∞ ∞>>= λ a → k a >>= l)
 ∞bind-assoc a∞ = ∞bind-assoc' a∞ refl
@@ -474,7 +474,7 @@ mutual
 lifta2lem1 : ∀{A B C D}
              (f : A → B → C)(g : C → D)(a : Delay ∞ A)(b : Delay ∞ B) →
              (g <$> (f <$> a <*> b)) ≈ ((λ a b → g (f a b)) <$> a <*> b)
-lifta2lem1 f g a b = proof 
+lifta2lem1 f g a b = proof
   (((a >>= now ∘ f) >>= (λ f' → b >>= now ∘ f')) >>= now ∘ g)
   ≈⟨ bind-assoc (a >>= now ∘ f) ⟩
   ((a >>= now ∘ f) >>= (λ f → (b >>= now ∘ f) >>= now ∘ g))
@@ -484,7 +484,7 @@ lifta2lem1 f g a b = proof
   (a >>= (λ x' → b >>= λ a' → now (g (f x' a'))))
   ≈⟨ ≈sym (bind-assoc a) ⟩
   ((a >>= (λ x' → now (g ∘ f x'))) >>= (λ f' → b >>= now ∘ f'))
-  ∎ 
+  ∎
  where open ≈-Reasoning
 
 lifta2lem2 : ∀{A A' B B' C : Set}
@@ -492,7 +492,7 @@ lifta2lem2 : ∀{A A' B B' C : Set}
              (a : Delay ∞ A')(b : Delay ∞ B') →
              ((λ a' b' → f (g a') (h b')) <$> a <*> b) ≈
              (f <$> (g <$> a) <*> (h <$> b))
-lifta2lem2 f g h a b = proof 
+lifta2lem2 f g h a b = proof
   ((a >>= (λ x' → now (λ b' → f (g x') (h b')))) >>= (λ f' → b >>= (now ∘ f')))
   ≈⟨ bind-assoc a ⟩
   (a >>= (λ x' → b >>= λ x → now (f (g x') (h x))))

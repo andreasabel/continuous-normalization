@@ -12,7 +12,7 @@ V⟦ a ⇒ b ⟧ f = ∀{Δ}(ρ : Ren Δ _)(u : Val ∞ Δ a)
     (u⇓ : V⟦ a ⟧ u) → V⟦ b ⟧ (apply (renval ρ f) u)
 
 substV⟦⟧ : ∀{Γ} a {v v' : Val ∞ Γ a} → Val∋ v ≈ v' → V⟦ a ⟧ v → V⟦ a ⟧ v'
-substV⟦⟧ ★       p (n , q) = _ , subst≈⇓ q (readback-cong _ p) 
+substV⟦⟧ ★       p (n , q) = _ , subst≈⇓ q (readback-cong _ p)
 substV⟦⟧ (a ⇒ b) p q       ρ u u⇓ =
   substV⟦⟧ b (apply-cong (renval-cong ρ p) (≈reflVal u)) (q ρ u u⇓)
 
@@ -36,7 +36,7 @@ renV⟦⟧ : ∀{Δ Δ′} a (η : Ren Δ′ Δ)(v : Val ∞ Δ a)(⟦v⟧ : V�
          V⟦ a ⟧ (renval η v)
 renV⟦⟧ (a ⇒ b) η v ih ρ u u⇓ =
   substV⟦⟧ b (apply-cong (≈symVal (renvalcomp ρ η v)) (≈reflVal u))
-             (ih (renComp ρ η) u u⇓) 
+             (ih (renComp ρ η) u u⇓)
 renV⟦⟧ ★       η t (n , p) = rennf η n , rennfreadback⇓ η t p
 
 renE⟦⟧ : ∀{Γ Δ Δ′} (η : Ren Δ′ Δ) (ρ : Env ∞ Δ Γ) (θ : E⟦ Γ ⟧ ρ) →
@@ -95,4 +95,3 @@ var↑ x = reflect _ (var x) (var x , now⇓)
 
 normalize : ∀ Γ a (t : Tm Γ a) → ∃ λ n → nf t ⇓ n
 normalize Γ a t = reify a (eval t (ide Γ)) (term t (ide Γ) (⟦ide⟧ Γ))
-

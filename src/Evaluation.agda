@@ -46,8 +46,8 @@ mutual
   force (beta t ρ v) = eval t (ρ , v)
 
 -- apply-cong
-mutual 
-  eval-cong : ∀{i Γ Δ a}(t : Tm Γ a){ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' → 
+mutual
+  eval-cong : ∀{i Γ Δ a}(t : Tm Γ a){ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
          Val∋ eval t ρ ≈⟨ i ⟩≈ eval t ρ'
   eval-cong (var zero)    (p ≈, q) = q
   eval-cong (var (suc x)) (p ≈, q) = eval-cong (var x) p
@@ -55,22 +55,22 @@ mutual
   eval-cong (app t u) p = apply-cong (eval-cong t p) (eval-cong u p)
 
   apply-cong : ∀ {i Δ a b}{f f' : Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
-               Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' → 
+               Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' →
                Val∋ apply f v ≈⟨ i ⟩≈ apply f' v'
   apply-cong (≈lam p)    q = ≈later (beta-cong _ p q)
   apply-cong (≈ne p)     q = ≈ne (≈app p q)
-  apply-cong (≈later p) q = ≈later (∞apply-cong p q)             
+  apply-cong (≈later p) q = ≈later (∞apply-cong p q)
 
   ∞apply-cong : ∀ {i Δ a b}{f f' : ∞Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
-               ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' → 
+               ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' →
                ∞Val∋ ∞apply f v ≈⟨ i ⟩≈ ∞apply f' v'
   ≈force (∞apply-cong p q) = apply-cong (≈force p) q
 
   beta-cong : ∀ {i Γ a b} (t : Tm (Γ , a) b)
-    {Δ : Cxt}{ρ ρ' : Env ∞ Δ Γ}{v v' : Val ∞ Δ a} → 
+    {Δ : Cxt}{ρ ρ' : Env ∞ Δ Γ}{v v' : Val ∞ Δ a} →
     Env∋ ρ ≈⟨ i ⟩≈ ρ' → Val∋ v ≈⟨ i ⟩≈ v' →
     ∞Val∋ beta t ρ v ≈⟨ i ⟩≈ beta t ρ' v'
-  ≈force (beta-cong t p q) = eval-cong t (p ≈, q) 
+  ≈force (beta-cong t p q) = eval-cong t (p ≈, q)
 
 mutual
   reneval : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env ∞ Δ Γ) (η : Ren Δ′ Δ) →
@@ -130,16 +130,16 @@ mutual
   ∞readback-cong : ∀{i Γ} a {v v' : ∞Val ∞ Γ a} → ∞Val∋ v ≈⟨ i ⟩≈ v' →
                   ∞readback v ∞≈⟨ i ⟩≈ ∞readback v'
   ≈force (∞readback-cong a p) = readback-cong a (≈force p)
-  
+
   nereadback-cong : ∀{i Γ} a {n n' : NeVal ∞ Γ a} → NeVal∋ n ≈⟨ i ⟩≈ n' →
                   nereadback n ≈⟨ i ⟩≈ nereadback n'
   nereadback-cong a ≈var       = ≈now _ _ refl
   nereadback-cong a (≈app p q) =
-    *-cong (map-cong app (nereadback-cong _ p)) (readback-cong _ q) 
+    *-cong (map-cong app (nereadback-cong _ p)) (readback-cong _ q)
 
   eta-cong : ∀{i Γ a b}{v v' : Val ∞ Γ (a ⇒ b)} →
              Val∋ v ≈⟨ i ⟩≈ v' → eta v ∞≈⟨ i ⟩≈ eta v'
-  ≈force (eta-cong p) = 
+  ≈force (eta-cong p) =
     readback-cong _ (apply-cong (renval-cong (wkr renId) p) (≈ne ≈var))
 
 -- these proofs could surely be shortened, readback-cong would help
@@ -195,7 +195,7 @@ mutual
   ∞renreadback   : ∀{i Γ Δ} a (η : Ren Δ Γ)(v : ∞Val ∞ Γ a) →
                 (rennf η ∞<$> ∞readback v) ∞≈⟨ i ⟩≈ (∞readback (∞renval η v))
   ≈force (∞renreadback a η v) = renreadback a η (force v)
-  
+
   reneta  : ∀{i Γ Δ a b} (η : Ren Δ Γ)(v : Val ∞ Γ (a ⇒ b)) →
           (rennf (liftr η) ∞<$> eta v) ∞≈⟨ i ⟩≈ (eta (renval η v))
   ≈force (reneta η f) = proof
@@ -238,30 +238,29 @@ evalS (σ , v) ρ = evalS σ ρ , eval v ρ
 renevalS : ∀ {i Γ Γ' Δ Δ′} (σ : Sub Γ Γ') (ρ : Env ∞ Δ Γ) (η : Ren Δ′ Δ) →
     Env∋ (renenv η $ evalS σ ρ) ≈⟨ i ⟩≈ (evalS σ $ renenv η ρ)
 renevalS ε       ρ η = ≈ε
-renevalS (σ , t) ρ η = renevalS σ ρ η ≈, reneval t ρ η 
+renevalS (σ , t) ρ η = renevalS σ ρ η ≈, reneval t ρ η
 
 lookupR : ∀{Γ Γ' Δ}(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → Env ∞ Δ Γ
 lookupR ε       ρ = ε
 lookupR (σ , x) ρ = lookupR σ ρ , lookup x ρ
 
-renlookupR : ∀{Γ Γ' Δ Δ'}(η : Ren Δ' Δ)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → 
+renlookupR : ∀{Γ Γ' Δ Δ'}(η : Ren Δ' Δ)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') →
              Env∋ renenv η (lookupR σ ρ) ≈⟨ ∞ ⟩≈ lookupR σ (renenv η ρ)
 renlookupR η ε       ρ = ≈ε
-renlookupR η (σ , x) ρ = renlookupR η σ ρ ≈, lookup≤ x ρ η  
+renlookupR η (σ , x) ρ = renlookupR η σ ρ ≈, lookup≤ x ρ η
 
-lookupRwkr : ∀{Γ Γ' Δ a}(u : Val ∞ Δ a)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') → 
+lookupRwkr : ∀{Γ Γ' Δ a}(u : Val ∞ Δ a)(σ : Ren Γ' Γ)(ρ : Env ∞ Δ Γ') →
       Env∋  lookupR σ ρ ≈⟨ ∞ ⟩≈ lookupR (wkr σ) (ρ , u)
 lookupRwkr u ε       ρ = ≈ε
 lookupRwkr u (σ , x) ρ = (lookupRwkr u σ ρ) ≈, ≈reflVal (lookup x ρ)
 
-lookupRrenId : ∀{Γ Δ}(ρ : Env ∞ Δ Γ) → 
+lookupRrenId : ∀{Γ Δ}(ρ : Env ∞ Δ Γ) →
       Env∋  lookupR renId ρ ≈⟨ ∞ ⟩≈ ρ
 lookupRrenId ε       = ≈ε
-lookupRrenId (ρ , v) = 
+lookupRrenId (ρ , v) =
   ≈transEnv (≈symEnv (lookupRwkr v renId ρ)) (lookupRrenId ρ) ≈, ≈reflVal v
 
-lookuplookr : ∀{Γ Γ' Δ a}(ρ : Env ∞ Δ Γ')(σ : Ren Γ' Γ)(x : Var Γ a) → 
+lookuplookr : ∀{Γ Γ' Δ a}(ρ : Env ∞ Δ Γ')(σ : Ren Γ' Γ)(x : Var Γ a) →
               Val∋ lookup (lookr σ x) ρ ≈⟨ ∞ ⟩≈ lookup x (lookupR σ ρ)
 lookuplookr ρ (σ , y) zero    = ≈reflVal (lookup y ρ)
 lookuplookr ρ (σ , y) (suc x) = lookuplookr ρ σ x
-
