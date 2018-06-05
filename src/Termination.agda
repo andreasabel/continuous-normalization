@@ -51,11 +51,11 @@ E⟦ Γ , a ⟧ (ρ , v) = E⟦ Γ ⟧ ρ × V⟦ a ⟧ v
 -- Convergence of readback is closed under renaming.
 
 rennereadback⇓ : ∀{Γ Δ a}(η : Ren Δ Γ)(t : NeVal ∞ Γ a){n : Ne Γ a} →
-              nereadback t ⇓ n → nereadback (rennev η t) ⇓ rennen η n
+                 nereadback t ⇓ n → nereadback (rennev η t) ⇓ rennen η n
 rennereadback⇓ η t {n} p = subst≈⇓ (map⇓ (rennen η) p) (rennereadback η t)
 
 rennfreadback⇓ : ∀{Γ Δ a}(η : Ren Δ Γ)(t : Val ∞ Γ a){n : Nf Γ a} →
-              readback t ⇓ n → readback (renval η t) ⇓ rennf η n
+                 readback t ⇓ n → readback (renval η t) ⇓ rennf η n
 rennfreadback⇓ η t {n} p = subst≈⇓ (map⇓ (rennf η) p) (renreadback _ η t)
 
 -- Termination semantics is closed under renaming.
@@ -75,18 +75,18 @@ renE⟦⟧ η (ρ , v) (θ , ⟦v⟧) = renE⟦⟧ η ρ θ , renV⟦⟧ _ η v 
 -- Lemmata for the fundamental theorem.
 
 ⟦var⟧ : ∀{Δ Γ a} (x : Var Γ a) (ρ : Env ∞ Δ Γ) (θ : E⟦ Γ ⟧ ρ) →
-            V⟦ a ⟧ (lookup x ρ)
+        V⟦ a ⟧ (lookup x ρ)
 ⟦var⟧ zero   (_ , v) (_ , v⇓) = v⇓
 ⟦var⟧(suc x) (ρ , _) (θ , _ ) = ⟦var⟧ x ρ θ
 
 ⟦abs⟧ : ∀ {Δ Γ a b} (t : Tm (Γ , a) b) (ρ : Env ∞ Δ Γ) (θ : E⟦ Γ ⟧ ρ) →
         (∀{Δ′}(η : Ren Δ′ Δ)(u : Val ∞ Δ′ a)(u⇓ : V⟦ a ⟧ u) →
-         V⟦ b ⟧ (eval t (renenv η ρ , u))) →
+        V⟦ b ⟧ (eval t (renenv η ρ , u))) →
         V⟦ a ⇒ b ⟧ (lam t ρ)
 ⟦abs⟧ t ρ θ ih η u p = stepV⟦⟧ _ _ (ih η u p)
 
 ⟦app⟧ : ∀ {Δ a b} (f? : Val ∞ Δ (a ⇒ b))(u? : Val ∞ Δ a) →
-          V⟦ a ⇒ b ⟧ f? → V⟦ a ⟧ u? → V⟦ b ⟧ (apply f? u?)
+        V⟦ a ⇒ b ⟧ f? → V⟦ a ⟧ u? → V⟦ b ⟧ (apply f? u?)
 ⟦app⟧ f? u? p q =
   substV⟦⟧ _ (apply-cong (renvalid f?) (≈reflVal u?) ) (p renId u? q)
 

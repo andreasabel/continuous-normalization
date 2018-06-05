@@ -8,7 +8,7 @@ open import RenamingAndSubstitution
 -- Identity environment.
 
 ide : ∀ Γ → Env ∞ Γ Γ
-ide ε = ε
+ide ε       = ε
 ide (Γ , a) = renenv (wkr renId) (ide Γ) , ne (var zero)
 
 -- Looking up in an environment.
@@ -18,7 +18,7 @@ lookup zero    (ρ , v) = v
 lookup (suc x) (ρ , v) = lookup x ρ
 
 lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env ∞ Δ Γ) (η : Ren Δ' Δ) →
-  Val∋ renval η (lookup x ρ) ≈ lookup x (renenv η ρ)
+          Val∋ renval η (lookup x ρ) ≈ lookup x (renenv η ρ)
 lookup≤ zero    (ρ , v) η = ≈reflVal (renval η v)
 lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
 
@@ -46,9 +46,9 @@ mutual
   force (beta t ρ v) = eval t (ρ , v)
 
 -- apply-cong
-mutual
-  eval-cong : ∀{i Γ Δ a}(t : Tm Γ a){ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
-         Val∋ eval t ρ ≈⟨ i ⟩≈ eval t ρ'
+mutual 
+  eval-cong : ∀{i Γ Δ a}(t : Tm Γ a){ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' → 
+              Val∋ eval t ρ ≈⟨ i ⟩≈ eval t ρ'
   eval-cong (var zero)    (p ≈, q) = q
   eval-cong (var (suc x)) (p ≈, q) = eval-cong (var x) p
   eval-cong (abs t)   p = ≈lam p
@@ -62,8 +62,8 @@ mutual
   apply-cong (≈later p) q = ≈later (∞apply-cong p q)
 
   ∞apply-cong : ∀ {i Δ a b}{f f' : ∞Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
-               ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' →
-               ∞Val∋ ∞apply f v ≈⟨ i ⟩≈ ∞apply f' v'
+                ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' → 
+                ∞Val∋ ∞apply f v ≈⟨ i ⟩≈ ∞apply f' v'
   ≈force (∞apply-cong p q) = apply-cong (≈force p) q
 
   beta-cong : ∀ {i Γ a b} (t : Tm (Γ , a) b)
@@ -143,6 +143,7 @@ mutual
     readback-cong _ (apply-cong (renval-cong (wkr renId) p) (≈ne ≈var))
 
 -- these proofs could surely be shortened, readback-cong would help
+
 mutual
   rennereadback : ∀{i Γ Δ a}(η : Ren Δ Γ)(t : NeVal ∞ Γ a) →
                 (rennen η <$> nereadback t) ≈⟨ i ⟩≈ (nereadback (rennev η t))
