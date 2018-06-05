@@ -1,3 +1,4 @@
+{-# OPTIONS --cubical #-}
 -- Interface to standard library.
 
 module Library where
@@ -39,6 +40,9 @@ open import Function public
   using (_∘_; flip; case_of_)
   renaming (id to idf)
 
+open import Cubical.PathPrelude public
+
+{-
 open import Relation.Nullary public
   using (Dec; yes; no)
 
@@ -58,6 +62,8 @@ open import Relation.Binary.HeterogeneousEquality public
   using (_≅_; refl; ≡-to-≅; module ≅-Reasoning)
   renaming (sym to hsym; trans to htrans; cong to hcong;
             cong₂ to hcong₂; subst to hsubst)
+-- -}
+-- this stuff was commented out already
 {-
 hcong₃ : {A : Set}
          {B : A → Set}

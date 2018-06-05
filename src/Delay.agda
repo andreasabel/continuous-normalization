@@ -4,8 +4,6 @@ open import Library
 open import Category.Applicative.Indexed
 -- Coinductive delay monad.
 
-infix 10 _⇓_
-
 mutual
 
   data Delay (i : Size) (A : Set) : Set where
@@ -157,6 +155,7 @@ mutual
 
 -- Equality reasoning
 
+{-
 ≈setoid : (i : Size) (A : Set) → Setoid lzero lzero
 ≈setoid i A = record
   { Carrier       = Delay ∞ A
@@ -289,6 +288,8 @@ data _⇓_ {A : Set} : (a? : Delay ∞ A) (a : A) → Set where
 
 _⇓ : {A : Set} (x : Delay ∞ A) → Set
 x ⇓ = ∃ λ a → x ⇓ a
+
+infix 10 _⇓_
 
 -- Lifting a predicate to Delay using convergence.
 
@@ -506,3 +507,4 @@ lifta2lem2 f g h a b = proof
   (((a >>= (now ∘ g)) >>= (now ∘ f)) >>= (λ f' → b >>= (now ∘ h) >>= now ∘ f'))
   ∎
   where open ≈-Reasoning
+-- -}

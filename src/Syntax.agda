@@ -1,3 +1,4 @@
+{-# OPTIONS --cubical #-}
 -- Syntax: Types, terms and contexts.
 module Syntax where
 
@@ -59,6 +60,7 @@ mutual
     ε   : Env i Δ ε
     _,_ : ∀ {Γ a} (ρ : Env i Δ Γ) (v : Val i Δ a) → Env i Δ (Γ , a)
 
+  NeVal : Size -> Cxt -> Ty -> Set -- got an error without this for cubical
   NeVal = λ i → GNe (Val i)
 
   data Val (i : Size) (Δ : Cxt) : (a : Ty) → Set where
@@ -73,7 +75,6 @@ mutual
       force : {j : Size< i} → Val j Δ a
 
 open ∞Val public
-
   -- Note: this is not the same thing as Delay i (Val i Δ a)
   -- because now the sizes are not uniform, but the size is
   -- the sum on the longest path
@@ -86,7 +87,7 @@ open ∞Val public
   -- otherwise Delay i A is not antitone in i
 
 -- strong bisimilarity for values, neutral values and environments
-
+{-
 mutual
   Val∋_≈⟨_⟩≈_   = λ {Δ}{a} a? i b? → Val∋_≈_ {i}{Δ}{a} a? b?
   NeVal∋_≈⟨_⟩≈_ = λ {Δ}{a} a? i b? → NeVal∋_≈_ {i}{Δ}{a} a? b?
@@ -195,3 +196,4 @@ module ≈Val-Reasoning {i : Size}{Δ : Cxt}{a : Ty} where
     using (_∎)
     renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_;
               begin_ to proof_)
+-- -}

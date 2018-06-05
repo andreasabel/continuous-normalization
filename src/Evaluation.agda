@@ -1,3 +1,4 @@
+{-# OPTIONS --cubical #-}
 module Evaluation where
 
 open import Library
@@ -17,9 +18,9 @@ lookup : ∀ {i Γ Δ a} → Var Γ a → Env i Δ Γ → Val i Δ a
 lookup zero    (ρ , v) = v
 lookup (suc x) (ρ , v) = lookup x ρ
 
-lookup≤ : ∀ {Γ Δ Δ' a} (x : Var Γ a) (ρ : Env ∞ Δ Γ) (η : Ren Δ' Δ) →
-          Val∋ renval η (lookup x ρ) ≈ lookup x (renenv η ρ)
-lookup≤ zero    (ρ , v) η = ≈reflVal (renval η v)
+lookup≤ : ∀ {j Γ Δ Δ' a} (x : Var Γ a) (ρ : Env j Δ Γ) (η : Ren Δ' Δ) →
+          renval η (lookup x ρ) ≡ lookup x (renenv η ρ)
+lookup≤ zero    (ρ , v) η = refl -- (renval η v)
 lookup≤ (suc x) (ρ , v) η = lookup≤ x ρ η
 
 -- Weakening a value to an extended context.
@@ -38,67 +39,52 @@ mutual
   apply (lam t ρ) v = later (beta t ρ v)
   apply (later w) v = later (∞apply w v)
 
-  ∞apply : ∀ {i Δ a b} → ∞Val i Δ (a ⇒ b) → Val i Δ a → ∞Val i Δ b
-  force (∞apply w v) = apply (force w) v
+  ∞apply : ∀ {j Δ a b} → ∞Val j Δ (a ⇒ b) → Val j Δ a → ∞Val j Δ b
+  force (∞apply w v)  = apply (force w) v
 
   beta : ∀ {i Γ a b} (t : Tm (Γ , a) b)
     {Δ : Cxt} (ρ : Env i Δ Γ) (v : Val i Δ a) → ∞Val i Δ b
   force (beta t ρ v) = eval t (ρ , v)
 
--- apply-cong
-mutual 
-  eval-cong : ∀{i Γ Δ a}(t : Tm Γ a){ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' → 
-              Val∋ eval t ρ ≈⟨ i ⟩≈ eval t ρ'
-  eval-cong (var zero)    (p ≈, q) = q
-  eval-cong (var (suc x)) (p ≈, q) = eval-cong (var x) p
-  eval-cong (abs t)   p = ≈lam p
-  eval-cong (app t u) p = apply-cong (eval-cong t p) (eval-cong u p)
-
-  apply-cong : ∀ {i Δ a b}{f f' : Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
-               Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' →
-               Val∋ apply f v ≈⟨ i ⟩≈ apply f' v'
-  apply-cong (≈lam p)    q = ≈later (beta-cong _ p q)
-  apply-cong (≈ne p)     q = ≈ne (≈app p q)
-  apply-cong (≈later p) q = ≈later (∞apply-cong p q)
-
-  ∞apply-cong : ∀ {i Δ a b}{f f' : ∞Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
-                ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' → 
-                ∞Val∋ ∞apply f v ≈⟨ i ⟩≈ ∞apply f' v'
-  ≈force (∞apply-cong p q) = apply-cong (≈force p) q
-
-  beta-cong : ∀ {i Γ a b} (t : Tm (Γ , a) b)
-    {Δ : Cxt}{ρ ρ' : Env ∞ Δ Γ}{v v' : Val ∞ Δ a} →
-    Env∋ ρ ≈⟨ i ⟩≈ ρ' → Val∋ v ≈⟨ i ⟩≈ v' →
-    ∞Val∋ beta t ρ v ≈⟨ i ⟩≈ beta t ρ' v'
-  ≈force (beta-cong t p q) = eval-cong t (p ≈, q)
-
 mutual
-  reneval : ∀ {i Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env ∞ Δ Γ) (η : Ren Δ′ Δ) →
-    Val∋ (renval η $ eval t ρ) ≈⟨ i ⟩≈ (eval t $ renenv η ρ)
+  reneval : ∀ {j Γ Δ Δ′ a} (t : Tm Γ a) (ρ : Env j Δ Γ) (η : Ren Δ′ Δ) →
+            renval η (eval t ρ) ≡ eval t (renenv η ρ)
   reneval (var x)   ρ η = lookup≤ x ρ η
-  reneval (abs t)   ρ η = ≈lam (≈reflEnv (renenv η ρ))
-  reneval (app t u) ρ η = proof
+  reneval (abs t)   ρ η = cong (lam t) refl
+  reneval (app t u) ρ η = begin
     renval η (apply (eval t ρ) (eval u ρ))
-    ≈⟨ renapply (eval t ρ) (eval u ρ) η ⟩
+    ≡⟨  renapply (eval t ρ) (eval u ρ) η  ⟩
     apply (renval η (eval t ρ)) (renval η (eval u ρ))
-    ≈⟨ apply-cong (reneval t ρ η) (reneval u ρ η) ⟩
+    ≡⟨ ( λ i →  apply (reneval t ρ η i) (reneval u ρ η i) ) ⟩
     apply (eval t (renenv η ρ)) (eval u (renenv η ρ))
-    ∎ where open ≈Val-Reasoning
+    ∎
 
-  renapply  : ∀{i Γ Δ a b} (f : Val ∞ Γ (a ⇒ b))(v : Val ∞ Γ a)(η : Ren Δ Γ) →
-    Val∋ (renval η $ apply f v) ≈⟨ i ⟩≈ (apply (renval η f) (renval η v))
-  renapply (ne x)    v η = ≈reflVal _
-  renapply (lam t ρ) v η = ≈later (renbeta t ρ v η)
-  renapply (later p) v η = ≈later (∞renapply p v η)
+  renapply : ∀{j Γ Δ a b} (f : Val j Γ (a ⇒ b))(v : Val j Γ a)(η : Ren Δ Γ) →
+             renval η (apply f v) ≡ apply (renval η f) (renval η v)
+  renapply (ne x)    v η = refl
+  renapply (lam t ρ) v η i = later (renbeta t ρ v η i)
+  renapply (later p) v η i = later (∞renapply p v η i)
 
-  ∞renapply  : ∀{i Γ Δ a b}(f : ∞Val ∞ Γ (a ⇒ b))(v : Val ∞ Γ a)(η : Ren Δ Γ) →
-     ∞Val∋ (∞renval η $ ∞apply f v) ≈⟨ i ⟩≈ (∞apply (∞renval η f) (renval η v))
-  ≈force (∞renapply f v η) = renapply (force f) v η
+  ∞renapply  : ∀{j Γ Δ a b}(f : ∞Val j Γ (a ⇒ b))(v : Val j Γ a)(η : Ren Δ Γ) →
+     ∞renval η (∞apply f v) ≡ ∞apply (∞renval η f) (renval η v)
+  force (∞renapply {j} f v η i) {j'} =  {!renval {j'} η v !}
+  
+--------------------------------------------------------------------------------
+  --  renapply {j'} (force f {?} ) v η i
+  -- i0: renval {j'} {.Γ} {.Δ} η {.b} (apply {j'} {.Γ} {.a} {.b} (force f {?}) v)
+  -- i1: apply {j'} {.Δ} {.a} {.b} (renval {j'} {.Γ} {.Δ} η {.a ⇒ .b} (force f {?}))
+  --        (renval {j'} {.Γ} {.Δ} η {.a} v)
 
-  renbeta : ∀ {i Γ Δ E a b} (t : Tm (Γ , a) b)(ρ : Env ∞ Δ Γ) (v : Val ∞ Δ a) →
+  -- force (∞renapply {j'} f v η i1) {j}
+  -- i0: renval {j} {.Γ} {.Δ} η {.b} (apply {j} {.Γ} {.a} {.b} (force f {j}) v)
+  -- i1: apply {j} {.Δ} {.a} {.b} (renval {j} {.Γ} {.Δ} η {.a ⇒ .b} (force f {j})) (renval {j'} {.Γ} {.Δ} η {.a} v)
+--------------------------------------------------------------------------------
+
+  renbeta : ∀ {j Γ Δ E a b} (t : Tm (Γ , a) b)(ρ : Env j Δ Γ) (v : Val j Δ a) →
     (η : Ren E Δ) →
-     ∞Val∋ ∞renval η $ (beta t ρ v) ≈⟨ i ⟩≈ (beta t (renenv η ρ) (renval η v))
-  ≈force (renbeta t ρ v η) = reneval t (ρ , v) η
+    (∞renval η $ (beta t ρ v)) ≡ (beta t (renenv η ρ) (renval η v))
+  force (renbeta t ρ v η i) {j} = {! reneval t (ρ , v) η i!}
+
 
 mutual
   readback : ∀{i Γ a} → Val i Γ a → Delay i (Nf Γ a)
@@ -114,11 +100,9 @@ mutual
 
   nereadback : ∀{i Γ a} → NeVal i Γ a → Delay i (Ne Γ a)
   nereadback (var x)   = now (var x)
-  nereadback (app w v) =
---    nereadback w >>= λ m → app m <$> readback v
-      app <$> nereadback w <*> readback v
+  nereadback (app w v) = app <$> nereadback w <*> readback v
 
-
+{-
 mutual
   readback-cong : ∀{i Γ} a {v v' : Val ∞ Γ a} → Val∋ v ≈⟨ i ⟩≈ v' →
                   readback v ≈⟨ i ⟩≈ readback v'
@@ -265,3 +249,4 @@ lookuplookr : ∀{Γ Γ' Δ a}(ρ : Env ∞ Δ Γ')(σ : Ren Γ' Γ)(x : Var Γ 
               Val∋ lookup (lookr σ x) ρ ≈⟨ ∞ ⟩≈ lookup x (lookupR σ ρ)
 lookuplookr ρ (σ , y) zero    = ≈reflVal (lookup y ρ)
 lookuplookr ρ (σ , y) (suc x) = lookuplookr ρ σ x
+-- -}
