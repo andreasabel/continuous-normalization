@@ -44,7 +44,6 @@ mutual
     ne  :         (n : Ne Γ ★)        → Nf Γ ★
 
 mutual
-
   embNe : ∀{Γ a} → Ne Γ a → Tm Γ a
   embNe (var x) = var x
   embNe (app t u) = app (embNe t) (embNf u)
@@ -56,7 +55,6 @@ mutual
 -- Values and environments.
 
 mutual
-
   data Env (i : Size) (Δ : Cxt) : (Γ : Cxt) → Set where
     ε   : Env i Δ ε
     _,_ : ∀ {Γ a} (ρ : Env i Δ Γ) (v : Val i Δ a) → Env i Δ (Γ , a)
@@ -90,24 +88,24 @@ open ∞Val public
 -- strong bisimilarity for values, neutral values and environments
 
 mutual
-  Val∋_≈⟨_⟩≈_ = λ {Δ}{a} a? i b? → Val∋_≈_ {i}{Δ}{a} a? b?
+  Val∋_≈⟨_⟩≈_   = λ {Δ}{a} a? i b? → Val∋_≈_ {i}{Δ}{a} a? b?
   NeVal∋_≈⟨_⟩≈_ = λ {Δ}{a} a? i b? → NeVal∋_≈_ {i}{Δ}{a} a? b?
-  Env∋_≈⟨_⟩≈_ = λ {Δ}{Γ} a? i b? → Env∋_≈_ {i}{Δ}{Γ} a? b?
+  Env∋_≈⟨_⟩≈_   = λ {Δ}{Γ} a? i b? → Env∋_≈_ {i}{Δ}{Γ} a? b?
 
   data NeVal∋_≈_ {i}{Δ} : {a : Ty}(a? b? : NeVal ∞ Δ a) → Set where
-    ≈var : ∀{a}{x : Var Δ a} → NeVal∋ var x ≈ var x
-    ≈app : ∀{a b}{n n' : NeVal ∞ Δ (a ⇒ b)} → NeVal∋ n ≈⟨ i ⟩≈ n' →
+    ≈var : ∀{a}{x : Var Δ a}                      → NeVal∋ var x ≈ var x
+    ≈app : ∀{a b}{n n' : NeVal ∞ Δ (a ⇒ b)}       → NeVal∋ n ≈⟨ i ⟩≈ n' →
            {v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → NeVal∋ app n v ≈ app n' v'
  
   data Env∋_≈_ {i}{Δ} : ∀{Γ} → Env ∞ Δ Γ → Env ∞ Δ Γ → Set where
-    ≈ε : Env∋ ε ≈ ε
+    ≈ε   : Env∋ ε ≈ ε
     _≈,_ : ∀{Γ a}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
            {v v' : Val ∞ Δ a} → Val∋ v ≈⟨ i ⟩≈ v' → Env∋ (ρ , v) ≈ (ρ' , v')
     
   data Val∋_≈_ {i}{Δ} : {a : Ty}(a? b? : Val ∞ Δ a) → Set where
-    ≈lam : ∀{Γ a b}{t : Tm (Γ , a) b}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
-           Val∋ lam t ρ ≈ lam t ρ'
-    ≈ne  : ∀{a}{n n' : NeVal ∞ Δ a} → NeVal∋ n ≈⟨ i ⟩≈ n' → Val∋ ne n ≈ ne n'
+    ≈lam   : ∀{Γ a b}{t : Tm (Γ , a) b}{ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
+             Val∋ lam t ρ ≈ lam t ρ'
+    ≈ne    : ∀{a}{n n' : NeVal ∞ Δ a} → NeVal∋ n ≈⟨ i ⟩≈ n' → Val∋ ne n ≈ ne n'
     ≈later : ∀ {a}{a∞ b∞ : ∞Val ∞ Δ a}(eq : ∞Val∋ a∞ ≈⟨ i ⟩≈ b∞) →
              Val∋ later a∞ ≈ later b∞
 
@@ -170,8 +168,8 @@ mutual
   ≈force (∞≈transVal p q) = ≈transVal (≈force p) (≈force q)
 
   ≈transNeVal : ∀{i}{Δ}{a}{v v' v'' : NeVal ∞ Δ a} →
-              NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v'' → 
-              NeVal∋ v ≈⟨ i ⟩≈ v''
+                NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v'' → 
+                NeVal∋ v ≈⟨ i ⟩≈ v''
   ≈transNeVal ≈var       ≈var        = ≈var
   ≈transNeVal (≈app p q) (≈app p' q') =
     ≈app (≈transNeVal p p' ) (≈transVal q q')
@@ -194,6 +192,7 @@ mutual
 
 module ≈Val-Reasoning {i : Size}{Δ : Cxt}{a : Ty} where
   open Pre (Setoid.preorder (≈Valsetoid i Δ a)) public
+    using (_∎)
     renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_;
               begin_ to proof_)
 

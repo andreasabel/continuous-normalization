@@ -62,7 +62,7 @@ lookrwkr : ∀{Γ Δ σ τ}(xs : Ren Δ Γ)(i : Var Γ σ) →
 lookrwkr (xs , _) zero    = refl
 lookrwkr (xs , _) (suc i) = lookrwkr xs i
 
--- A weakning cancels a renaming extension.
+-- A weakening cancels a renaming extension.
 
 lemrr : ∀{Φ Γ Δ σ}(xs : Ren Φ Γ)(x : Var Φ σ)(ys : Ren Γ Δ) →
        renComp (xs , x) (wkr ys) ≡ renComp xs ys
@@ -82,9 +82,12 @@ wkrcomp xs (ys , y) = cong₂ _,_ (wkrcomp xs ys) (lookrwkr xs y)
 liftrcomp : ∀{Φ Γ Δ σ}(xs : Ren Φ Γ)(ys : Ren Γ Δ) →
   renComp (liftr {σ = σ} xs) (liftr {σ = σ} ys) ≡ liftr {σ = σ} (renComp xs ys)
 liftrcomp xs ys = begin
-  renComp (wkr xs , zero) (wkr ys) , zero  ≡⟨ cong (_, zero) (lemrr (wkr xs) zero ys) ⟩
-  renComp (wkr xs) ys              , zero  ≡⟨ cong (_, zero) (wkrcomp xs ys) ⟩
-  wkr (renComp xs ys)              , zero  ∎
+  renComp (wkr xs , zero) (wkr ys) , zero
+  ≡⟨ cong (_, zero) (lemrr (wkr xs) zero ys) ⟩
+  renComp (wkr xs) ys              , zero
+  ≡⟨ cong (_, zero) (wkrcomp xs ys) ⟩
+  wkr (renComp xs ys)              , zero
+  ∎
 
 -- lookr is a morphism from the category  Ren
 -- to the category of the corresponding renaming functions on variables.
@@ -95,9 +98,12 @@ liftrcomp xs ys = begin
 lookrid : ∀{Γ σ}(x : Var Γ σ) → lookr renId x ≡ x
 lookrid zero    = refl
 lookrid (suc x) = begin
-  lookr (wkr renId) x  ≡⟨ lookrwkr renId x ⟩
-  suc (lookr renId x)  ≡⟨ cong suc (lookrid x) ⟩
-  suc x                ∎
+  lookr (wkr renId) x
+  ≡⟨ lookrwkr renId x ⟩
+  suc (lookr renId x)
+  ≡⟨ cong suc (lookrid x) ⟩
+  suc x
+  ∎
 
 -- A composition of renamings corresponds to the composition
 -- of the corresponding renaming functions.
@@ -314,30 +320,44 @@ wksrcomp xs ε        = refl
 wksrcomp xs (ys , y) = cong₂ Sub._,_ (wksrcomp xs ys) (lookswks y xs)
 
 liftsrcomp : ∀{Φ Γ Δ σ}(xs : Sub Φ Γ)(ys : Ren Γ Δ) →
-             subComp (lifts {σ = σ} xs) (ren2sub (liftr ys)) ≡ lifts {σ = σ} (subComp xs (ren2sub ys))
+             subComp (lifts {σ = σ} xs) (ren2sub (liftr ys))
+             ≡
+             lifts {σ = σ} (subComp xs (ren2sub ys))
 liftsrcomp xs ys = begin
-  subComp (wks xs , var zero) (ren2sub (wkr ys)) , var zero ≡⟨ cong (_, var zero) (lemsr (wks xs) (var zero) ys) ⟩
-  subComp (wks xs) (ren2sub ys)                  , var zero ≡⟨ cong (_, var zero) (wksrcomp xs ys) ⟩
-  wks (subComp xs (ren2sub ys))                  , var zero ∎
+  subComp (wks xs , var zero) (ren2sub (wkr ys)) , var zero
+  ≡⟨ cong (_, var zero) (lemsr (wks xs) (var zero) ys) ⟩
+  subComp (wks xs) (ren2sub ys)                  , var zero
+  ≡⟨ cong (_, var zero) (wksrcomp xs ys) ⟩
+  wks (subComp xs (ren2sub ys))                  , var zero
+  ∎
 
 subren : ∀{Φ Γ Δ}(f : Sub Δ Γ)(g : Ren Γ Φ){σ}(t : Tm Φ σ) →
          (sub f ∘ ren g) t ≡ sub (subComp f (ren2sub g)) t
 subren f g (var x)   = sym $ lookslookr f g x
 subren f g (abs t)   = begin
-  abs (sub (lifts f) (ren (liftr g) t))               ≡⟨ cong abs $ subren (lifts f) (liftr g) t ⟩
-  abs (sub (subComp (lifts f) (ren2sub (liftr g))) t) ≡⟨ cong (λ f → abs (sub f t)) $ liftsrcomp f g ⟩
-  abs (sub (lifts (subComp f (ren2sub g))) t)         ∎
+  abs (sub (lifts f) (ren (liftr g) t))
+  ≡⟨ cong abs $ subren (lifts f) (liftr g) t ⟩
+  abs (sub (subComp (lifts f) (ren2sub (liftr g))) t)
+  ≡⟨ cong (λ f → abs (sub f t)) $ liftsrcomp f g ⟩
+  abs (sub (lifts (subComp f (ren2sub g))) t)
+  ∎
 subren f g (app t u) = cong₂ app (subren f g t) (subren f g u)
 
 looksid : ∀{Γ σ}(x : Var Γ σ) → looks subId x ≡ var x
 looksid zero    = refl
 looksid (suc x) = begin
-  looks (wks subId) x             ≡⟨ lookswks x subId ⟩
-  ren (wkr renId) (looks subId x) ≡⟨ cong (ren (wkr renId)) (looksid x) ⟩
-  ren (wkr renId) (var x)         ≡⟨⟩
-  var (lookr (wkr renId) x)       ≡⟨ cong var $ lookrwkr renId x ⟩
-  var (suc (lookr renId x))       ≡⟨ cong (λ x → var (suc x)) (lookrid x) ⟩ -- using ∘ makes it go yellow
-  var (suc x)                     ∎
+  looks (wks subId) x
+  ≡⟨ lookswks x subId ⟩
+  ren (wkr renId) (looks subId x)
+  ≡⟨ cong (ren (wkr renId)) (looksid x) ⟩
+  ren (wkr renId) (var x)
+  ≡⟨⟩
+  var (lookr (wkr renId) x)
+  ≡⟨ cong var $ lookrwkr renId x ⟩
+  var (suc (lookr renId x))
+  ≡⟨ cong (λ x → var (suc x)) (lookrid x) ⟩ -- using ∘ makes it go yellow
+  var (suc x)
+  ∎
 
 subid : ∀{Γ σ}(t : Tm Γ σ) → sub subId t ≡ t
 subid (var x)   = looksid x
@@ -460,20 +480,24 @@ sidr xs = begin
 liftscomp : ∀{Φ Γ Δ σ}(xs : Sub Φ Γ)(ys : Sub Γ Δ) →
   subComp (lifts {σ = σ} xs) (lifts ys) ≡ lifts {σ = σ} (subComp xs ys)
 liftscomp xs ys = begin
-  subComp (wks xs , var zero) (wks ys) , var zero ≡⟨ cong (_, var zero) (lemss (wks xs) (var zero) ys) ⟩
-  subComp (wks xs) ys                  , var zero ≡⟨ cong (_, var zero) (wksscomp xs ys) ⟩
-  wks (subComp xs ys)                  , var zero ∎
+  subComp (wks xs , var zero) (wks ys) , var zero
+  ≡⟨ cong (_, var zero) (lemss (wks xs) (var zero) ys) ⟩
+  subComp (wks xs) ys                  , var zero
+  ≡⟨ cong (_, var zero) (wksscomp xs ys) ⟩
+  wks (subComp xs ys)                  , var zero
+  ∎
 
 subcomp : ∀{Φ Γ Δ}(f : Sub Δ Γ)(g : Sub Γ Φ){σ}(t : Tm Φ σ) →
           sub (subComp f g) t ≡ (sub f ∘ sub g) t
 subcomp f g (var x)   = lookscomp f g x
 subcomp f g (abs t)   = begin
-  abs (sub (lifts (subComp f g)) t)         ≡⟨ cong (λ f → abs (sub f t)) (sym $ liftscomp f g) ⟩
-  abs (sub (subComp (lifts f) (lifts g)) t) ≡⟨ cong abs (subcomp (lifts f) (lifts g) t) ⟩
-  abs (sub (lifts f) (sub (lifts g) t))     ∎
+  abs (sub (lifts (subComp f g)) t)
+  ≡⟨ cong (λ f → abs (sub f t)) (sym $ liftscomp f g) ⟩
+  abs (sub (subComp (lifts f) (lifts g)) t)
+  ≡⟨ cong abs (subcomp (lifts f) (lifts g) t) ⟩
+  abs (sub (lifts f) (sub (lifts g) t))
+  ∎
 subcomp f g (app t u) = cong₂ app (subcomp f g t) (subcomp f g u)
-
---
 
 mutual
   renembNe : ∀{Γ Δ a}(u : Ne Γ a)(σ : Ren Δ Γ) →
@@ -485,4 +509,3 @@ mutual
              ren σ (embNf n) ≡ embNf (rennf σ n)
   renembNf (abs n) σ = cong abs (renembNf n (liftr σ))
   renembNf (ne n)  σ = renembNe n σ
--- -}

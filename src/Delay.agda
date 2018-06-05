@@ -171,6 +171,7 @@ mutual
 module ≈-Reasoning {i : Size} {A : Set} where
   open Pre (Setoid.preorder (≈setoid i A)) public
 --    using (begin_; _∎) (_≈⟨⟩_ to _≈⟨⟩_; _≈⟨_⟩_ to _≈⟨_⟩_)
+    using (_∎)
     renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_; begin_ to proof_)
 
 ∞≈setoid : (i : Size) (A : Set) → Setoid lzero lzero
@@ -187,6 +188,7 @@ module ≈-Reasoning {i : Size} {A : Set} where
 module ∞≈-Reasoning {i : Size} {A : Set} where
   open Pre (Setoid.preorder (∞≈setoid i A)) public
 --    using (begin_; _∎) (_≈⟨⟩_ to _≈⟨⟩_; _≈⟨_⟩_ to _≈⟨_⟩_)
+    using (_∎)
     renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _∞≈⟨_⟩_; begin_ to proof_)
 
 
