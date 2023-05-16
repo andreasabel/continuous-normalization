@@ -45,8 +45,8 @@ open import Relation.Nullary public
 open import Relation.Binary public
   using (Setoid; module Setoid)
 
-import Relation.Binary.PreorderReasoning
-module Pre = Relation.Binary.PreorderReasoning
+import Relation.Binary.Reasoning.Setoid
+module SetoidReasoning = Relation.Binary.Reasoning.Setoid
 
 open import Relation.Binary.PropositionalEquality public
   using ( _≡_; refl; sym; trans; cong; cong₂; subst; module ≡-Reasoning

@@ -168,7 +168,7 @@ mutual
   ≈force (∞≈transVal p q) = ≈transVal (≈force p) (≈force q)
 
   ≈transNeVal : ∀{i}{Δ}{a}{v v' v'' : NeVal ∞ Δ a} →
-                NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v'' → 
+                NeVal∋ v ≈⟨ i ⟩≈ v' → NeVal∋ v' ≈⟨ i ⟩≈ v'' →
                 NeVal∋ v ≈⟨ i ⟩≈ v''
   ≈transNeVal ≈var       ≈var        = ≈var
   ≈transNeVal (≈app p q) (≈app p' q') =
@@ -191,7 +191,5 @@ mutual
   }
 
 module ≈Val-Reasoning {i : Size}{Δ : Cxt}{a : Ty} where
-  open Pre (Setoid.preorder (≈Valsetoid i Δ a)) public
-    using (_∎)
-    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_;
-              begin_ to proof_)
+  open SetoidReasoning (≈Valsetoid i Δ a) public
+    renaming (begin_ to proof_)

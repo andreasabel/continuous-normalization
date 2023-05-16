@@ -31,17 +31,17 @@ open ∞Delay_∋_~⟨_⟩~_ public
 
 
 mutual
-  map~ : ∀ {A B R S}{a a' : Delay ∞ A}
+  map~ : ∀ {i A B R S}{a a' : Delay ∞ A}
          (f : A → B)(g : A → B)
          (h : ∀ a a' → R a a' → S (f a) (g a')) →
-         Delay R ∋ a ~ a' → Delay S ∋ f <$> a ~ (g <$> a')
+         Delay R ∋ a ~⟨ i ⟩~ a' → Delay S ∋ f <$> a ~⟨ i ⟩~ (g <$> a')
   map~ f g h (~now a⇓ a'⇓ aRa') = ~now (map⇓ f a⇓) (map⇓ g a'⇓) (h _ _ aRa')
   map~ f g h (~later ∞p)      = ~later (∞map~ f g h ∞p)
 
-  ∞map~ : ∀ {A B R S}{a a' : ∞Delay ∞ A}
+  ∞map~ : ∀ {i A B R S}{a a' : ∞Delay ∞ A}
          (f : A → B)(g : A → B)
          (h : ∀ a a' → R a a' → S (f a) (g a')) →
-         ∞Delay R ∋ a ~ a' → ∞Delay S ∋ f ∞<$> a ~ (g ∞<$> a')
+         ∞Delay R ∋ a ~⟨ i ⟩~ a' → ∞Delay S ∋ f ∞<$> a ~⟨ i ⟩~ (g ∞<$> a')
   ∞Delay_∋_~⟨_⟩~_.~force (∞map~ f g h p) = map~ f g h (∞Delay_∋_~⟨_⟩~_.~force p)
 
 -- Delaying left only
@@ -197,27 +197,27 @@ bindlem X now⇓       = X
 bindlem X (later⇓ p) = ~laterl (bindlem X p)
 
 mutual
-  map2~ : ∀ {A B C R S T}{a a' : Delay ∞ A}{b b' : Delay ∞ B}
+  map2~ : ∀ {i A B C R S T}{a a' : Delay ∞ A}{b b' : Delay ∞ B}
          (f : A → B → C)
          (g : ∀ a a' → R a a' → ∀ b b' → S b b' → T (f a b) (f a' b')) →
          (∀ c → T c c) →
          (∀{c c'} → T c c' → T c' c) →
-         (∀ {c c' c''} → T c c' → T c' c'' → T c c'') → 
-         Delay R ∋ a ~ a' → Delay S ∋ b ~ b' →
-         Delay T ∋ f <$> a <*> b ~ (f <$> a' <*> b')
+         (∀ {c c' c''} → T c c' → T c' c'' → T c c'') →
+         Delay R ∋ a ~⟨ i ⟩~ a' → Delay S ∋ b ~ b' →
+         Delay T ∋ f <$> a <*> b ~⟨ i ⟩~ (f <$> a' <*> b')
   map2~ f g p q r (~now a⇓ a'⇓ aRa') (~now b⇓ b'⇓ bRb') =
     ~now (map2⇓ f a⇓ b⇓) (map2⇓ f a'⇓ b'⇓) (g _ _ aRa' _ _ bRb')
   map2~ {a = a}{a'} f g p q r (~now a⇓ b⇓ aRb) (~later ∞p) = ~trans r (≈→~ (bind-assoc' a (p _))) (~trans r (~bind (p _) _ a⇓) (~trans r (~trans r (~later (∞map~ (f _)(f _)(g _ _ aRb) ∞p )) (~sym q (~bind (p _) _ b⇓))) (≈→~ (≈sym' q (bind-assoc' a' (p _))))))
   map2~ f g p q r (~later ∞p) s = ~later (∞map2~ f g p q r ∞p s)
 
-  ∞map2~ : ∀ {A B C R S T}{a a' : ∞Delay ∞ A}{b b' : Delay ∞ B} 
+  ∞map2~ : ∀ {i A B C R S T}{a a' : ∞Delay ∞ A}{b b' : Delay ∞ B}
            (f : A → B → C)
            (g : ∀ a a' → R a a' → ∀ b b' → S b b' → T (f a b) (f a' b')) →
            (∀ c → T c c) →
            (∀{c c'} → T c c' → T c' c) →
-           (∀ {c c' c''} → T c c' → T c' c'' → T c c'') → 
-           ∞Delay R ∋ a ~ a' → Delay S ∋ b ~ b' →
-           ∞Delay T ∋ ((f ∞<$> a) ∞<*> b) ~ ((f ∞<$> a') ∞<*> b')
+           (∀ {c c' c''} → T c c' → T c' c'' → T c c'') →
+           ∞Delay R ∋ a ~⟨ i ⟩~ a' → Delay S ∋ b ~ b' →
+           ∞Delay T ∋ ((f ∞<$> a) ∞<*> b) ~⟨ i ⟩~ ((f ∞<$> a') ∞<*> b')
   ~force (∞map2~ f g p q r s t) = map2~ f g p q r (~force s) t
 
 {-

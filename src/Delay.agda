@@ -169,10 +169,8 @@ mutual
   }
 
 module ≈-Reasoning {i : Size} {A : Set} where
-  open Pre (Setoid.preorder (≈setoid i A)) public
---    using (begin_; _∎) (_≈⟨⟩_ to _≈⟨⟩_; _≈⟨_⟩_ to _≈⟨_⟩_)
-    using (_∎)
-    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _≈⟨_⟩_; begin_ to proof_)
+  open SetoidReasoning (≈setoid i A) public
+    renaming (begin_ to proof_)
 
 ∞≈setoid : (i : Size) (A : Set) → Setoid lzero lzero
 ∞≈setoid i A = record
@@ -186,11 +184,13 @@ module ≈-Reasoning {i : Size} {A : Set} where
   }
 
 module ∞≈-Reasoning {i : Size} {A : Set} where
-  open Pre (Setoid.preorder (∞≈setoid i A)) public
---    using (begin_; _∎) (_≈⟨⟩_ to _≈⟨⟩_; _≈⟨_⟩_ to _≈⟨_⟩_)
-    using (_∎)
-    renaming (_≈⟨⟩_ to _≡⟨⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _∼⟨_⟩_ to _∞≈⟨_⟩_; begin_ to proof_)
-
+  private
+    open module M = SetoidReasoning (∞≈setoid i A) public
+      using (_∎; _≡⟨⟩_; step-≡) -- ; step-≈)
+      renaming (begin_ to proof_)
+  step-∞≈ = M.step-≈
+  infixr 2 step-∞≈
+  syntax step-∞≈ x y≈z x≈y = x ∞≈⟨ x≈y ⟩ y≈z
 
 -- Congruence laws.
 
@@ -236,11 +236,11 @@ _≈>>=_ = bind-cong
 -- Monad laws.
 
 mutual -- why don't I need size i here?
-  bind-now : ∀{A}(m : Delay ∞ A) → m ≈ (m >>= now)
+  bind-now : ∀{i A}(m : Delay ∞ A) → m ≈⟨ i ⟩≈ (m >>= now)
   bind-now (now a)   = ≈now a a refl
   bind-now (later m) = ≈later (∞bind-now m)
 
-  ∞bind-now : ∀{A}(m : ∞Delay ∞ A) → m ∞≈ (m ∞>>= now)
+  ∞bind-now : ∀{i A}(m : ∞Delay ∞ A) → m ∞≈⟨ i ⟩≈ (m ∞>>= now)
   ≈force (∞bind-now m) = bind-now (force m)
 
 mutual
@@ -446,17 +446,17 @@ mutual
 
 mutual
   -- bind
-  bindD : ∀{A B : Set}(P : A → Set)(Q : B → Set){a? : Delay ∞ A} →
+  bindD : ∀{i A B} (P : A → Set)(Q : B → Set){a? : Delay ∞ A} →
             (f : A → Delay ∞ B) →
-            (g : ∀ a → P a → Delay₁ ∞ Q (f a)) →
-            Delay₁ ∞ P a? → Delay₁ ∞ Q (a? >>= f)
+            (g : ∀ a → P a → Delay₁ i Q (f a)) →
+            Delay₁ i P a? → Delay₁ i Q (a? >>= f)
   bindD P Q f g (now₁ p)   = g _ p
   bindD P Q f g (later₁ p) = later₁ (∞bindD P Q f g p)
 
-  ∞bindD : ∀{A B : Set}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A} →
+  ∞bindD : ∀{i A B}(P : A → Set)(Q : B → Set){a? : ∞Delay ∞ A} →
             (f : A → Delay ∞ B) →
-            (g : ∀ a → P a → Delay₁ ∞ Q (f a)) →
-            ∞Delay₁ ∞ P a? → ∞Delay₁ ∞ Q (a? ∞>>= f)
+            (g : ∀ a → P a → Delay₁ i Q (f a)) →
+            ∞Delay₁ i P a? → ∞Delay₁ i Q (a? ∞>>= f)
   force₁ (∞bindD P Q f g p) = bindD P Q f g (force₁ p)
 
 

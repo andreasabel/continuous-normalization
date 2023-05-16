@@ -102,9 +102,9 @@ mutual
 
 mutual
   readback : ∀{i Γ a} → Val i Γ a → Delay i (Nf Γ a)
-  readback {a = ★} (ne w) = ne  <$> nereadback w
+  readback {a = ★} (ne w)    = ne  <$> nereadback w
   readback {a = ★} (later w) = later (∞readback w)
-  readback {a = _ ⇒ _} v = later (abs ∞<$> eta v)
+  readback {a = _ ⇒ _} v     = later (abs ∞<$> eta v)
 
   ∞readback : ∀{i Γ a} → ∞Val i Γ a → ∞Delay i (Nf Γ a)
   force (∞readback w) = readback (force w)
@@ -114,9 +114,7 @@ mutual
 
   nereadback : ∀{i Γ a} → NeVal i Γ a → Delay i (Ne Γ a)
   nereadback (var x)   = now (var x)
-  nereadback (app w v) =
---    nereadback w >>= λ m → app m <$> readback v
-      app <$> nereadback w <*> readback v
+  nereadback (app w v) = app <$> nereadback w <*> readback v
 
 
 mutual
@@ -176,9 +174,9 @@ mutual
       ne <$>   nereadback (rennev η w)
     ∎
     where open ≈-Reasoning
+
   renreadback ★ η (later p) = ≈later (∞renreadback ★ η p)
-  renreadback (a ⇒ b) η f      = ≈later (
-    proof
+  renreadback (a ⇒ b) η f   = ≈later (proof
     (eta f ∞>>= (λ a₁ → now (abs a₁))) ∞>>= (λ x' → now (rennf η x'))
     ∞≈⟨ ∞bind-assoc (eta f) ⟩
     (eta f ∞>>= λ a₁ → now (abs a₁) >>= λ x' → now (rennf η x'))

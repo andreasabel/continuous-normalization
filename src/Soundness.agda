@@ -18,11 +18,17 @@ infix 8 _V∋_~_
 -- Conditional βη-equality between a term and a delayed normal form.
 -- Classically: If the nf terminates, it is equal to the term.
 
+_≡βη⟨_⟩?_ : ∀{Γ a} (t : Tm Γ a) (i : Size) (n? : Delay ∞ (Nf Γ a)) → Set
+t ≡βη⟨ i ⟩? n? = Delay₁ i (λ n → t ≡βη (embNf n)) n?
+
 _≡βη?_ : ∀{Γ a} (t : Tm Γ a) (n? : Delay ∞ (Nf Γ a)) → Set
-t ≡βη? n? = Delay₁ ∞ (λ n → t ≡βη (embNf n)) n?
+t ≡βη? n? = t ≡βη⟨ ∞ ⟩? n?
+
+_≡βη⟨_⟩?∞_ : ∀{Γ a} (t : Tm Γ a) (i : Size) (n∞ : ∞Delay ∞ (Nf Γ a)) → Set
+t ≡βη⟨ i ⟩?∞ n∞ = ∞Delay₁ i (λ n → t ≡βη (embNf n)) n∞
 
 _≡βη?∞_ : ∀{Γ a} (t : Tm Γ a) (n∞ : ∞Delay ∞ (Nf Γ a)) → Set
-t ≡βη?∞ n∞ = ∞Delay₁ ∞ (λ n → t ≡βη (embNf n)) n∞
+t ≡βη?∞ n? = t ≡βη⟨ ∞ ⟩?∞ n?
 
 _≡βη?ne_ : ∀{Γ a} (t : Tm Γ a) (n? : Delay ∞ (Ne Γ a)) → Set
 t ≡βη?ne n? = Delay₁ ∞ (λ n → t ≡βη (embNe n)) n?
@@ -34,7 +40,7 @@ _V∋_~_ : ∀{Γ}(a : Ty) (t : Tm Γ a) (v : Val ∞ Γ a) → Set
 -- At base type: put it what we want to harvest.
 _V∋_~_         ★       t u  =
 
-  t ≡βη?  (readback u)
+  t ≡βη⟨ ∞ ⟩?  (readback u)
 
 -- Function type: the usual Krikpe function space.
 _V∋_~_ {Γ = Γ} (a ⇒ b) t f =
@@ -57,15 +63,15 @@ V∋subst p refl = p
 -- Conditional βη-equality is closed under βη-equality of terms.
 
 mutual
-  Dsubstβη : ∀{Γ a}{t t' : Tm Γ a}{v : Delay ∞ (Nf Γ a)} →
-             t ≡βη? v → t ≡βη t' →
-             t' ≡βη? v
+  Dsubstβη : ∀{i Γ a}{t t' : Tm Γ a}{v : Delay ∞ (Nf Γ a)} →
+             t ≡βη⟨ i ⟩? v → t ≡βη t' →
+             t' ≡βη⟨ i ⟩? v
   Dsubstβη (now₁ p)   q = now₁ $ trans≡ (sym≡ q) p
   Dsubstβη (later₁ x) q = later₁ (∞Dsubstβη x q)
 
-  ∞Dsubstβη : ∀{Γ a} {t t' : Tm Γ a}{v : ∞Delay ∞ (Nf Γ a)} →
-             t ≡βη?∞ v → t ≡βη t' →
-             t' ≡βη?∞ v
+  ∞Dsubstβη : ∀{i Γ a} {t t' : Tm Γ a}{v : ∞Delay ∞ (Nf Γ a)} →
+             t ≡βη⟨ i ⟩?∞ v → t ≡βη t' →
+             t' ≡βη⟨ i ⟩?∞ v
   force₁ (∞Dsubstβη p q) = Dsubstβη (force₁ p) q
 
 -- LR is closed under βη-equality of terms.
