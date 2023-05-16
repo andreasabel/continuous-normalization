@@ -46,8 +46,8 @@ mutual
   force (beta t ρ v) = eval t (ρ , v)
 
 -- apply-cong
-mutual 
-  eval-cong : ∀{i Γ Δ a}(t : Tm Γ a){ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' → 
+mutual
+  eval-cong : ∀{i Γ Δ a}(t : Tm Γ a){ρ ρ' : Env ∞ Δ Γ} → Env∋ ρ ≈⟨ i ⟩≈ ρ' →
               Val∋ eval t ρ ≈⟨ i ⟩≈ eval t ρ'
   eval-cong (var zero)    (p ≈, q) = q
   eval-cong (var (suc x)) (p ≈, q) = eval-cong (var x) p
@@ -62,7 +62,7 @@ mutual
   apply-cong (≈later p) q = ≈later (∞apply-cong p q)
 
   ∞apply-cong : ∀ {i Δ a b}{f f' : ∞Val ∞ Δ (a ⇒ b)}{v v' : Val ∞ Δ a} →
-                ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' → 
+                ∞Val∋ f ≈⟨ i ⟩≈ f' → Val∋ v ≈⟨ i ⟩≈ v' →
                 ∞Val∋ ∞apply f v ≈⟨ i ⟩≈ ∞apply f' v'
   ≈force (∞apply-cong p q) = apply-cong (≈force p) q
 
@@ -77,7 +77,7 @@ mutual
     Val∋ (renval η $ eval t ρ) ≈⟨ i ⟩≈ (eval t $ renenv η ρ)
   reneval (var x)   ρ η = lookup≤ x ρ η
   reneval (abs t)   ρ η = ≈lam (≈reflEnv (renenv η ρ))
-  reneval (app t u) ρ η = proof
+  reneval (app t u) ρ η = begin
     renval η (apply (eval t ρ) (eval u ρ))
     ≈⟨ renapply (eval t ρ) (eval u ρ) η ⟩
     apply (renval η (eval t ρ)) (renval η (eval u ρ))
@@ -146,7 +146,7 @@ mutual
   rennereadback : ∀{i Γ Δ a}(η : Ren Δ Γ)(t : NeVal ∞ Γ a) →
                 (rennen η <$> nereadback t) ≈⟨ i ⟩≈ (nereadback (rennev η t))
   rennereadback η (var x) = ≈now _ _ refl
-  rennereadback η (app t u) = proof
+  rennereadback η (app t u) = begin
     rennen η <$> (app <$> nereadback t <*> readback u)
     ≈⟨ lifta2lem1 app (rennen η) (nereadback t) (readback u)  ⟩
     (λ m n → rennen η (app m n)) <$> nereadback t <*> readback u
@@ -162,7 +162,7 @@ mutual
   renreadback   : ∀{i Γ Δ} a (η : Ren Δ Γ)(v : Val ∞ Γ a) →
                 (rennf η <$> readback v) ≈⟨ i ⟩≈ (readback (renval η v))
   renreadback ★ η (ne w) =
-    proof
+    begin
       rennf η  <$>  (ne  <$> nereadback w)
       ≈⟨ map-compose (nereadback w) ⟩
       (rennf η ∘ ne)     <$> nereadback w
@@ -176,7 +176,7 @@ mutual
     where open ≈-Reasoning
 
   renreadback ★ η (later p) = ≈later (∞renreadback ★ η p)
-  renreadback (a ⇒ b) η f   = ≈later (proof
+  renreadback (a ⇒ b) η f   = ≈later (begin
     (eta f ∞>>= (λ a₁ → now (abs a₁))) ∞>>= (λ x' → now (rennf η x'))
     ∞≈⟨ ∞bind-assoc (eta f) ⟩
     (eta f ∞>>= λ a₁ → now (abs a₁) >>= λ x' → now (rennf η x'))
@@ -197,7 +197,7 @@ mutual
 
   reneta  : ∀{i Γ Δ a b} (η : Ren Δ Γ)(v : Val ∞ Γ (a ⇒ b)) →
           (rennf (liftr η) ∞<$> eta v) ∞≈⟨ i ⟩≈ (eta (renval η v))
-  ≈force (reneta η f) = proof
+  ≈force (reneta η f) = begin
     readback (apply (renval (wkr renId) f) (ne (var zero))) Bind.>>=
       (λ a → now (rennf (wkr η , zero) a))
     ≈⟨ renreadback _ (liftr η) (apply (renval (wkr renId) f) (ne (var zero))) ⟩

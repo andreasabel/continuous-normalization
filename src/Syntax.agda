@@ -192,4 +192,3 @@ mutual
 
 module ≈Val-Reasoning {i : Size}{Δ : Cxt}{a : Ty} where
   open SetoidReasoning (≈Valsetoid i Δ a) public
-    renaming (begin_ to proof_)

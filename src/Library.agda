@@ -52,8 +52,6 @@ open import Relation.Binary.PropositionalEquality public
   using ( _≡_; refl; sym; trans; cong; cong₂; subst; module ≡-Reasoning
         ; inspect; [_])
 
---open ≡-Reasoning renaming (begin_ to proof_) public
-
 open import Relation.Binary.HeterogeneousEquality public
   using (_≅_; refl; ≡-to-≅; module ≅-Reasoning)
   renaming (sym to hsym; trans to htrans; cong to hcong;

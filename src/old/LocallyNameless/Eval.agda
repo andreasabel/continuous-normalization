@@ -177,7 +177,7 @@ mutual
     (val≤ η <$> (〖 t 〗 ρ)) ~ 〖 t 〗 (env≤ η ρ)
   eval≤ (var x  ) ρ η rewrite lookup≤ x ρ η = ~now _
   eval≤ (abs t  ) ρ η = ~refl _
-  eval≤ (app t u) ρ η = proof
+  eval≤ (app t u) ρ η = begin
 
       (val≤ η <$> apply* (〖 t 〗 ρ) (〖 u 〗 ρ))
 
@@ -193,7 +193,7 @@ mutual
 
   apply*≤ : ∀ {Γ Δ a b} (f? : Delay ∞ (Val Δ (a ⇒ b))) (u? : Delay ∞ (Val Δ a)) (η : Γ ≤ Δ) →
     (val≤ η <$> apply* f? u?) ~ apply* (val≤ η <$> f?) (val≤ η <$> u?)
-  apply*≤ f? u? η = proof
+  apply*≤ f? u? η = begin
 
       val≤ η <$> apply* f? u?
 

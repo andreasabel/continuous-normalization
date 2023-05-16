@@ -170,7 +170,6 @@ mutual
 
 module ≈-Reasoning {i : Size} {A : Set} where
   open SetoidReasoning (≈setoid i A) public
-    renaming (begin_ to proof_)
 
 ∞≈setoid : (i : Size) (A : Set) → Setoid lzero lzero
 ∞≈setoid i A = record
@@ -184,10 +183,8 @@ module ≈-Reasoning {i : Size} {A : Set} where
   }
 
 module ∞≈-Reasoning {i : Size} {A : Set} where
-  private
-    open module M = SetoidReasoning (∞≈setoid i A) public
-      using (_∎; _≡⟨⟩_; step-≡) -- ; step-≈)
-      renaming (begin_ to proof_)
+  private module M = SetoidReasoning (∞≈setoid i A)
+  open M public using (begin_; _∎; _≡⟨⟩_; step-≡)
   step-∞≈ = M.step-≈
   infixr 2 step-∞≈
   syntax step-∞≈ x y≈z x≈y = x ∞≈⟨ x≈y ⟩ y≈z
@@ -476,7 +473,7 @@ mutual
 lifta2lem1 : ∀{A B C D}
              (f : A → B → C)(g : C → D)(a : Delay ∞ A)(b : Delay ∞ B) →
              (g <$> (f <$> a <*> b)) ≈ ((λ a b → g (f a b)) <$> a <*> b)
-lifta2lem1 f g a b = proof
+lifta2lem1 f g a b = begin
   (((a >>= now ∘ f) >>= (λ f' → b >>= now ∘ f')) >>= now ∘ g)
   ≈⟨ bind-assoc (a >>= now ∘ f) ⟩
   ((a >>= now ∘ f) >>= (λ f → (b >>= now ∘ f) >>= now ∘ g))
@@ -494,7 +491,7 @@ lifta2lem2 : ∀{A A' B B' C : Set}
              (a : Delay ∞ A')(b : Delay ∞ B') →
              ((λ a' b' → f (g a') (h b')) <$> a <*> b) ≈
              (f <$> (g <$> a) <*> (h <$> b))
-lifta2lem2 f g h a b = proof
+lifta2lem2 f g h a b = begin
   ((a >>= (λ x' → now (λ b' → f (g x') (h b')))) >>= (λ f' → b >>= (now ∘ f')))
   ≈⟨ bind-assoc a ⟩
   (a >>= (λ x' → b >>= λ x → now (f (g x') (h x))))
