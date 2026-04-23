@@ -25,7 +25,7 @@ jobs:
         # - os: windows-latest
         #   agda: 2.6.2.2
         - os: ubuntu-latest
-          agda: 2.6.4
+          agda: 2.8.0
 
     steps:
 
@@ -38,7 +38,7 @@ jobs:
         with:
           agda-version: ${{ matrix.agda }}
           # agda-stdlib-version: recommended
-          agda-stdlib-version: '1.7.3'
+          agda-stdlib-version: '2.3'
           # agda-stdlib-default: true
 
       - name: Cache build
