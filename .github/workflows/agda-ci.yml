@@ -30,7 +30,7 @@ jobs:
     steps:
 
       # Checkout to $HOME empties $HOME so we have to do it before we put stuff there.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Agda
         uses: wenkokke/setup-agda@latest
@@ -42,7 +42,7 @@ jobs:
           # agda-stdlib-default: true
 
       - name: Cache build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id:   cache
         with:
           key: ${{ runner.os }}-agda-${{ steps.setup.outputs.agda-version }}
@@ -57,7 +57,7 @@ jobs:
         working-directory: src
         run: agda Everything.agda --html
 
-      - uses: actions/upload-pages-artifact@v1
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: src/html
 
