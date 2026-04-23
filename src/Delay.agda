@@ -46,12 +46,8 @@ module Bind where
     force (x ∞>>= f) = force x >>= f
 
 delayMonad : ∀ {i} → RawMonad {f = lzero} (Delay i)
-delayMonad {i} = Effect.Monad.mkRawMonad (Delay i) now (_>>=_ {i}) where open Bind -- mkRawMonad return _>>=_
-{-delayMonad {i} = record
-  { return = now
-  ; _>>=_  = _>>=_ {i}
-  } where open Bind
--}
+delayMonad {i} = Effect.Monad.mkRawMonad (Delay i) now (_>>=_ {i}) where open Bind
+
 module _ {i : Size} where
   open module DelayMonad = RawMonad (delayMonad {i = i})
                            public
@@ -504,4 +500,3 @@ lifta2lem2 f g h a b = begin
   (((a >>= (now ∘ g)) >>= (now ∘ f)) >>= (λ f' → b >>= (now ∘ h) >>= now ∘ f'))
   ∎
   where open ≈-Reasoning
--- -}
