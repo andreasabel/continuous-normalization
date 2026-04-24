@@ -1,10 +1,11 @@
 module Delay where
 
 open import Library
-open import Category.Applicative.Indexed
+open import Effect.Applicative.Indexed
+import Effect.Monad
 -- Coinductive delay monad.
 
-infix 10 _⇓_
+-- infix 10 _⇓_
 
 mutual
 
@@ -45,14 +46,11 @@ module Bind where
     force (x ∞>>= f) = force x >>= f
 
 delayMonad : ∀ {i} → RawMonad {f = lzero} (Delay i)
-delayMonad {i} = record
-  { return = now
-  ; _>>=_  = _>>=_ {i}
-  } where open Bind
+delayMonad {i} = Effect.Monad.mkRawMonad (Delay i) now (_>>=_ {i}) where open Bind
 
 module _ {i : Size} where
   open module DelayMonad = RawMonad (delayMonad {i = i})
-                           public renaming (_⊛_ to _<*>_)
+                           public
 open Bind public using (_∞>>=_)
 
 -- Map for ∞Delay
@@ -70,7 +68,6 @@ _=<<2_,_ : ∀ {i A B C} → (A → B → Delay i C) → Delay i A → Delay i B
 f =<<2 x , y = x >>= λ a → y >>= λ b → f a b
 
 -- Lifting a predicate to Delay (without convergence).
-
 mutual
   data Delay₁ i {A : Set} (P : A → Set) : Delay ∞ A → Set where
     now₁   : ∀{a}  → (p : P a) → Delay₁ i P (now a)
@@ -184,7 +181,7 @@ module ≈-Reasoning {i : Size} {A : Set} where
 
 module ∞≈-Reasoning {i : Size} {A : Set} where
   private module M = SetoidReasoning (∞≈setoid i A)
-  open M public using (begin_; _∎; _≡⟨⟩_; step-≡)
+  open M public using (begin_; _∎; step-≡-∣; step-≡)
   step-∞≈ = M.step-≈
   infixr 2 step-∞≈
   syntax step-∞≈ x y≈z x≈y = x ∞≈⟨ x≈y ⟩ y≈z

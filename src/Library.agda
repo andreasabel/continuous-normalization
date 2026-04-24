@@ -3,14 +3,14 @@
 module Library where
 
 open import Function public
-  hiding (_∋_)
+  hiding (_∋_; force)
 
 open import Level public
   using (Level) renaming (zero to lzero; suc to lsuc)
 
 open import Size public
 
-open import Category.Monad public
+open import Effect.Monad public
   using (RawMonad; module RawMonad)
 
 open import Data.Empty public
